@@ -114,7 +114,7 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
                     <AccountAnalytics accountAddress={account.account} />
                     <StrategyList 
                       accountAddress={account.account}
-                      strategies={account?.strategies || []}
+                      strategies={Array.isArray(account.strategies) ? account.strategies : []}
                     />
                   </div>
                 )}
