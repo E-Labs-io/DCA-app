@@ -34,6 +34,8 @@ createAppKit({
   adapters: [ethAdapter],
   networks: [sepolia, base],
   projectId,
+  enableWalletConnect: false,
+  enableCoinbase: true,
   metadata: {
     name: "DCA Protocol",
     description: "Decentralized Cost Averaging",

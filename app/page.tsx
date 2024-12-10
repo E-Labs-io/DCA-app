@@ -1,34 +1,72 @@
-'use client';
+/** @format */
 
-import { Card, CardBody, Button, Tabs, Tab } from '@nextui-org/react';
-import { useAccount, useChainId, useSwitchChain } from 'wagmi';
-import { sepolia } from 'viem/chains';
-import { PlusCircle, LineChart, Settings } from 'lucide-react';
-import { useState } from 'react';
-import { toast } from 'sonner';
-import dynamic from 'next/dynamic';
+"use client";
 
-const CreateAccountModal = dynamic(() => import('@/components/modals/CreateAccountModal').then(mod => ({ default: mod.CreateAccountModal })), {
-  ssr: false,
-  loading: () => null
-});
+import { Card, CardBody, Button, Tabs, Tab } from "@nextui-org/react";
+import { sepolia } from "viem/chains";
+import { PlusCircle, LineChart, Settings } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import dynamic from "next/dynamic";
+import {
+  useAppKit,
+  useAppKitAccount,
+  useAppKitNetwork,
+} from "@reown/appkit/react";
 
-const CreateStrategyModal = dynamic(() => import('@/components/modals/CreateStrategyModal').then(mod => ({ default: mod.CreateStrategyModal })), {
-  ssr: false,
-  loading: () => null
-});
+const CreateAccountModal = dynamic(
+  () =>
+    import("@/components/modals/CreateAccountModal").then((mod) => ({
+      default: mod.CreateAccountModal,
+    })),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
 
-const AccountsView = dynamic(() => import('@/components/views/AccountsView').then(mod => ({ default: mod.AccountsView })), {
-  ssr: false,
-  loading: () => <Card><CardBody className="h-24 animate-pulse" /></Card>
-});
+const CreateStrategyModal = dynamic(
+  () =>
+    import("@/components/modals/CreateStrategyModal").then((mod) => ({
+      default: mod.CreateStrategyModal,
+    })),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
 
-const PairsView = dynamic(() => import('@/components/views/PairsView').then(mod => ({ default: mod.PairsView })), {
-  ssr: false,
-  loading: () => <Card><CardBody className="h-24 animate-pulse" /></Card>
-});
+const AccountsView = dynamic(
+  () =>
+    import("@/components/views/AccountsView").then((mod) => ({
+      default: mod.AccountsView,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <Card>
+        <CardBody className="h-24 animate-pulse" />
+      </Card>
+    ),
+  }
+);
 
-const StatsOverview = dynamic(() => import('@/components/StatsOverview'), {
+const PairsView = dynamic(
+  () =>
+    import("@/components/views/PairsView").then((mod) => ({
+      default: mod.PairsView,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <Card>
+        <CardBody className="h-24 animate-pulse" />
+      </Card>
+    ),
+  }
+);
+
+const StatsOverview = dynamic(() => import("@/components/StatsOverview"), {
   ssr: false,
   loading: () => (
     <Card className="mb-8">
@@ -47,13 +85,14 @@ const StatsOverview = dynamic(() => import('@/components/StatsOverview'), {
 });
 
 export default function AppPage() {
-  const { isConnected } = useAccount();
-  const chainId = useChainId();
-  const { switchChain } = useSwitchChain();
+  const { isConnected } = useAppKitAccount();
+  const { chainId, switchNetwork } = useAppKitNetwork();
+  const { open } = useAppKit();
+
   const [isCreateAccountOpen, setIsCreateAccountOpen] = useState(false);
   const [isCreateStrategyOpen, setIsCreateStrategyOpen] = useState(false);
-  const [selectedView, setSelectedView] = useState('accounts');
-  const [selectedAccount, setSelectedAccount] = useState('');
+  const [selectedView, setSelectedView] = useState("accounts");
+  const [selectedAccount, setSelectedAccount] = useState("");
 
   const isWrongNetwork = chainId !== sepolia.id;
 
@@ -66,6 +105,9 @@ export default function AppPage() {
             <p className="text-center text-gray-400 mb-6">
               Please connect your wallet to access the DCA Protocol
             </p>
+            <Button onClick={() => open({ view: "Connect" })}>
+              Connect Wallet
+            </Button>
           </CardBody>
         </Card>
       </div>
@@ -81,14 +123,14 @@ export default function AppPage() {
             <p className="text-center text-gray-400 mb-6">
               Please switch to Sepolia network to use the DCA Protocol
             </p>
-            <Button 
+            <Button
               color="primary"
               size="lg"
               onPress={() => {
                 try {
-                  switchChain({ chainId: sepolia.id });
+                  switchNetwork(sepolia);
                 } catch (error) {
-                  toast.error('Failed to switch network. Please try manually.');
+                  toast.error("Failed to switch network. Please try manually.");
                 }
               }}
             >
@@ -126,7 +168,7 @@ export default function AppPage() {
 
         <StatsOverview />
 
-        <Tabs 
+        <Tabs
           selectedKey={selectedView}
           onSelectionChange={(key) => setSelectedView(key.toString())}
           className="mb-8"
@@ -151,22 +193,22 @@ export default function AppPage() {
           />
         </Tabs>
 
-        {selectedView === 'accounts' ? (
+        {selectedView === "accounts" ? (
           <AccountsView onAccountSelect={setSelectedAccount} />
         ) : (
           <PairsView />
         )}
 
         {isCreateAccountOpen && (
-          <CreateAccountModal 
-            isOpen={isCreateAccountOpen} 
-            onClose={() => setIsCreateAccountOpen(false)} 
+          <CreateAccountModal
+            isOpen={isCreateAccountOpen}
+            onClose={() => setIsCreateAccountOpen(false)}
           />
         )}
-        
+
         {isCreateStrategyOpen && selectedAccount && (
-          <CreateStrategyModal 
-            isOpen={isCreateStrategyOpen} 
+          <CreateStrategyModal
+            isOpen={isCreateStrategyOpen}
             onClose={() => setIsCreateStrategyOpen(false)}
             accountAddress={selectedAccount}
           />

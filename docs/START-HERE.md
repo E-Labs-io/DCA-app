@@ -12,9 +12,7 @@ Welcome to the ATION DCA App project. This Web3 platform will enable seamless us
 * **Develop**: Create features adhering to the defined rules and processes.
 * **Document**: Log changes and progress clearly for future reference.
 
-
 ## Rules
-
 
 
 1. **Codebase Assessment**
@@ -36,7 +34,6 @@ Welcome to the ATION DCA App project. This Web3 platform will enable seamless us
    * Only use **NextUI components**.
    * Adhere to the design brief for styling and functionality.
 
-
 ## To-Do
 
 ### Initial Tasks
@@ -55,6 +52,5 @@ Welcome to the ATION DCA App project. This Web3 platform will enable seamless us
 - [ ] Review and optimize state management using React Context or Zustand.
 - [ ] Conduct a thorough code review to ensure adherence to the design brief and coding standards.
 - [ ] Document any additional changes in `/docs/change-log.md`.
-
 
 

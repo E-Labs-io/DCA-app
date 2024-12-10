@@ -1,16 +1,30 @@
-'use client';
+/** @format */
 
-import { useState, useEffect } from 'react';
-import { useAccount, useDisconnect, useChainId, useSwitchChain } from 'wagmi';
-import { sepolia } from 'viem/chains';
-import { Button, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from '@nextui-org/react';
-import { Wallet, ExternalLink, ChevronDown, Power } from 'lucide-react';
+"use client";
+
+import { useState, useEffect } from "react";
+import {
+  Button,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+} from "@nextui-org/react";
+import { Wallet, ExternalLink, ChevronDown, Power } from "lucide-react";
+import {
+  useAppKit,
+  useAppKitAccount,
+  useAppKitNetwork,
+  useDisconnect,
+} from "@reown/appkit/react";
+import { sepolia } from "@reown/appkit/networks";
 
 export default function WalletButton() {
-  const { address, isConnected } = useAccount();
+  const { isConnected, address } = useAppKitAccount();
+  const { open } = useAppKit();
+  const { chainId, switchNetwork } = useAppKitNetwork();
   const { disconnect } = useDisconnect();
-  const chainId = useChainId();
-  const { switchChain } = useSwitchChain();
+
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -18,24 +32,18 @@ export default function WalletButton() {
   }, []);
 
   if (!mounted) {
-    return <div className="w-[150px] h-[40px] bg-default-100 animate-pulse rounded-lg" />;
+    return (
+      <div className="w-[150px] h-[40px] bg-default-100 animate-pulse rounded-lg" />
+    );
   }
-
-  const handleConnect = async () => {
-    try {
-      await (window as any).ethereum?.request({ method: 'eth_requestAccounts' });
-    } catch (error) {
-      console.warn('Connection error:', error);
-    }
-  };
 
   if (!isConnected) {
     return (
-      <Button 
+      <Button
         color="primary"
         variant="bordered"
         startContent={<Wallet size={18} />}
-        onPress={handleConnect}
+        onPress={() => open({ view: "Connect" })}
       >
         Connect Wallet
       </Button>
@@ -48,7 +56,7 @@ export default function WalletButton() {
   return (
     <Dropdown>
       <DropdownTrigger>
-        <Button 
+        <Button
           variant="bordered"
           endContent={<ChevronDown size={18} />}
           startContent={<Wallet size={18} />}
@@ -61,16 +69,20 @@ export default function WalletButton() {
           key="network"
           description="Switch to Sepolia testnet"
           startContent={
-            <div className={`w-2 h-2 rounded-full ${chainId === sepolia.id ? 'bg-success' : 'bg-danger'}`} />
+            <div
+              className={`w-2 h-2 rounded-full ${
+                chainId === sepolia.id ? "bg-success" : "bg-danger"
+              }`}
+            />
           }
-          onPress={() => switchChain({ chainId: sepolia.id })}
+          onPress={() => switchNetwork(sepolia)}
         >
-          Network: {chainId === sepolia.id ? 'Sepolia' : 'Wrong Network'}
+          Network: {chainId === sepolia.id ? "Sepolia" : "Wrong Network"}
         </DropdownItem>
         <DropdownItem
           key="explorer"
           startContent={<ExternalLink size={18} />}
-          onPress={() => window.open(explorerUrl, '_blank')}
+          onPress={() => window.open(explorerUrl, "_blank")}
         >
           View on Explorer
         </DropdownItem>

@@ -11,8 +11,13 @@ import {
   Button,
 } from "@nextui-org/react";
 import { useDCAFactory } from "@/hooks/useDCAFactory";
+import { useAppKitAccount, useAppKitProvider } from "@reown/appkit/react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { sep } from "path";
+import { sepolia } from "@reown/appkit/networks";
+import { Signer } from "ethers";
+import useSigner from "@/hooks/useSigner";
 
 interface CreateAccountModalProps {
   isOpen: boolean;
@@ -24,12 +29,14 @@ export function CreateAccountModal({
   onClose,
 }: CreateAccountModalProps) {
   const { createAccount } = useDCAFactory();
-  const publicClient = usePublicClient();
+  const { address } = useAppKitAccount();
+  const { walletProvider } = useAppKitProvider("eip155");
+
   const [isWaitingForTx, setIsWaitingForTx] = useState(false);
   const [txHash, setTxHash] = useState("");
 
   const handleCreateAccount = async () => {
-    if (!isConnected) {
+    if (!address) {
       toast.error("Please connect your wallet first.");
       return;
     }
@@ -37,41 +44,33 @@ export function CreateAccountModal({
     setIsWaitingForTx(true);
 
     try {
-      const hash = await createAccount().catch((error) => {
+      const transaction = await createAccount().catch((error) => {
         console.warn("Account creation warning:", error);
-        // Only throw if user explicitly rejected
         if (error?.code === 4001) throw error;
-        // Otherwise assume it might have succeeded
-        return null;
+        return false;
       });
 
-      if (hash) {
-        setTxHash(hash);
+      if (typeof transaction !== "boolean") {
+        setTxHash(transaction.hash);
         toast.success("Transaction submitted. Creating your DCA account...");
 
         try {
-          await publicClient.waitForTransactionReceipt({
-            hash: hash as `0x${string}`,
-          });
+          await transaction.tx.wait();
           toast.success("DCA account created successfully!");
           onClose();
         } catch (error) {
           console.warn("Transaction confirmation warning:", error);
-          // Continue anyway as the transaction might have succeeded
           toast.success("Account likely created successfully");
           onClose();
         }
       } else {
-        // If we don't have a hash but didn't explicitly fail, assume success
         toast.success("Account creation appears to have succeeded");
         onClose();
       }
     } catch (error: any) {
-      // Only show error for explicit user rejections
       if (error?.code === 4001 || error?.message?.includes("rejected")) {
         toast.error("Transaction cancelled by user");
       } else {
-        // For all other errors, assume the operation might have succeeded
         console.warn("Non-critical error:", error);
         if (txHash) {
           toast.success("Account likely created successfully");

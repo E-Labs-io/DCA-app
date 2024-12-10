@@ -2,20 +2,22 @@
 
 "use client";
 
-import { useCallback } from "react";
-import { useWriteContract, useReadContract, usePublicClient } from "wagmi";
+import { useCallback, useState } from "react";
+import {
+  useAppKit,
+  useAppKitAccount,
+  useAppKitProvider,
+} from "@reown/appkit/react";
+import { toast } from "sonner";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
-import { DCAAccount__factory } from "@/types/contracts";
-export function useDCAAccount(accountAddress: string) {
-  const { writeContract, isPending } = useWriteContract();
-  const publicClient = usePublicClient();
+import { connectToDCAAccount } from "./helpers/connectToContract";
+import useSigner from "./useSigner";
+import { ContractTransactionReport } from "@/types/contractReturns";
 
-  const { data: strategies = [] } = useReadContract({
-    abi: DCAAccount__factory.abi,
-    address: accountAddress as `0x${string}`,
-    functionName: "getStrategies",
-    enabled: !!accountAddress,
-  });
+export function useDCAAccount(accountAddress: string) {
+  const { address } = useAppKitAccount();
+  const { walletProvider } = useAppKitProvider("eip155");
+  const { Signer } = useSigner();
 
   const createStrategy = useCallback(
     async ({
@@ -26,37 +28,42 @@ export function useDCAAccount(accountAddress: string) {
       strategy: IDCADataStructures.StrategyStruct;
       fundAmount: bigint;
       subscribe: boolean;
-    }) => {
-      if (!accountAddress) {
-        throw new Error("Missing account address");
+    }): Promise<ContractTransactionReport | false> => {
+      if (!Signer || !address) {
+        toast.error("Please connect your wallet first");
+        throw new Error("No signer available");
       }
 
       try {
-        const { hash } = await writeContract({
-          abi: DCAAccount__factory.abi,
-          address: accountAddress as `0x${string}`,
-          functionName: "SetupStrategy",
-          args: [strategy, fundAmount, subscribe],
-        });
-
-        if (!hash) {
-          throw new Error(
-            "Failed to create strategy - no transaction hash returned"
-          );
-        }
-
-        return hash;
+        const dcaAccount = await connectToDCAAccount(accountAddress, Signer);
+        if (!dcaAccount) throw "error connecting to account";
+        const tx = await dcaAccount.SetupStrategy(
+          strategy,
+          fundAmount,
+          subscribe
+        );
+        return { tx, hash: tx.hash };
       } catch (error: any) {
-        console.error("Error in createStrategy:", error);
-        throw new Error(error?.message || "Failed to create strategy");
+        console.error("Error creating strategy:", error);
+        if (error.code === 4001 || error.message?.includes("rejected")) {
+          throw error;
+        }
+        toast.error("Failed to create strategy");
+        return false;
       }
     },
-    [writeContract, accountAddress]
+    [Signer, address, accountAddress]
   );
+
+  const fundAccount = useCallback(async () => {
+    if (!Signer || !address) {
+      toast.error("Please connect your wallet first");
+      throw new Error("No signer available");
+    }
+  }, [Signer, address, accountAddress]);
 
   return {
     createStrategy,
-    strategies,
-    isCreatingStrategy: isPending,
+    fundAccount,
   };
 }

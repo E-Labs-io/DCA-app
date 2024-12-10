@@ -1,38 +1,53 @@
-'use client';
+/** @format */
 
-import { useWriteContract, useReadContract } from 'wagmi';
-import { erc20Abi } from 'viem';
-import { parseUnits } from 'viem';
+"use client";
+
+import { parseUnits } from "viem";
+import { connectERC20 } from "./helpers/connectToContract";
+import { useAppKitProvider } from "@reown/appkit/react";
+
+import { toast } from "sonner";
+import useSigner from "./useSigner";
+import { ContractTransactionReport } from "@/types/contractReturns";
 
 export function useTokenApproval(tokenAddress: string, decimals: number = 18) {
-  const { writeContract: approve } = useWriteContract();
-  const { data: allowanceData, refetch } = useReadContract({
-    address: tokenAddress as `0x${string}`,
-    abi: erc20Abi,
-    functionName: 'allowance',
-    enabled: false,
-  });
+  const { Signer } = useSigner();
 
-  const checkAllowance = async (owner: string, spender: string, amount: string) => {
+  const getAllowance = async (owner: string, spender: string) => {
+    if (!Signer) {
+      toast.error("Please connect your wallet first");
+      throw new Error("No signer available");
+    }
+    const tokenContract = await connectERC20(tokenAddress, Signer);
+    const allowance = await tokenContract.allowance(owner, spender);
+    return allowance;
+  };
+
+  const checkAllowance = async (
+    owner: string,
+    spender: string,
+    amount: string
+  ) => {
     if (!tokenAddress) {
-      console.error('Token address is required for allowance check');
+      console.error("Token address is required for allowance check");
       return false;
+    }
+    if (!Signer) {
+      toast.error("Please connect your wallet first");
+      throw new Error("No signer available");
     }
 
     try {
-      const allowance = await refetch({
-        args: [owner as `0x${string}`, spender as `0x${string}`],
-      });
-
-      if (!allowance.data) {
-        console.warn('No allowance data returned');
+      const allowance = await getAllowance(owner, spender);
+      if (!allowance) {
+        console.warn("No allowance data returned");
         return false;
       }
-      
+
       const requiredAmount = parseUnits(amount, decimals);
-      return BigInt(allowance.data) >= requiredAmount;
+      return BigInt(allowance) >= requiredAmount;
     } catch (error: any) {
-      console.error('Error checking allowance:', {
+      console.error("Error checking allowance:", {
         error,
         tokenAddress,
         owner,
@@ -44,30 +59,34 @@ export function useTokenApproval(tokenAddress: string, decimals: number = 18) {
     }
   };
 
-  const approveToken = async (spender: string, amount: string) => {
+  const approveToken = async (
+    spender: string,
+    amount: string
+  ): Promise<ContractTransactionReport | false> => {
     if (!tokenAddress) {
-      throw new Error('Token address is required for approval');
+      throw new Error("Token address is required for approval");
     }
 
+    if (!Signer) {
+      toast.error("Please connect your wallet first");
+      throw new Error("No signer available");
+    }
+    const tokenContract = await connectERC20(tokenAddress, Signer);
+    const tx = await tokenContract.approve(spender, spender);
+    await tx.wait();
     try {
-      console.log('Approving token:', {
+      console.log("Approving token:", {
         tokenAddress,
         spender,
         amount,
         parsedAmount: parseUnits(amount, decimals).toString(),
       });
 
-      const { hash } = await approve({
-        address: tokenAddress as `0x${string}`,
-        abi: erc20Abi,
-        functionName: 'approve',
-        args: [spender as `0x${string}`, parseUnits(amount, decimals)],
-      });
-
-      if (!hash) throw new Error('No transaction hash returned from approval');
-      return hash;
+      if (!tx.hash)
+        throw new Error("No transaction hash returned from approval");
+      return { tx, hash: tx.hash };
     } catch (error: any) {
-      console.error('Error approving token:', {
+      console.error("Error approving token:", {
         error,
         tokenAddress,
         spender,
@@ -82,5 +101,6 @@ export function useTokenApproval(tokenAddress: string, decimals: number = 18) {
   return {
     checkAllowance,
     approveToken,
+    getAllowance,
   };
 }

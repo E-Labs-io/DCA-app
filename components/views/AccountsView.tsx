@@ -1,27 +1,28 @@
-'use client';
+/** @format */
 
-import { Card, CardBody, ButtonGroup } from '@nextui-org/react';
-import { Settings, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
-import { useAccountStats } from '@/hooks/useAccountStats';
-import { useAccountStore } from '@/lib/store/accountStore';
-import { useState } from 'react';
-import { AccountAnalytics } from './AccountAnalytics';
-import { StrategyList } from './StrategyList';
+"use client";
+
+import { Card, CardBody, ButtonGroup } from "@nextui-org/react";
+import { Settings, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
+import { useAccountStats } from "@/hooks/useAccountStats";
+import { useAccountStore } from "@/lib/store/accountStore";
+import { useState } from "react";
+import { AccountAnalytics } from "./AccountAnalytics";
+import { StrategyList } from "./StrategyList";
 
 interface AccountsViewProps {
   onAccountSelect: (address: string) => void;
 }
 
 export function AccountsView({ onAccountSelect }: AccountsViewProps) {
-  const { accountsWithStrategies, isLoading } = useAccountStats();
-  const selectedAccount = useAccountStore((state) => state.selectedAccount);
-  const setSelectedAccount = useAccountStore((state) => state.setSelectedAccount);
+  const { accounts, selectedAccount, setSelectedAccount, accountStrategies } = useAccountStore();
+  const { getAllData, isLoading } = useAccountStats();
   const [expandedAccount, setExpandedAccount] = useState<string | null>(null);
 
   const handleAccountClick = (address: string) => {
     if (expandedAccount === address) {
       setExpandedAccount(null);
-      setSelectedAccount('');
+      setSelectedAccount("");
     } else {
       setExpandedAccount(address);
       setSelectedAccount(address);
@@ -41,11 +42,13 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
     );
   }
 
-  if (!accountsWithStrategies.length) {
+  if (!accounts.length) {
     return (
       <Card>
         <CardBody className="text-center py-8">
-          <p className="text-gray-400">No DCA accounts found. Create your first account to get started!</p>
+          <p className="text-gray-400">
+            No DCA accounts found. Create your first account to get started!
+          </p>
         </CardBody>
       </Card>
     );
@@ -53,26 +56,26 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
 
   return (
     <div className="grid grid-cols-1 gap-6">
-      {accountsWithStrategies.map((account) => (
-        <div key={account.account}>
-          <Card 
+      {accounts.map((account) => (
+        <div key={account}>
+          <Card
             className={`w-full transition-all duration-200 ${
-              selectedAccount === account.account 
-                ? 'border-2 border-primary shadow-lg' 
-                : 'hover:scale-[1.01]'
+              selectedAccount === account
+                ? "border-2 border-primary shadow-lg"
+                : "hover:scale-[1.01]"
             }`}
             isPressable
-            onPress={() => handleAccountClick(account.account)}
+            onPress={() => handleAccountClick(account)}
           >
             <CardBody>
               <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="text-lg font-semibold">
-                      {`${account.account.slice(0, 6)}...${account.account.slice(-4)}`}
+                      {`${account.slice(0, 6)}...${account.slice(-4)}`}
                     </h3>
                     <p className="text-sm text-gray-400">
-                      {account.strategies?.length || 0} Active Strategies
+                      {accountStrategies[account]?.length || 0} Active Strategies
                     </p>
                   </div>
 
@@ -101,7 +104,7 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
                         </div>
                       </div>
                     </ButtonGroup>
-                    {expandedAccount === account.account ? (
+                    {expandedAccount === account ? (
                       <ChevronUp size={20} />
                     ) : (
                       <ChevronDown size={20} />
@@ -109,12 +112,12 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
                   </div>
                 </div>
 
-                {expandedAccount === account.account && (
+                {expandedAccount === account && (
                   <div className="mt-4 space-y-6 border-t pt-4">
-                    <AccountAnalytics accountAddress={account.account} />
-                    <StrategyList 
-                      accountAddress={account.account}
-                      strategies={Array.isArray(account.strategies) ? account.strategies : []}
+                    <AccountAnalytics accountAddress={account} />
+                    <StrategyList
+                      accountAddress={account}
+                      strategies={accountStrategies[account] || []}
                     />
                   </div>
                 )}

@@ -1,16 +1,27 @@
-'use client';
+/** @format */
 
-import { Card, CardBody, Skeleton } from '@nextui-org/react';
-import { useAccountStats } from '@/hooks/useAccountStats';
-import { useEffect, useState } from 'react';
+"use client";
+
+import { Card, CardBody, Skeleton } from "@nextui-org/react";
+import { useAccountStore } from "@/lib/store/accountStore";
+import { useStrategyStore } from "@/lib/store/strategyStore";
+import { useEffect, useState } from "react";
+import { useAccountStats } from "@/hooks/useAccountStats";
 
 export default function StatsOverview() {
-  const { totalAccounts, totalStrategies, isLoading } = useAccountStats();
+  const { accounts } = useAccountStore();
+  const { strategies } = useStrategyStore();
+  const { totalExecutions, isLoading } = useAccountStats();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Calculate statistics
+  const totalAccounts = accounts.length;
+  const totalStrategies = strategies.length;
+  const totalActiveStrategies = strategies.filter(strategy => strategy.active).length;
 
   if (!mounted || isLoading) {
     return (
@@ -51,8 +62,16 @@ export default function StatsOverview() {
               <p className="text-2xl font-bold">{totalAccounts}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-400">Active Strategies</p>
+              <p className="text-sm text-gray-400">Total Strategies</p>
               <p className="text-2xl font-bold">{totalStrategies}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-400">Active Strategies</p>
+              <p className="text-2xl font-bold">{totalActiveStrategies}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-400">Total Executions</p>
+              <p className="text-2xl font-bold">{totalExecutions}</p>
             </div>
           </div>
         </div>

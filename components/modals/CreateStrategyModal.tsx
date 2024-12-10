@@ -15,12 +15,12 @@ import {
 } from "@nextui-org/react";
 import { useState } from "react";
 import { useDCAAccount } from "@/hooks/useDCAAccount";
-import { useTokenApproval } from "@/hooks/useTokenApproval";
 import { tokenList, type TokenTickers } from "@/lib/config/tokens";
-import { useAccount, usePublicClient } from "wagmi";
+import { useAppKitAccount, useAppKitProvider } from "@reown/appkit/react";
 import { parseUnits } from "viem";
 import { toast } from "sonner";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
+import { useTokenApproval } from "@/hooks/useTokenApproval";
 
 interface CreateStrategyModalProps {
   isOpen: boolean;
@@ -42,9 +42,6 @@ export function CreateStrategyModal({
   onClose,
   accountAddress,
 }: CreateStrategyModalProps) {
-  const { createStrategy } = useDCAAccount(accountAddress);
-  const { address: userAddress } = useAccount();
-  const publicClient = usePublicClient();
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [formData, setFormData] = useState<FormData>({
@@ -59,7 +56,10 @@ export function CreateStrategyModal({
   const selectedTokenDecimals = formData.baseToken
     ? tokenList[formData.baseToken as TokenTickers]?.decimals
     : 18;
-  const tokenApproval = useTokenApproval(
+
+  const { address } = useAppKitAccount();
+  const { createStrategy } = useDCAAccount(accountAddress);
+  const { getAllowance, approveToken, checkAllowance } = useTokenApproval(
     formData.baseToken
       ? tokenList[formData.baseToken as TokenTickers]?.contractAddress
           .ETH_SEPOLIA || ""
@@ -103,13 +103,12 @@ export function CreateStrategyModal({
     setIsProcessing(true);
 
     try {
-      // Validation
       if (
         !formData.baseToken ||
         !formData.targetToken ||
         !formData.amount ||
         !formData.interval ||
-        !userAddress
+        !address
       ) {
         toast.error(
           "Please fill in all required fields and connect your wallet"
@@ -118,16 +117,17 @@ export function CreateStrategyModal({
         return;
       }
 
-      // Step 1: Token Approval (if funding amount is specified)
       if (formData.fundAmount && parseFloat(formData.fundAmount) > 0) {
         setStep(1);
         const approvalToast = toast.loading("Checking token approval...");
 
         let hasAllowance = false;
         try {
-          hasAllowance = await tokenApproval
-            .checkAllowance(userAddress, accountAddress, formData.fundAmount)
-            .catch(() => false);
+          hasAllowance = await checkAllowance(
+            address,
+            accountAddress,
+            formData.fundAmount
+          ).catch(() => false);
         } catch (error) {
           console.warn("Allowance check failed, proceeding anyway:", error);
         }
@@ -138,28 +138,21 @@ export function CreateStrategyModal({
           toast.loading("Please approve token spending...");
 
           try {
-            const approvalHash = await tokenApproval
-              .approveToken(accountAddress, formData.fundAmount)
-              .catch((error) => {
-                console.warn("Approval warning:", error);
-                return null;
-              });
+            const transaction = await approveToken(
+              accountAddress,
+              formData.fundAmount
+            ).catch((error: any) => {
+              console.warn("Approval warning:", error);
+              return null;
+            });
 
-            if (approvalHash) {
+            if (typeof transaction !== "boolean") {
               toast.loading("Waiting for approval confirmation...");
-
-              await publicClient?.waitForTransactionReceipt({
-                  hash: approvalHash as `0x${string}`,
-                })
-                .catch((error) => {
-                  console.warn("Approval confirmation warning:", error);
-                });
 
               toast.success("Token approval confirmed");
             }
           } catch (error) {
             console.warn("Non-critical approval error:", error);
-            // Continue regardless of approval errors
           }
         } else {
           toast.dismiss(approvalToast);
@@ -167,7 +160,6 @@ export function CreateStrategyModal({
         }
       }
 
-      // Step 2: Create Strategy
       setStep(3);
       toast.loading("Creating strategy...");
 
@@ -186,7 +178,7 @@ export function CreateStrategyModal({
         ? parseUnits(formData.fundAmount, selectedTokenDecimals)
         : 0;
 
-      const hash = await createStrategy({
+      const transaction = await createStrategy({
         strategy: strategyData,
         fundAmount: BigInt(fundAmountBigInt),
         subscribe: formData.subscribeToExecutor,
@@ -195,29 +187,20 @@ export function CreateStrategyModal({
         return null;
       });
 
-      if (hash) {
+      if (typeof transaction !== "boolean") {
         toast.loading("Waiting for transaction confirmation...");
         try {
-          await publicClient?.waitForTransactionReceipt({
-            hash: hash as `0x${string}`,
-          })
-          .catch((error) => {
-              console.warn("Strategy confirmation warning:", error);
-            });
+          await transaction?.tx.wait();
         } catch (error) {
           console.warn("Transaction confirmation error:", error);
         }
       }
 
-      // Consider the operation successful regardless of errors
       toast.success("Strategy creation completed");
-
-      // Attempt to refresh account data
 
       resetForm();
       onClose();
     } catch (error) {
-      // Log but don't let any error stop the process
       console.warn("Strategy creation process warning:", error);
       toast.success("Strategy creation likely succeeded");
       resetForm();
