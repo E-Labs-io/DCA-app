@@ -2,60 +2,55 @@
 
 "use client";
 
-import { useCallback, useState } from "react";
-import { useAppKitAccount, useAppKitProvider } from "@reown/appkit/react";
-import { BrowserProvider, ethers } from "ethers";
+import { useCallback, useEffect, useState } from "react";
+import { useAppKitAccount } from "@reown/appkit/react";
 import { toast } from "sonner";
 import { DCAFactoryAddress } from "@/constants/contracts";
 import { connectToDCAFactory } from "./helpers/connectToContract";
-import { Signer } from "ethers";
-import { Provider } from "ethers";
+
 import { ContractTransactionReport } from "@/types/contractReturns";
+import { DCAFactory } from "@/types/contracts";
+import useSigner from "./useSigner";
 
 const DCA_FACTORY_ADDRESS = DCAFactoryAddress.ETH_SEPOLIA!;
 
 export function useDCAFactory() {
   const { address } = useAppKitAccount();
-  const { walletProvider } = useAppKitProvider("eip155");
-  const [Signer, setSigner] = useState<Signer | null>(null);
+  const { Signer } = useSigner();
   const [accounts, setAccounts] = useState<string[]>([]);
+  const [DCAFactory, setDCAFactory] = useState<DCAFactory | null>(null);
 
-  const getProvider = useCallback(async () => {
-    if (!Signer) {
-      const provider = new BrowserProvider(walletProvider as any);
-      const newSigner = await provider.getSigner();
-      setSigner(newSigner);
-      return newSigner;
+  useEffect(() => {
+    if (Signer) {
+      connectToDCAFactory(DCA_FACTORY_ADDRESS, Signer).then((factory) =>
+        setDCAFactory(factory)
+      );
     }
-    return Signer;
-  }, [Signer, walletProvider]);
+  }, [Signer]);
 
   const getUsersAccounts = useCallback(async (): Promise<string[]> => {
-    const signer = await getProvider();
-    if (!signer || !address) {
+    if (!Signer || !address) {
       toast.error("Please connect your wallet first");
       throw new Error("No signer available");
     }
 
-    const factory = await connectToDCAFactory(DCA_FACTORY_ADDRESS, signer);
+    const factory = await connectToDCAFactory(DCA_FACTORY_ADDRESS, Signer);
     const accounts: string[] = await factory.getDCAAccountsOfUser(address);
     setAccounts(accounts);
     return accounts;
-  }, [address, getProvider]);
+  }, [address, Signer]);
 
   const createAccount = useCallback(async (): Promise<
     ContractTransactionReport | false
   > => {
-    const signer = await getProvider();
-
-    if (!signer || !address) {
+    if (!Signer || !address) {
       toast.error("Please connect your wallet first");
       throw new Error("No signer available");
     }
 
+    if (!DCAFactory) throw new Error("DCA Factory not found");
     try {
-      const factory = await connectToDCAFactory(DCA_FACTORY_ADDRESS, signer);
-      const tx = await factory.CreateAccount();
+      const tx = await DCAFactory.CreateAccount();
 
       await tx.wait();
 
@@ -68,11 +63,7 @@ export function useDCAFactory() {
       toast.error("Failed to create DCA account");
       return false;
     }
-  }, [address, getProvider]);
+  }, [address, Signer]);
 
-  return {
-    createAccount,
-    getUsersAccounts,
-    accounts,
-  };
+  return { DCAFactory, createAccount, getUsersAccounts, accounts };
 }

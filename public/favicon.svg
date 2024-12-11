@@ -1,0 +1,13 @@
+<svg version="1.2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+	<title>favcon</title>
+	<style>
+		tspan { white-space:pre } 
+		.s0 { fill: #000000 } 
+		.t1 { font-size: 300px;fill: #cccccc;font-weight: 400;font-family: "Rubik-Regular", "Rubik" } 
+	</style>
+	<path id="Shape 1" class="s0" d="m200 381c-100.1 0-181-80.9-181-181 0-100.1 80.9-181 181-181 100.1 0 181 80.9 181 181 0 100.1-80.9 181-181 181z"/>
+	<text id="ÅTION-Black" style="transform: matrix(1,0,0,1,99.137,315.9)" >
+		<tspan x="0" y="0" class="t1">Å</tspan><tspan  y="0" class="t1">
+</tspan>
+	</text>
+</svg>

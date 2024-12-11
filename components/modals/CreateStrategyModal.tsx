@@ -15,26 +15,30 @@ import {
 } from "@nextui-org/react";
 import { useState } from "react";
 import { useDCAAccount } from "@/hooks/useDCAAccount";
-import { tokenList, type TokenTickers } from "@/lib/config/tokens";
-import { useAppKitAccount, useAppKitProvider } from "@reown/appkit/react";
+import { tokenList, type TokenTickers } from "@/constants/tokens";
+import { useAppKitAccount } from "@reown/appkit/react";
 import { parseUnits } from "viem";
 import { toast } from "sonner";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
 import { useTokenApproval } from "@/hooks/useTokenApproval";
-
-interface CreateStrategyModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  accountAddress: string;
-}
+import {
+  Interval,
+  IntervalOption,
+  intervalOptions,
+} from "@/constants/intervals";
 
 interface FormData {
   baseToken: string;
   targetToken: string;
   amount: string;
-  interval: string;
+  interval: Interval;
   fundAmount: string;
   subscribeToExecutor: boolean;
+}
+interface CreateStrategyModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  accountAddress: string;
 }
 
 export function CreateStrategyModal({
@@ -48,7 +52,7 @@ export function CreateStrategyModal({
     baseToken: "",
     targetToken: "",
     amount: "",
-    interval: "3600",
+    interval: Interval.OneDay,
     fundAmount: "",
     subscribeToExecutor: true,
   });
@@ -61,8 +65,8 @@ export function CreateStrategyModal({
   const { createStrategy } = useDCAAccount(accountAddress);
   const { getAllowance, approveToken, checkAllowance } = useTokenApproval(
     formData.baseToken
-      ? tokenList[formData.baseToken as TokenTickers]?.contractAddress
-          .ETH_SEPOLIA || ""
+      ? (tokenList[formData.baseToken as TokenTickers]?.contractAddress
+          .ETH_SEPOLIA as string) || ""
       : "",
     selectedTokenDecimals
   );
@@ -90,7 +94,7 @@ export function CreateStrategyModal({
       baseToken: "",
       targetToken: "",
       amount: "",
-      interval: "3600",
+      interval: Interval.OneDay,
       fundAmount: "",
       subscribeToExecutor: true,
     });
@@ -148,7 +152,7 @@ export function CreateStrategyModal({
 
             if (typeof transaction !== "boolean") {
               toast.loading("Waiting for approval confirmation...");
-
+              await transaction?.tx.wait();
               toast.success("Token approval confirmed");
             }
           } catch (error) {
@@ -182,7 +186,7 @@ export function CreateStrategyModal({
         strategy: strategyData,
         fundAmount: BigInt(fundAmountBigInt),
         subscribe: formData.subscribeToExecutor,
-      }).catch((error) => {
+      }).catch((error: any) => {
         console.warn("Strategy creation warning:", error);
         return null;
       });
@@ -191,18 +195,18 @@ export function CreateStrategyModal({
         toast.loading("Waiting for transaction confirmation...");
         try {
           await transaction?.tx.wait();
+          toast.success("Strategy creation completed");
         } catch (error) {
           console.warn("Transaction confirmation error:", error);
+          toast.error("Failed to confirm transaction");
         }
       }
-
-      toast.success("Strategy creation completed");
 
       resetForm();
       onClose();
     } catch (error) {
-      console.warn("Strategy creation process warning:", error);
-      toast.success("Strategy creation likely succeeded");
+      console.error("Strategy creation process error:", error);
+      toast.error("Failed to create strategy");
       resetForm();
       onClose();
     } finally {
@@ -242,7 +246,7 @@ export function CreateStrategyModal({
           <Select
             label="Base Token"
             placeholder="Select base token"
-            value={formData.baseToken}
+            selectedKeys={formData.baseToken ? [formData.baseToken] : []}
             onChange={(e) =>
               setFormData({ ...formData, baseToken: e.target.value })
             }
@@ -258,24 +262,21 @@ export function CreateStrategyModal({
           <Select
             label="Target Token"
             placeholder="Select target token"
-            value={formData.targetToken}
+            selectedKeys={formData.targetToken ? [formData.targetToken] : []}
             onChange={(e) =>
               setFormData({ ...formData, targetToken: e.target.value })
             }
             isDisabled={isProcessing}
           >
-            {Object.values(tokenList)
-              .filter((token) => token.ticker !== formData.baseToken)
-              .map((token) => (
-                <SelectItem key={token.ticker} value={token.ticker}>
-                  {token.label}
-                </SelectItem>
-              ))}
+            {Object.values(tokenList).map((token) => (
+              <SelectItem key={token.ticker} value={token.ticker}>
+                {token.label}
+              </SelectItem>
+            ))}
           </Select>
 
           <Input
-            type="number"
-            label="Amount per Execution"
+            label="Amount"
             placeholder="Enter amount"
             value={formData.amount}
             onChange={(e) =>
@@ -284,10 +285,32 @@ export function CreateStrategyModal({
             isDisabled={isProcessing}
           />
 
+          <Select
+            label="Execution Interval"
+            placeholder="Select execution interval"
+            selectedKeys={[formData.interval.toString()]}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                interval: parseInt(e.target.value) as Interval,
+              })
+            }
+            isDisabled={isProcessing}
+          >
+            {intervalOptions.map((option: IntervalOption) => (
+              <SelectItem
+                key={option.value}
+                value={option.value}
+                description={option.description}
+              >
+                {option.label}
+              </SelectItem>
+            ))}
+          </Select>
+
           <Input
-            type="number"
-            label="Initial Funding Amount (Optional)"
-            placeholder="Enter funding amount"
+            label="Fund Amount"
+            placeholder="Enter fund amount"
             value={formData.fundAmount}
             onChange={(e) =>
               setFormData({ ...formData, fundAmount: e.target.value })
@@ -295,24 +318,20 @@ export function CreateStrategyModal({
             isDisabled={isProcessing}
           />
 
-          <Select
-            label="Execution Interval"
-            value={formData.interval}
-            onChange={(e) =>
-              setFormData({ ...formData, interval: e.target.value })
-            }
-            isDisabled={isProcessing}
-          >
-            <SelectItem key="3600" value="3600">
-              Every Hour
-            </SelectItem>
-            <SelectItem key="86400" value="86400">
-              Every Day
-            </SelectItem>
-            <SelectItem key="604800" value="604800">
-              Every Week
-            </SelectItem>
-          </Select>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={formData.subscribeToExecutor}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  subscribeToExecutor: e.target.checked,
+                })
+              }
+              disabled={isProcessing}
+            />
+            <label>Subscribe to Executor</label>
+          </div>
         </ModalBody>
         <ModalFooter>
           <Button
@@ -331,7 +350,6 @@ export function CreateStrategyModal({
             color="primary"
             onPress={handleCreateStrategy}
             isLoading={isProcessing}
-            isDisabled={isProcessing}
           >
             {getButtonText()}
           </Button>

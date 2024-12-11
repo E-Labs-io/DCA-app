@@ -11,6 +11,8 @@ import {
   IERC20,
 } from "@/types/contracts";
 import { erc20 } from "@/types/contracts/@openzeppelin/contracts/token";
+import { EthereumAddress } from "@/types/generic";
+import { AddressLike } from "ethers";
 import { ethers, Contract } from "ethers";
 
 const connectToContract = async ({
@@ -35,10 +37,10 @@ const newContract = async ({
   ContractABI,
   providerOrSigner,
 }: connectToContractInterface) =>
-  new ethers.Contract(ContractAddress, ContractABI, providerOrSigner);
+  new ethers.Contract(ContractAddress as string, ContractABI, providerOrSigner);
 
 const connectToDCAAccount = async (
-  contractAddress: string,
+  contractAddress: EthereumAddress,
   providerOrSigner: ProviderOrSignerType
 ): Promise<DCAAccount> =>
   (await connectToContract({
@@ -48,7 +50,7 @@ const connectToDCAAccount = async (
   })) as unknown as DCAAccount;
 
 const connectToDCAExecutor = async (
-  contractAddress: string,
+  contractAddress: EthereumAddress,
   providerOrSigner: ProviderOrSignerType
 ): Promise<DCAExecutor> =>
   (await connectToContract({
@@ -58,7 +60,7 @@ const connectToDCAExecutor = async (
   })) as unknown as DCAExecutor;
 
 const connectToDCAFactory = async (
-  contractAddress: string,
+  contractAddress: EthereumAddress,
   providerOrSigner: ProviderOrSignerType
 ): Promise<DCAFactory> =>
   (await connectToContract({
@@ -68,7 +70,7 @@ const connectToDCAFactory = async (
   })) as unknown as DCAFactory;
 
 const connectERC20 = async (
-  contractAddress: string,
+  contractAddress: EthereumAddress,
   providerOrSigner: ProviderOrSignerType
 ): Promise<IERC20> =>
   (await connectToContract({
@@ -85,13 +87,13 @@ export {
 };
 
 export interface connectToContractInterface {
-  ContractAddress: string;
+  ContractAddress: EthereumAddress;
   ContractABI: any;
   providerOrSigner: ProviderOrSignerType;
 }
 
 export interface connectToTokenContractInterface {
-  ContractAddress: string;
+  ContractAddress: EthereumAddress;
   providerOrSigner: ProviderOrSignerType;
 }
 

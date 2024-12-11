@@ -1,18 +1,22 @@
 /** @format */
 
 import { create } from "zustand";
-import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
+import { DCAAccount, IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
+import { EthereumAddress } from "@/types/generic";
 
 interface AccountState {
-  accounts: `0x${string}`[];
-  setAccounts: (accounts: `0x${string}`[]) => void;
-  selectedAccount: string;
+  accounts: EthereumAddress[];
+  setAccounts: (accounts: EthereumAddress[]) => void;
+  selectedAccount: EthereumAddress;
   setSelectedAccount: (account: string) => void;
   accountStrategies: Record<string, IDCADataStructures.StrategyStruct[]>;
   setAccountStrategies: (
     account: string,
     strategies: IDCADataStructures.StrategyStruct[]
   ) => void;
+  accountInstances: Record<string, DCAAccount>;
+  setAccountInstance: (account: string, instance: DCAAccount) => void;
+  clearAccountInstance: (account: string) => void;
 }
 
 export const useAccountStore = create<AccountState>((set) => ({
@@ -25,4 +29,14 @@ export const useAccountStore = create<AccountState>((set) => ({
     set((state) => ({
       accountStrategies: { ...state.accountStrategies, [account]: strategies },
     })),
+  accountInstances: {},
+  setAccountInstance: (account, instance) =>
+    set((state) => ({
+      accountInstances: { ...state.accountInstances, [account]: instance },
+    })),
+  clearAccountInstance: (account) =>
+    set((state) => {
+      const { [account]: _, ...rest } = state.accountInstances;
+      return { accountInstances: rest };
+    }),
 }));

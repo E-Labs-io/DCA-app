@@ -27,7 +27,7 @@ export function useTokenApproval(tokenAddress: string, decimals: number = 18) {
     owner: string,
     spender: string,
     amount: string
-  ) => {
+  ): Promise<boolean> => {
     if (!tokenAddress) {
       console.error("Token address is required for allowance check");
       return false;
@@ -72,8 +72,12 @@ export function useTokenApproval(tokenAddress: string, decimals: number = 18) {
       throw new Error("No signer available");
     }
     const tokenContract = await connectERC20(tokenAddress, Signer);
+    toast.info("Please accept the transaction to approve the token");
+
     const tx = await tokenContract.approve(spender, spender);
+    toast.loading("Transaction is confirming...");
     await tx.wait();
+    toast.success("Transaction confirmed, the token has been approved");
     try {
       console.log("Approving token:", {
         tokenAddress,

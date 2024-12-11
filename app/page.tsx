@@ -13,6 +13,7 @@ import {
   useAppKitAccount,
   useAppKitNetwork,
 } from "@reown/appkit/react";
+import { StrategyView } from "@/components/views/StrategyView";
 
 const CreateAccountModal = dynamic(
   () =>
@@ -66,7 +67,7 @@ const PairsView = dynamic(
   }
 );
 
-const StatsOverview = dynamic(() => import("@/components/StatsOverview"), {
+const StatsOverview = dynamic(() => import("@/components/ui/StatsOverview"), {
   ssr: false,
   loading: () => (
     <Card className="mb-8">
@@ -178,26 +179,36 @@ export default function AppPage() {
             title={
               <div className="flex items-center gap-2">
                 <Settings size={18} />
-                <span>By Accounts</span>
+                <span>Accounts</span>
               </div>
             }
           />
+          <Tab
+            key="strategies"
+            title={
+              <div className="flex items-center gap-2">
+                <LineChart size={18} />
+                <span>Strategies</span>
+              </div>
+            }
+          />
+
           <Tab
             key="pairs"
             title={
               <div className="flex items-center gap-2">
                 <LineChart size={18} />
-                <span>By Pairs</span>
+                <span>Pairs</span>
               </div>
             }
           />
         </Tabs>
 
-        {selectedView === "accounts" ? (
+        {selectedView === "accounts" && (
           <AccountsView onAccountSelect={setSelectedAccount} />
-        ) : (
-          <PairsView />
         )}
+        {selectedView === "pairs" && <PairsView />}
+        {selectedView === "strategies" && <StrategyView />}
 
         {isCreateAccountOpen && (
           <CreateAccountModal

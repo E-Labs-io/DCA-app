@@ -18,7 +18,7 @@ export const buildStrategyCreationEvent = (
   contract: DCAAccount
 ): StrategyCreationEvent => {
   return {
-    id: Number(event.args.strategyId_).toString(),
+    id: event.args.strategyId_.toString(),
     account: event.address,
     blockNumber: Number(event.blockNumber),
     transactionHash: event.transactionHash,
@@ -30,8 +30,8 @@ export const buildAccountStrategyExecutionEvent = (
   event: StrategyExecutedEvent.Log
 ): AccountStrategyExecutionEvent => {
   return {
-    id: Number(event.args.strategyId_).toString(),
-    amountIn: Number(event.args.amountIn_).toString(),
+    id: event.args.strategyId_.toString(),
+    amountIn: event.args.amountIn_.toString(),
     reinestActive: event.args.reInvested_,
     blockNumber: Number(event.blockNumber),
     transactionHash: event.transactionHash,
@@ -55,7 +55,7 @@ export const buildStrategyStruct = (
   data: IDCADataStructures.StrategyStructOutput
 ): IDCADataStructures.StrategyStruct => {
   return {
-    strategyId: Number(data.strategyId).toString(),
+    strategyId: data.strategyId.toString(),
     accountAddress: data.accountAddress,
     baseToken: {
       tokenAddress: data.baseToken[0],
@@ -68,7 +68,7 @@ export const buildStrategyStruct = (
       ticker: data.targetToken[2],
     },
     interval: data.interval,
-    amount: Number(data.amount).toString(),
+    amount: data.amount.toString(),
     reinvest: data.reinvest,
     active: data.active,
   };
