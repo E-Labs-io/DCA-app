@@ -12,8 +12,9 @@ import { useAccountStats } from "@/hooks/useAccountStats";
 import { useAccountStore } from "@/lib/store/accountStore";
 import { toast } from "sonner";
 import { formatUnits } from "viem";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FundStrategyModal } from "../modals/FundStrategyModal";
+import { getTokenIcon, getTokenTicker } from "@/lib/helpers/tokenData";
 
 interface StrategyListProps {
   accountAddress: string;
@@ -35,11 +36,22 @@ export function StrategyList({
 }: StrategyListProps) {
   const { subscribeStrategy, unsubscribeStrategy } =
     useDCAAccount(accountAddress);
-  const { tokenBalances, getAllData } = useAccountStats();
+  const { tokenBalances, executionTimings, getAllData } = useAccountStats();
   const { setAccountStrategies } = useAccountStore();
   const [selectedStrategy, setSelectedStrategy] =
     useState<IDCADataStructures.StrategyStruct | null>(null);
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState<number>(
+    Math.floor(Date.now() / 1000)
+  );
+
+  // Update current time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(Math.floor(Date.now() / 1000));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleSubscriptionToggle = async (
     strategy: IDCADataStructures.StrategyStruct
@@ -94,17 +106,6 @@ export function StrategyList({
     }
   };
 
-  const getTokenIcon = (token: IDCADataStructures.TokenDataStruct) => {
-    if (!token?.ticker) return "";
-    const ticker = token.ticker as TokenTickers;
-    return tokenList[ticker]?.icon ?? "";
-  };
-
-  const getTokenTicker = (token: IDCADataStructures.TokenDataStruct) => {
-    if (!token?.ticker) return "Unknown";
-    return token.ticker;
-  };
-
   const getTokenBalance = (token: IDCADataStructures.TokenDataStruct) => {
     const accountBalances = tokenBalances[accountAddress];
     if (!accountBalances) return null;
@@ -122,12 +123,46 @@ export function StrategyList({
     return INTERVAL_LABELS[Number(interval)] || `${interval} seconds`;
   };
 
+  const getExecutionTiming = (strategy: IDCADataStructures.StrategyStruct) => {
+    const accountTimings = executionTimings[accountAddress];
+    if (!accountTimings) return null;
+
+    const timing = accountTimings[strategy.strategyId.toString()];
+    if (!timing) return null;
+
+    const nextExecutionIn = timing.nextExecution - currentTime;
+    return {
+      ...timing,
+      nextExecutionIn,
+      formattedNextExecution:
+        nextExecutionIn > 0
+          ? `Next execution in ${formatTimeRemaining(nextExecutionIn)}`
+          : "Execution pending...",
+    };
+  };
+
+  const formatTimeRemaining = (seconds: number) => {
+    if (seconds <= 0) return "now";
+
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+
+    const parts = [];
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (remainingSeconds > 0 && hours === 0) parts.push(`${remainingSeconds}s`);
+
+    return parts.join(" ");
+  };
+
   return (
     <div className="space-y-4">
-      <h4 className="text-lg font-semibold">Active Strategies</h4>
+      <h4 className="text-lg font-semibold">Account Strategies</h4>
       <div className="space-y-4">
         {strategies?.map((strategy) => {
           const baseTokenBalance = getTokenBalance(strategy.baseToken);
+          const executionTiming = getExecutionTiming(strategy);
 
           return (
             <div key={strategy.strategyId}>
@@ -164,6 +199,18 @@ export function StrategyList({
                         <Chip color="primary" size="sm">
                           {getIntervalLabel(BigInt(strategy.interval))}
                         </Chip>
+                        {strategy.active &&
+                          executionTiming &&
+                          executionTiming.nextExecutionIn > 0 && (
+                            <Chip color="default" size="sm">
+                              {executionTiming.formattedNextExecution}
+                            </Chip>
+                          )}
+                        {strategy.reinvest.active && (
+                          <Chip color="success" size="sm">
+                            Reinvest Active
+                          </Chip>
+                        )}
                       </div>
                     </div>
 
@@ -173,17 +220,20 @@ export function StrategyList({
                           <p className="text-sm text-gray-400">Balance:</p>
                           <p className="font-semibold">
                             {baseTokenBalance ? (
-                              <>
-                                {baseTokenBalance.formattedBalance}{" "}
+                              <a
+                                href={`https://etherscan.io/token/${strategy.baseToken}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Image
+                                  src={getTokenIcon(strategy.baseToken)}
+                                  alt={getTokenTicker(strategy.baseToken)}
+                                  width={16}
+                                  height={16}
+                                  className="inline-block mr-1"
+                                />
                                 {getTokenTicker(strategy.baseToken)}
-                                {baseTokenBalance.needsTopUp && (
-                                  <span className="ml-2 text-warning">
-                                    <AlertCircle size={16} className="inline" />
-                                    {baseTokenBalance.remainingExecutions}{" "}
-                                    executions remaining
-                                  </span>
-                                )}
-                              </>
+                              </a>
                             ) : (
                               "Loading..."
                             )}
@@ -199,17 +249,6 @@ export function StrategyList({
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          color="primary"
-                          variant="light"
-                          isIconOnly
-                          startContent={<Wallet size={18} />}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedStrategy(strategy);
-                          }}
-                        />
                         <Button
                           size="sm"
                           color={strategy.active ? "warning" : "success"}
@@ -254,12 +293,13 @@ export function StrategyList({
           </Card>
         )}
       </div>
-
-      <FundStrategyModal
-        isOpen={!!selectedStrategy}
-        onClose={() => setSelectedStrategy(null)}
-        strategy={selectedStrategy!}
-      />
+      {selectedStrategy && (
+        <FundStrategyModal
+          isOpen={!!selectedStrategy}
+          onClose={() => setSelectedStrategy(null)}
+          strategy={selectedStrategy}
+        />
+      )}
     </div>
   );
 }

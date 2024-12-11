@@ -40,17 +40,18 @@ Welcome to the ATION DCA App project. This Web3 platform will enable seamless us
 
 - [ ] Assess the full project codebase.
 - [ ] Understand the contract types in `/types/contracts`.
-- [ ] Plan migration of the Web3 system to use **App Kit** and **Ethers.js**.
+- [x] Plan migration of the Web3 system to use **App Kit** and **Ethers.js**.
 
 ### Development Tasks
 
-- [ ] Integrate real data into `PairsView` and `CreateStrategyModal`.
-- [ ] Enhance error handling and logging across components.
-- [ ] Implement manage and analytics functionality in `AccountsView`.
-- [ ] Replace mock data in `PairsView` with actual data from the backend.
-- [ ] Ensure all modals handle transactions and errors gracefully.
-- [ ] Review and optimize state management using React Context or Zustand.
-- [ ] Conduct a thorough code review to ensure adherence to the design brief and coding standards.
-- [ ] Document any additional changes in `/docs/change-log.md`.
+- [x] THE ACCOUNT VIEW ISNT WORKINGF NOT LOADING ACCOUNTS
+- [x] Remove fund button from strategy in account view, save for strategy view
+- [ ] add fud & unfund account button to account card drop down (in account info area? maybe rename to somthing liek actions?)
+- [ ] add chip to strategy row of Reinvest if reinvest is active
+- [x] ermove manage and anylitic buttons on accounts card
+- [ ] if strategy is not active do not show the seconds remianng chip
+- [ ] Fix balance info for account
+- [ ] remove balance from strategy row
+- [ ] add interval chip to strategy row
 
 

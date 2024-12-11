@@ -104,11 +104,9 @@ export default function AppPage() {
           <CardBody className="flex flex-col items-center gap-4 p-8">
             <h1 className="text-2xl font-bold mb-4">Connect Wallet</h1>
             <p className="text-center text-gray-400 mb-6">
-              Please connect your wallet to access the DCA Protocol
+              Please connect your wallet to access the Ation Control
             </p>
-            <Button onClick={() => open({ view: "Connect" })}>
-              Connect Wallet
-            </Button>
+            <appkit-connect-button />
           </CardBody>
         </Card>
       </div>
@@ -122,7 +120,7 @@ export default function AppPage() {
           <CardBody className="flex flex-col items-center gap-4 p-8">
             <h1 className="text-2xl font-bold mb-4">Wrong Network</h1>
             <p className="text-center text-gray-400 mb-6">
-              Please switch to Sepolia network to use the DCA Protocol
+              Ation Control is currently only available on Sepolia Ethereum.
             </p>
             <Button
               color="primary"
@@ -147,8 +145,9 @@ export default function AppPage() {
     <div className="min-h-screen p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <h1 className="text-3xl font-bold">DCA Protocol</h1>
+          <h1 className="text-3xl font-bold">ATION CONTROL</h1>
           <div className="flex gap-4">
+            <appkit-account-button />
             <Button
               color="primary"
               startContent={<PlusCircle size={20} />}

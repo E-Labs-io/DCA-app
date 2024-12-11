@@ -2,7 +2,7 @@
 
 "use client";
 
-import { Card, CardBody, ButtonGroup, Chip } from "@nextui-org/react";
+import { Card, CardBody, ButtonGroup, Chip, Button } from "@nextui-org/react";
 import {
   Settings,
   TrendingUp,
@@ -12,10 +12,16 @@ import {
 } from "lucide-react";
 import { useAccountStats } from "@/hooks/useAccountStats";
 import { useAccountStore } from "@/lib/store/accountStore";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { StrategyList } from "../ui/StrategyList";
 import { formatEther } from "viem";
 import { EthereumAddress } from "@/types/generic";
+import { useDCAFactory } from "@/hooks/useDCAFactory";
+import { useAppKitAccount } from "@reown/appkit/react";
+import { FundUnfundAccountModal } from "../modals/FundUnfundAccountModal";
+import Image from "next/image";
+import { getTokenIcon, getTokenTicker } from "@/lib/helpers/tokenData";
+import { formatDistanceToNow } from "date-fns";
 
 interface AccountsViewProps {
   onAccountSelect: (address: string) => void;
@@ -30,15 +36,70 @@ interface AccountStats {
 }
 
 export function AccountsView({ onAccountSelect }: AccountsViewProps) {
-  const { accounts, selectedAccount, setSelectedAccount, accountStrategies } =
-    useAccountStore();
-  const { getAllData, isLoading } = useAccountStats();
+  const {
+    accounts,
+    selectedAccount,
+    setSelectedAccount,
+    accountStrategies,
+    setAccounts,
+  } = useAccountStore();
+  const {
+    getAllData,
+    isLoading: isStatsLoading,
+    totalExecutions,
+    tokenBalances,
+    lastRefresh,
+    executionTimings,
+  } = useAccountStats();
+  const { getUsersAccounts } = useDCAFactory();
+  const { isConnected } = useAppKitAccount();
   const [expandedAccount, setExpandedAccount] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isFundModalOpen, setIsFundModalOpen] = useState(false);
+  const [isUnfundModalOpen, setIsUnfundModalOpen] = useState(false);
+  const [modalTokens, setModalTokens] = useState<
+    { address: string; label: string }[]
+  >([]);
+
+  useEffect(() => {
+    console.log("useEffect triggered with isConnected:", isConnected);
+    const loadAccounts = async () => {
+      if (!isConnected) {
+        console.log("Not connected, setting isLoading to false");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        console.log("Loading accounts...");
+        setIsLoading(true);
+        const userAccounts = await getUsersAccounts();
+        console.log("User accounts loaded:", userAccounts);
+        if (JSON.stringify(userAccounts) !== JSON.stringify(accounts)) {
+          setAccounts(userAccounts as `0x${string}`[]);
+        }
+        if (userAccounts.length > 0) {
+          console.log("Fetching all data...");
+          await getAllData();
+        }
+      } catch (error) {
+        console.error("Error loading accounts:", error);
+      } finally {
+        console.log("Setting isLoading to false");
+        setIsLoading(false);
+      }
+    };
+
+    loadAccounts();
+  }, [isConnected, getUsersAccounts, setAccounts, getAllData]);
 
   const handleAccountClick = (address: EthereumAddress) => {
+    console.log("Account clicked:", address);
     if (expandedAccount === address) {
+      console.log("Collapsing account:", address);
       setExpandedAccount(null);
     } else {
+      console.log("Expanding account:", address);
       setExpandedAccount(address as string);
       setSelectedAccount(address as string);
       onAccountSelect(address as string);
@@ -47,16 +108,58 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
 
   const getAccountStats = (accountAddress: EthereumAddress): AccountStats => {
     const strategies = accountStrategies[accountAddress as string] || [];
+    const accountBalances = tokenBalances[accountAddress as string] || {};
+
     return {
       totalStrategies: strategies.length,
       activeStrategies: strategies.filter((s) => s.active).length,
-      totalExecutions: 0,
-      baseTokenBalances: {},
+      totalExecutions: totalExecutions,
+      baseTokenBalances: Object.entries(accountBalances).reduce(
+        (acc, [token, data]) => {
+          acc[token] = data.balance;
+          return acc;
+        },
+        {} as { [key: string]: bigint }
+      ),
       reinvestLibraryVersion: "v1.0",
     };
   };
 
-  if (isLoading) {
+  const openFundModal = () => {
+    // Set tokens for the fund modal
+    setModalTokens(
+      accounts.map((account) => ({
+        address: account as string,
+        label: account as string,
+      }))
+    );
+    setIsFundModalOpen(true);
+  };
+
+  const openUnfundModal = () => {
+    // Set tokens for the unfund modal
+    setModalTokens(
+      accounts.map((account) => ({
+        address: account as string,
+        label: account as string,
+      }))
+    );
+    setIsUnfundModalOpen(true);
+  };
+
+  if (!isConnected) {
+    return (
+      <Card>
+        <CardBody className="text-center py-8">
+          <p className="text-gray-400">
+            Please connect your wallet to view your DCA accounts.
+          </p>
+        </CardBody>
+      </Card>
+    );
+  }
+
+  if (isLoading || isStatsLoading) {
     return (
       <div className="grid grid-cols-1 gap-6">
         {[1, 2].map((i) => (
@@ -85,6 +188,22 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
       {accounts.map((accountAddress) => {
         const account = accountAddress as string;
         const stats = getAccountStats(account as string);
+        const accountBalances = tokenBalances[account] || {};
+
+        const accountExecutionTimings =
+          executionTimings[selectedAccount as string] ?? {};
+
+        const lastExecutionTime: number = Object.values(
+          accountExecutionTimings
+        ).reduce((max, timing) => Math.max(max, timing.lastExecution), 0);
+
+        const timeAgo = formatDistanceToNow(
+          new Date(lastExecutionTime * 1000),
+          {
+            addSuffix: true,
+          }
+        );
+
         return (
           <div key={account as string}>
             <Card
@@ -110,30 +229,6 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
                     </div>
 
                     <div className="flex items-center gap-4">
-                      <ButtonGroup>
-                        <div className="flex gap-2">
-                          <div
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg hover:bg-default-100 cursor-pointer"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // Add manage functionality
-                            }}
-                          >
-                            <Settings size={18} />
-                            <span>Manage</span>
-                          </div>
-                          <div
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg hover:bg-default-100 cursor-pointer"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // Add analytics functionality
-                            }}
-                          >
-                            <TrendingUp size={18} />
-                            <span>Analytics</span>
-                          </div>
-                        </div>
-                      </ButtonGroup>
                       {expandedAccount === account ? (
                         <ChevronUp size={20} />
                       ) : (
@@ -145,6 +240,46 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
                   {expandedAccount === account && (
                     <div className="mt-4 space-y-6 border-t pt-4">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Card>
+                          <CardBody>
+                            <h4 className="text-sm font-semibold mb-2">
+                              Account Info
+                            </h4>
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span className="text-sm text-gray-400">
+                                  Reinvest Library:
+                                </span>
+                                <Chip size="sm" color="primary">
+                                  {stats.reinvestLibraryVersion}
+                                </Chip>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-sm text-gray-400">
+                                  Last Execution:
+                                </span>
+                                <span className="text-sm">{timeAgo}</span>
+                              </div>
+                              <div className="flex gap-2 mt-2">
+                                <Button
+                                  size="sm"
+                                  color="primary"
+                                  onPress={() => openFundModal()}
+                                >
+                                  Fund Account
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  color="secondary"
+                                  onPress={() => openUnfundModal()}
+                                >
+                                  Unfund Account
+                                </Button>
+                              </div>
+                            </div>
+                          </CardBody>
+                        </Card>
+
                         <Card>
                           <CardBody>
                             <h4 className="text-sm font-semibold mb-2">
@@ -179,37 +314,44 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
                               Token Balances
                             </h4>
                             <div className="space-y-2">
-                              {Object.entries(stats.baseTokenBalances).map(
-                                ([token, balance]) => (
-                                  <div
-                                    key={token}
-                                    className="flex justify-between"
-                                  >
-                                    <span className="text-sm text-gray-400">
-                                      {token}:
-                                    </span>
-                                    <span>{formatEther(balance)}</span>
-                                  </div>
-                                )
+                              {Object.entries(accountBalances).map(
+                                ([tokenAddress, data]) => {
+                                  const tokenData = accountStrategies[
+                                    selectedAccount as string
+                                  ]?.find(
+                                    (strategy) =>
+                                      strategy.baseToken.tokenAddress ===
+                                      tokenAddress
+                                  )?.baseToken;
+                                  if (!tokenData) return null;
+                                  return (
+                                    <div
+                                      key={tokenAddress}
+                                      className="flex justify-between"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <a
+                                          href={`https://etherscan.io/token/${tokenAddress}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                        >
+                                          <Image
+                                            src={getTokenIcon(tokenData)}
+                                            alt={getTokenTicker(tokenData)}
+                                            width={16}
+                                            height={16}
+                                            className="inline-block mr-1"
+                                          />
+                                          {getTokenTicker(tokenData)}
+                                        </a>
+                                      </div>
+                                      <div className="text-right">
+                                        <span>{formatEther(data.balance)}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                }
                               )}
-                            </div>
-                          </CardBody>
-                        </Card>
-
-                        <Card>
-                          <CardBody>
-                            <h4 className="text-sm font-semibold mb-2">
-                              Account Info
-                            </h4>
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span className="text-sm text-gray-400">
-                                  Reinvest Library:
-                                </span>
-                                <Chip size="sm" color="primary">
-                                  {stats.reinvestLibraryVersion}
-                                </Chip>
-                              </div>
                             </div>
                           </CardBody>
                         </Card>
@@ -227,6 +369,18 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
           </div>
         );
       })}
+      <FundUnfundAccountModal
+        isOpen={isFundModalOpen}
+        onClose={() => setIsFundModalOpen(false)}
+        tokens={modalTokens}
+        actionType="fund"
+      />
+      <FundUnfundAccountModal
+        isOpen={isUnfundModalOpen}
+        onClose={() => setIsUnfundModalOpen(false)}
+        tokens={modalTokens}
+        actionType="unfund"
+      />
     </div>
   );
 }
