@@ -13,8 +13,9 @@ import { useAccountStore } from "@/lib/store/accountStore";
 import { toast } from "sonner";
 import { formatUnits } from "viem";
 import { useState, useEffect } from "react";
-import { FundStrategyModal } from "../modals/FundStrategyModal";
 import { getTokenIcon, getTokenTicker } from "@/lib/helpers/tokenData";
+import { FundUnfundAccountModal } from "../modals/FundUnfundAccountModal";
+import { EthereumAddress } from "@/types/generic";
 
 interface StrategyListProps {
   accountAddress: string;
@@ -34,7 +35,7 @@ export function StrategyList({
   accountAddress,
   strategies,
 }: StrategyListProps) {
-  const { subscribeStrategy, unsubscribeStrategy } =
+  const { subscribeStrategy, getAccountBaseTokens, unsubscribeStrategy } =
     useDCAAccount(accountAddress);
   const { tokenBalances, executionTimings, getAllData } = useAccountStats();
   const { setAccountStrategies } = useAccountStore();
@@ -156,6 +157,15 @@ export function StrategyList({
     return parts.join(" ");
   };
 
+  const getBaseTokenData = (strategy: IDCADataStructures.StrategyStruct) => {
+    return {
+      address: strategy.baseToken.tokenAddress,
+      label: strategy.baseToken.ticker,
+      ticker: strategy.baseToken.ticker,
+      icon: getTokenIcon(strategy.baseToken),
+    };
+  };
+
   return (
     <div className="space-y-4">
       <h4 className="text-lg font-semibold">Account Strategies</h4>
@@ -196,9 +206,7 @@ export function StrategyList({
                         >
                           {strategy.active ? "Active" : "Paused"}
                         </Chip>
-                        <Chip color="primary" size="sm">
-                          {getIntervalLabel(BigInt(strategy.interval))}
-                        </Chip>
+
                         {strategy.active &&
                           executionTiming &&
                           executionTiming.nextExecutionIn > 0 && (
@@ -294,10 +302,12 @@ export function StrategyList({
         )}
       </div>
       {selectedStrategy && (
-        <FundStrategyModal
+        <FundUnfundAccountModal
           isOpen={!!selectedStrategy}
           onClose={() => setSelectedStrategy(null)}
-          strategy={selectedStrategy}
+          tokens={selectedStrategy ? [selectedStrategy.baseToken] : []}
+          actionType="fund"
+          accountAddress={accountAddress as EthereumAddress}
         />
       )}
     </div>

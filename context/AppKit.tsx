@@ -36,6 +36,8 @@ createAppKit({
     icons: ["https://ation.capital/icon.png"],
   },
   features: {
+    socials: false,
+    email: false,
     onramp: true,
     swaps: true,
   },

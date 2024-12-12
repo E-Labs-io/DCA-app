@@ -106,7 +106,7 @@ export default function AppPage() {
             <p className="text-center text-gray-400 mb-6">
               Please connect your wallet to access the Ation Control
             </p>
-            <appkit-connect-button />
+            <appkit-button />
           </CardBody>
         </Card>
       </div>

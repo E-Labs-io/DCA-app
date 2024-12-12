@@ -2,14 +2,8 @@
 
 "use client";
 
-import { Card, CardBody, ButtonGroup, Chip, Button } from "@nextui-org/react";
-import {
-  Settings,
-  TrendingUp,
-  ChevronDown,
-  ChevronUp,
-  Wallet,
-} from "lucide-react";
+import { Card, CardBody, Chip, Button } from "@nextui-org/react";
+import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import { useAccountStats } from "@/hooks/useAccountStats";
 import { useAccountStore } from "@/lib/store/accountStore";
 import { useState, useEffect } from "react";
@@ -22,6 +16,10 @@ import { FundUnfundAccountModal } from "../modals/FundUnfundAccountModal";
 import Image from "next/image";
 import { getTokenIcon, getTokenTicker } from "@/lib/helpers/tokenData";
 import { formatDistanceToNow } from "date-fns";
+import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
+import { useDCAAccount } from "@/hooks/useDCAAccount";
+import useSigner from "@/hooks/useSigner";
+import { buildNetworkScanLink } from "@/lib/helpers/buildScanLink";
 
 interface AccountsViewProps {
   onAccountSelect: (address: string) => void;
@@ -51,6 +49,10 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
     lastRefresh,
     executionTimings,
   } = useAccountStats();
+  const { ACTIVE_NETWORK } = useSigner();
+  const { getAccountBaseTokens, getAccountTargetTokens } = useDCAAccount(
+    selectedAccount as EthereumAddress
+  );
   const { getUsersAccounts } = useDCAFactory();
   const { isConnected } = useAppKitAccount();
   const [expandedAccount, setExpandedAccount] = useState<string | null>(null);
@@ -58,8 +60,11 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
   const [isFundModalOpen, setIsFundModalOpen] = useState(false);
   const [isUnfundModalOpen, setIsUnfundModalOpen] = useState(false);
   const [modalTokens, setModalTokens] = useState<
-    { address: string; label: string }[]
+    IDCADataStructures.TokenDataStruct[]
   >([]);
+  const [actionType, setActionType] = useState<"fund" | "unfund" | "withdraw">(
+    "fund"
+  );
 
   useEffect(() => {
     console.log("useEffect triggered with isConnected:", isConnected);
@@ -125,27 +130,8 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
     };
   };
 
-  const openFundModal = () => {
-    // Set tokens for the fund modal
-    setModalTokens(
-      accounts.map((account) => ({
-        address: account as string,
-        label: account as string,
-      }))
-    );
-    setIsFundModalOpen(true);
-  };
-
-  const openUnfundModal = () => {
-    // Set tokens for the unfund modal
-    setModalTokens(
-      accounts.map((account) => ({
-        address: account as string,
-        label: account as string,
-      }))
-    );
-    setIsUnfundModalOpen(true);
-  };
+  const getEtherscanUrl = (address: string) =>
+    buildNetworkScanLink({ network: ACTIVE_NETWORK!, address });
 
   if (!isConnected) {
     return (
@@ -218,10 +204,19 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
               <CardBody>
                 <div className="flex flex-col gap-4">
                   <div className="flex justify-between items-center">
-                    <div>
+                    <div className="flex items-center gap-2">
                       <h3 className="text-lg font-semibold">
                         {`${account.slice(0, 6)}...${account.slice(-4)}`}
                       </h3>
+                      <a
+                        href={getEtherscanUrl(account)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:text-primary-400"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink size={16} />
+                      </a>
                       <p className="text-sm text-gray-400">
                         {stats.activeStrategies} Active /{" "}
                         {stats.totalStrategies} Total Strategies
@@ -238,7 +233,10 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
                   </div>
 
                   {expandedAccount === account && (
-                    <div className="mt-4 space-y-6 border-t pt-4">
+                    <div
+                      className="mt-4 space-y-6 border-t pt-4"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Card>
                           <CardBody>
@@ -264,16 +262,35 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
                                 <Button
                                   size="sm"
                                   color="primary"
-                                  onPress={() => openFundModal()}
+                                  onPress={() => {
+                                    setModalTokens(getAccountBaseTokens());
+                                    setActionType("fund");
+                                    setIsFundModalOpen(true);
+                                  }}
                                 >
-                                  Fund Account
+                                  Fund
                                 </Button>
                                 <Button
                                   size="sm"
                                   color="secondary"
-                                  onPress={() => openUnfundModal()}
+                                  onPress={() => {
+                                    setModalTokens(getAccountBaseTokens());
+                                    setActionType("unfund");
+                                    setIsFundModalOpen(true);
+                                  }}
                                 >
-                                  Unfund Account
+                                  Unfund
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  color="warning"
+                                  onPress={() => {
+                                    setModalTokens(getAccountTargetTokens());
+                                    setActionType("withdraw");
+                                    setIsFundModalOpen(true);
+                                  }}
+                                >
+                                  Withdraw
                                 </Button>
                               </div>
                             </div>
@@ -371,15 +388,13 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
       })}
       <FundUnfundAccountModal
         isOpen={isFundModalOpen}
-        onClose={() => setIsFundModalOpen(false)}
+        onClose={() => {
+          setIsFundModalOpen(false);
+          setActionType("fund");
+        }}
         tokens={modalTokens}
-        actionType="fund"
-      />
-      <FundUnfundAccountModal
-        isOpen={isUnfundModalOpen}
-        onClose={() => setIsUnfundModalOpen(false)}
-        tokens={modalTokens}
-        actionType="unfund"
+        actionType={actionType}
+        accountAddress={selectedAccount as EthereumAddress}
       />
     </div>
   );

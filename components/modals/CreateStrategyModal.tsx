@@ -20,7 +20,7 @@ import { useAppKitAccount } from "@reown/appkit/react";
 import { parseUnits } from "viem";
 import { toast } from "sonner";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
-import { useTokenApproval } from "@/hooks/useTokenApproval";
+import { useToken } from "@/hooks/useToken";
 import {
   Interval,
   IntervalOption,
@@ -63,7 +63,7 @@ export function CreateStrategyModal({
 
   const { address } = useAppKitAccount();
   const { createStrategy } = useDCAAccount(accountAddress);
-  const { getAllowance, approveToken, checkAllowance } = useTokenApproval(
+  const { getAllowance, approveToken, checkAllowance } = useToken(
     formData.baseToken
       ? (tokenList[formData.baseToken as TokenTickers]?.contractAddress
           .ETH_SEPOLIA as string) || ""

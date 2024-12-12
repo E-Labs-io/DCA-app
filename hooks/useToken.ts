@@ -9,9 +9,40 @@ import { useAppKitProvider } from "@reown/appkit/react";
 import { toast } from "sonner";
 import useSigner from "./useSigner";
 import { ContractTransactionReport } from "@/types/contractReturns";
+import { useEffect, useState } from "react";
+import { erc20 } from "@/types/contracts/@openzeppelin/contracts/token";
+import { EthereumAddress } from "@/types";
+import { BigNumberish } from "ethers";
 
-export function useTokenApproval(tokenAddress: string, decimals: number = 18) {
+export function useToken(tokenAddress: EthereumAddress, decimals: number = 18) {
   const { Signer } = useSigner();
+  const [ERC20Instance, setERC20Instance] = useState<erc20.IERC20 | null>(null);
+
+  useEffect(() => {
+    if (ERC20Instance?.target !== tokenAddress) {
+      !ERC20Instance && connectToToken();
+    }
+  }, [Signer, ERC20Instance]);
+
+  const connectToToken = async () => {
+    if (Signer) {
+      const tokenContract = await connectERC20(tokenAddress, Signer);
+      setERC20Instance(tokenContract);
+      return tokenContract;
+    } else {
+      throw new Error("[useToken] : No signer available");
+    }
+  };
+
+  const getBalance = async (owner: string): Promise<bigint> => {
+    let instance;
+    if (!ERC20Instance) {
+      instance = await connectToToken();
+    } else instance = ERC20Instance;
+
+    const balance = await instance?.balanceOf(owner);
+    return balance;
+  };
 
   const getAllowance = async (owner: string, spender: string) => {
     if (!Signer) {
@@ -103,8 +134,10 @@ export function useTokenApproval(tokenAddress: string, decimals: number = 18) {
   };
 
   return {
+    ERC20Instance,
     checkAllowance,
     approveToken,
     getAllowance,
+    getBalance,
   };
 }
