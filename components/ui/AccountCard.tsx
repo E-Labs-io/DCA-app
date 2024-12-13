@@ -18,9 +18,9 @@ import { NetworkKeys } from "@/types";
 import { useAccountStore } from "@/lib/store/accountStore";
 import { useAccountStats } from "@/hooks/useAccountStats";
 import { formatDistanceToNow } from "date-fns";
-import { AccountInfo } from "../common/AccountInfo";
-import { StrategyStats } from "../common/StrategyStats";
-import { AccountBalances } from "../common/BalanceDisplay";
+import { AccountInfo } from "./AccountInfo";
+import { StrategyStats } from "./StrategyStats";
+import { AccountBalances } from "./BalanceDisplay";
 
 export interface AccountCardProps {
   accountAddress: EthereumAddress;

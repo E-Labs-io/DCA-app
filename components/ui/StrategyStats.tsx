@@ -1,7 +1,7 @@
 /** @format */
 
 import { Card, CardBody } from "@nextui-org/react";
-import { AccountStats } from "../ui/AccountCard";
+import { AccountStats } from "./AccountCard";
 
 export interface StrategyStatsProps {
   stats: AccountStats;

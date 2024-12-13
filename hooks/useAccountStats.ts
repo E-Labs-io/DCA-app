@@ -3,9 +3,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useAppKitAccount, useAppKitProvider } from "@reown/appkit/react";
-import { BrowserProvider, ethers } from "ethers";
-import { DCAAccount__factory, DCAFactory__factory } from "@/types/contracts";
+
 import { useAccountStore } from "@/lib/store/accountStore";
 import { useStrategyStore } from "@/lib/store/strategyStore";
 
@@ -46,6 +44,16 @@ export interface StrategyExecutionTiming {
 interface ExecutionTimings {
   [strategyId: string]: StrategyExecutionTiming;
 }
+
+// Define a new interface for storing execution details
+interface StrategyExecutionDetails {
+  lastExecution: number;
+  nextExecution: number;
+  amountIn: bigint;
+  reInvested: boolean;
+}
+
+// Update the ExecutionTimings interface to include execution details
 
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
@@ -117,13 +125,21 @@ export function useAccountStats() {
 
       const balances: TokenBalances = {};
 
-      // Group strategies by base token
+      // Group strategies by both base and target tokens
       const tokenStrategies = strategies.reduce((acc, strategy) => {
-        const tokenAddress = strategy.baseToken.tokenAddress.toString();
-        if (!acc[tokenAddress]) {
-          acc[tokenAddress] = [];
+        const baseTokenAddress = strategy.baseToken.tokenAddress.toString();
+        const targetTokenAddress = strategy.targetToken.tokenAddress.toString();
+
+        if (!acc[baseTokenAddress]) {
+          acc[baseTokenAddress] = [];
         }
-        acc[tokenAddress].push(strategy);
+        acc[baseTokenAddress].push(strategy);
+
+        if (!acc[targetTokenAddress]) {
+          acc[targetTokenAddress] = [];
+        }
+        acc[targetTokenAddress].push(strategy);
+
         return acc;
       }, {} as { [tokenAddress: string]: IDCADataStructures.StrategyStruct[] });
 
@@ -132,7 +148,10 @@ export function useAccountStats() {
         Object.entries(tokenStrategies).map(
           async ([tokenAddress, strategies]) => {
             try {
-              const balance = await dcaAccount.getBaseBalance(tokenAddress);
+              const baseBalance = await dcaAccount.getBaseBalance(tokenAddress);
+              const targetBalance = await dcaAccount.getTargetBalance(
+                tokenAddress
+              );
 
               // Calculate total amount needed per execution for this token
               const totalPerExecution = strategies.reduce((sum, strategy) => {
@@ -141,10 +160,13 @@ export function useAccountStats() {
 
               // Calculate remaining executions
               const remainingExecutions =
-                totalPerExecution > 0 ? Number(balance / totalPerExecution) : 0;
+                totalPerExecution > 0
+                  ? Number(baseBalance / totalPerExecution)
+                  : 0;
 
               balances[tokenAddress] = {
-                balance,
+                balance: baseBalance,
+                targetBalance,
                 remainingExecutions,
                 needsTopUp: remainingExecutions < 5,
               };
@@ -171,7 +193,6 @@ export function useAccountStats() {
       if (!Signer) return {};
 
       const timings: ExecutionTimings = {};
-      const currentTime = Math.floor(Date.now() / 1000);
       const dcaAccount = await getOrCreateAccountInstance(accountAddress);
 
       if (!dcaAccount) {
@@ -179,31 +200,44 @@ export function useAccountStats() {
         return {};
       }
 
-      let totalExecutionsCount = 0;
-
       await Promise.all(
         strategies.map(async (strategy) => {
           try {
-            const executions = await getStrategyExecutionEvents(
-              dcaAccount,
-              Number(strategy.strategyId)
+            const { lastEx, secondsLeft } = await dcaAccount.getTimeTillWindow(
+              strategy.strategyId
             );
 
-            const { lastExecution, executionCount, totalAmountReturned } =
-              processExecutionEvents(executions);
-
-            totalExecutionsCount += executionCount;
-
-            // Calculate next execution time
-            const nextExecution =
-              lastExecution > 0
-                ? lastExecution + Number(strategy.interval)
-                : currentTime + Number(strategy.interval);
+            const nextExecution = Number(lastEx) + Number(strategy.interval);
 
             timings[strategy.strategyId.toString()] = {
-              lastExecution,
+              lastExecution: Number(lastEx),
               nextExecution,
             };
+
+            // Listen for execution events to update timings
+            dcaAccount.on(
+              dcaAccount.filters.StrategyExecuted(),
+              (strategyId, amountIn, reInvested, event) => {
+                if (strategyId.toString() === strategy.strategyId.toString()) {
+                  const newLastEx = event.blockNumber;
+                  const newNextExecution =
+                    newLastEx + Number(strategy.interval);
+
+                  setExecutionTimings((prev) => ({
+                    ...prev,
+                    [accountAddress]: {
+                      ...prev[accountAddress],
+                      [strategy.strategyId.toString()]: {
+                        lastExecution: newLastEx,
+                        nextExecution: newNextExecution,
+                        amountIn: BigInt(amountIn),
+                        reInvested,
+                      },
+                    },
+                  }));
+                }
+              }
+            );
           } catch (error) {
             console.error(
               `Error fetching execution timing for strategy ${strategy.strategyId}:`,
@@ -213,7 +247,6 @@ export function useAccountStats() {
         })
       );
 
-      setTotalExecutions(totalExecutionsCount);
       return timings;
     },
     [Signer, getOrCreateAccountInstance]

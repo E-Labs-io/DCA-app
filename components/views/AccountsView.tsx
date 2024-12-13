@@ -31,23 +31,15 @@ interface AccountsViewProps {
 }
 
 export function AccountsView({ onAccountSelect }: AccountsViewProps) {
-  const {
-    accounts,
-    selectedAccount,
-    setSelectedAccount,
-    accountStrategies,
-    setAccounts,
-  } = useAccountStore();
+  const { accounts, selectedAccount, setSelectedAccount, setAccounts } =
+    useAccountStore();
   const {
     getAllData,
     isLoading: isStatsLoading,
-    totalExecutions,
     tokenBalances,
     executionTimings,
   } = useAccountStats();
-  const { getAccountBaseTokens, getAccountTargetTokens } = useDCAAccount(
-    selectedAccount as EthereumAddress
-  );
+
   const { getUsersAccounts } = useDCAFactory();
   const { isConnected } = useAppKitAccount();
   const { ACTIVE_NETWORK } = useSigner();
@@ -126,7 +118,6 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
       </Card>
     );
   }
-
   if (isLoading || isStatsLoading) {
     return (
       <div className="grid grid-cols-1 gap-6">
@@ -138,7 +129,6 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
       </div>
     );
   }
-
   if (!accounts.length) {
     return (
       <Card>
@@ -149,33 +139,32 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
         </CardBody>
       </Card>
     );
-  }
-
-  return (
-    <div className="grid grid-cols-1 gap-6">
-      {accounts.map((accountAddress) => {
-        return (
-          <div key={accountAddress as string}>
-            <AccountCard
-              handleAccountClick={handleAccountClick}
-              handleFundingModal={handleFundingModal}
-              selectedAccount={selectedAccount}
-              ACTIVE_NETWORK={ACTIVE_NETWORK!}
-              accountAddress={accountAddress}
-            />
-          </div>
-        );
-      })}
-      <FundUnfundAccountModal
-        isOpen={isFundModalOpen}
-        onClose={() => {
-          setIsFundModalOpen(false);
-          setActionType("fund");
-        }}
-        tokens={modalTokens}
-        actionType={actionType}
-        accountAddress={selectedAccount as EthereumAddress}
-      />
-    </div>
-  );
+  } else
+    return (
+      <div className="grid grid-cols-1 gap-6">
+        {accounts.map((accountAddress) => {
+          return (
+            <div key={accountAddress as string}>
+              <AccountCard
+                handleAccountClick={handleAccountClick}
+                handleFundingModal={handleFundingModal}
+                selectedAccount={selectedAccount}
+                ACTIVE_NETWORK={ACTIVE_NETWORK!}
+                accountAddress={accountAddress}
+              />
+            </div>
+          );
+        })}
+        <FundUnfundAccountModal
+          isOpen={isFundModalOpen}
+          onClose={() => {
+            setIsFundModalOpen(false);
+            setActionType("fund");
+          }}
+          tokens={modalTokens}
+          actionType={actionType}
+          accountAddress={selectedAccount as EthereumAddress}
+        />
+      </div>
+    );
 }
