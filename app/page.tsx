@@ -88,7 +88,6 @@ const StatsOverview = dynamic(() => import("@/components/ui/StatsOverview"), {
 export default function AppPage() {
   const { isConnected } = useAppKitAccount();
   const { chainId, switchNetwork } = useAppKitNetwork();
-  const { open } = useAppKit();
 
   const [isCreateAccountOpen, setIsCreateAccountOpen] = useState(false);
   const [isCreateStrategyOpen, setIsCreateStrategyOpen] = useState(false);
@@ -122,19 +121,7 @@ export default function AppPage() {
             <p className="text-center text-gray-400 mb-6">
               Ation Control is currently only available on Sepolia Ethereum.
             </p>
-            <Button
-              color="primary"
-              size="lg"
-              onPress={() => {
-                try {
-                  switchNetwork(sepolia);
-                } catch (error) {
-                  toast.error("Failed to switch network. Please try manually.");
-                }
-              }}
-            >
-              Switch to Sepolia
-            </Button>
+            <appkit-network-button />
           </CardBody>
         </Card>
       </div>

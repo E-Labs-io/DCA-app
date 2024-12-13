@@ -13,3 +13,10 @@ export const getTokenTicker = (token: IDCADataStructures.TokenDataStruct) => {
   if (!token?.ticker) return "Unknown";
   return token.ticker;
 };
+
+export const getTokenDecimals = (
+  token: IDCADataStructures.TokenDataStruct
+): number => {
+  if (!token?.ticker) return 18;
+  return Number(token.decimals);
+};

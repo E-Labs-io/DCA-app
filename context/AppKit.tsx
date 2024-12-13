@@ -40,6 +40,7 @@ createAppKit({
     email: false,
     onramp: true,
     swaps: true,
+    analytics: true,
   },
 });
 

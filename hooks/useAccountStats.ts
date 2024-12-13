@@ -27,13 +27,14 @@ import {
 } from "@/types/eventTransactions";
 import { buildStrategyStruct } from "./helpers/buildDataTypes";
 
-interface TokenBalance {
+export interface TokenBalance {
   balance: bigint;
+  targetBalance?: bigint;
   remainingExecutions: number;
   needsTopUp: boolean;
 }
 
-interface TokenBalances {
+export interface TokenBalances {
   [tokenAddress: string]: TokenBalance;
 }
 
@@ -310,17 +311,6 @@ export function useAccountStats() {
       getAllData();
     }
   }, [Signer, accounts]);
-
-  // Periodic refresh
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      if (Signer && accounts.length > 0) {
-        getAllData();
-      }
-    }, REFRESH_INTERVAL);
-
-    return () => clearInterval(intervalId);
-  }, [Signer, accounts, getAllData]);
 
   return {
     isLoading,

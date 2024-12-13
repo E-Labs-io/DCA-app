@@ -1,5 +1,7 @@
 /** @format */
 
+import { NetworkKeys } from "@/types";
+
 const DCAFactoryAddress: { [key in NetworkKeys]?: string } = {
   ETH_SEPOLIA: "0xe538fE1d89E4d1cd316AdC213c7503E303f45449",
   ARB_GOERLI: "",

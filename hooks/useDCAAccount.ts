@@ -82,7 +82,7 @@ export function useDCAAccount(accountAddress?: EthereumAddress) {
         if (!dcaAccount) throw new Error("Error connecting to account");
         toast.info("Please accept the Funding Transaction...");
         const tx = await dcaAccount.FundAccount(token.tokenAddress, amount);
-        toast.loading("Funding Transaction Approved...");
+        toast.loading("Funding Transaction is Confirming...");
         await tx.wait();
         toast.success("Funding Transaction Approved.");
         return { tx, hash: tx.hash };
@@ -104,8 +104,12 @@ export function useDCAAccount(accountAddress?: EthereumAddress) {
       try {
         const dcaAccount = await getOrCreateAccountInstance();
         if (!dcaAccount) throw new Error("Error connecting to account");
+        toast.info("Please accept the Transaction...");
 
         const tx = await dcaAccount.UnFundAccount(token.tokenAddress, amount);
+        toast.loading("Transaction is Confirming...");
+        await tx.wait();
+        toast.success("Transaction Approved.");
         return { tx, hash: tx.hash };
       } catch (error: any) {
         console.error("Error withdrawing funds from account:", error);
@@ -115,7 +119,7 @@ export function useDCAAccount(accountAddress?: EthereumAddress) {
     [Signer, address, getOrCreateAccountInstance]
   );
 
-  const WithdrawSavings = useCallback(
+  const withdrawSavings = useCallback(
     async (token: IDCADataStructures.TokenDataStruct, amount: bigint) => {
       if (!Signer || !address) {
         toast.error("Please connect your wallet first");
@@ -126,7 +130,12 @@ export function useDCAAccount(accountAddress?: EthereumAddress) {
         const dcaAccount = await getOrCreateAccountInstance();
         if (!dcaAccount) throw new Error("Error connecting to account");
 
+        toast.info("Please accept the Withdrawal Transaction");
         const tx = await dcaAccount.WithdrawSavings(token.tokenAddress, amount);
+        toast.loading("Withdrawal Transaction Confirming...");
+        await tx.wait();
+        toast.success("Withdrawal Transaction Approved.");
+
         return { tx, hash: tx.hash };
       } catch (error: any) {
         console.error("Error withdrawing target token:", error);
@@ -147,7 +156,11 @@ export function useDCAAccount(accountAddress?: EthereumAddress) {
         const dcaAccount = await getOrCreateAccountInstance();
         if (!dcaAccount) throw new Error("Error connecting to account");
 
+        toast.info("Please accept the transaction...");
         const tx = await dcaAccount.SubscribeStrategy(strategyId);
+        toast.loading("Transaction is confirming...");
+        await tx.wait();
+        toast.success("Account was subscribed to the Executor");
         return { tx, hash: tx.hash };
       } catch (error: any) {
         if (error.code === 4001 || error.message?.includes("rejected")) {
@@ -171,8 +184,11 @@ export function useDCAAccount(accountAddress?: EthereumAddress) {
       try {
         const dcaAccount = await getOrCreateAccountInstance();
         if (!dcaAccount) throw new Error("Error connecting to account");
-
+        toast.info("Please accept the transaction...");
         const tx = await dcaAccount.UnsubscribeStrategy(strategyId);
+        toast.loading("Transaction is confirming...");
+        await tx.wait();
+        toast.success("Account was unsubscribed to the Executor");
         return { tx, hash: tx.hash };
       } catch (error: any) {
         if (error.code === 4001 || error.message?.includes("rejected")) {
@@ -207,6 +223,27 @@ export function useDCAAccount(accountAddress?: EthereumAddress) {
     [Signer, address, getOrCreateAccountInstance]
   );
 
+  const getTargetBalance = useCallback(
+    async (tokenAddress: EthereumAddress): Promise<number> => {
+      if (!Signer || !address) {
+        toast.error("Please connect your wallet first");
+        throw new Error("No signer available");
+      }
+
+      try {
+        const dcaAccount = await getOrCreateAccountInstance();
+        if (!dcaAccount) throw new Error("Error connecting to account");
+
+        const balance = await dcaAccount.getTargetBalance(tokenAddress);
+        return Number(balance);
+      } catch (error: any) {
+        console.error("Error getting base balance:", error);
+        return 0;
+      }
+    },
+    [Signer, address, getOrCreateAccountInstance]
+  );
+
   const getAccountBaseTokens = () => {
     const strategies = accountStrategies[accountAddress as string] || [];
     const tokens = strategies.map((strategy) => strategy.baseToken);
@@ -227,10 +264,11 @@ export function useDCAAccount(accountAddress?: EthereumAddress) {
     createStrategy,
     fundAccount,
     defundAccount,
-    WithdrawSavings,
+    withdrawSavings,
     subscribeStrategy,
     unsubscribeStrategy,
     getBaseBalance,
+    getTargetBalance,
     getOrCreateAccountInstance,
     getAccountBaseTokens,
     getAccountTargetTokens,
