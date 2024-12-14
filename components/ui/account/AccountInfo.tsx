@@ -5,7 +5,7 @@ import { Button, Card, CardBody, Chip } from "@nextui-org/react";
 import { EthereumAddress } from "@/types/generic";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
 import { useDCAAccount } from "@/hooks/useDCAAccount";
-import { AccountStats } from "./AccountCard";
+import { AccountStats } from "@/types/statsAndTracking";
 
 interface AccountInfoProps {
   selectedAccount: EthereumAddress;

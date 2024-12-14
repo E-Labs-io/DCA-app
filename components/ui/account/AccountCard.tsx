@@ -5,22 +5,16 @@ import { Button, Card, CardBody, Chip } from "@nextui-org/react";
 import { ExternalLink, ChevronUp, ChevronDown } from "lucide-react";
 import { buildNetworkScanLink } from "@/lib/helpers/buildScanLink";
 import { EthereumAddress } from "@/types/generic";
-import { StrategyList } from "./StrategyList";
-import Image from "next/image";
-import {
-  getTokenDecimals,
-  getTokenIcon,
-  getTokenTicker,
-} from "@/lib/helpers/tokenData";
-import { ethers } from "ethers";
+import { StrategyList } from "../strategy/StrategyList";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
 import { NetworkKeys } from "@/types";
 import { useAccountStore } from "@/lib/store/accountStore";
 import { useAccountStats } from "@/hooks/useAccountStats";
 import { formatDistanceToNow } from "date-fns";
 import { AccountInfo } from "./AccountInfo";
-import { StrategyStats } from "./StrategyStats";
-import { AccountBalances } from "./BalanceDisplay";
+import { AccountStrategyStats } from "./AccountStrategyStats";
+import { AccountBalances } from "../../common/BalanceDisplay";
+import { AccountStats } from "@/types/statsAndTracking";
 
 export interface AccountCardProps {
   accountAddress: EthereumAddress;
@@ -31,14 +25,6 @@ export interface AccountCardProps {
     type: "fund" | "unfund" | "withdraw",
     tokens: IDCADataStructures.TokenDataStruct[]
   ) => void;
-}
-
-export interface AccountStats {
-  totalStrategies: number;
-  activeStrategies: number;
-  totalExecutions: number;
-  baseTokenBalances: { [key: string]: bigint };
-  reinvestLibraryVersion: string;
 }
 
 export const AccountCard: React.FC<AccountCardProps> = ({
@@ -94,7 +80,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
   const getEtherscanUrl = (address: string) =>
     buildNetworkScanLink({ network: ACTIVE_NETWORK!, address });
 
-  const hanfleExpandClick = (account: string) => {
+  const handleExpandClick = (account: string) => {
     if (expandedAccount === account) {
       handleAccountClick(account);
       setExpandedAccount(null);
@@ -110,7 +96,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
         <div className="flex flex-col gap-4">
           <div
             className="flex justify-between items-center cursor-pointer"
-            onClick={() => hanfleExpandClick(account)}
+            onClick={() => handleExpandClick(account)}
           >
             <div className="flex items-center gap-2">
               <h3 className="text-lg font-semibold">
@@ -152,7 +138,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
                   stats={stats}
                   handleFundingModal={handleFundingModal}
                 />
-                <StrategyStats stats={stats} />
+                <AccountStrategyStats stats={stats} />
                 <AccountBalances
                   accountBalances={accountBalances}
                   accountStrategies={accountStrategies[account]}

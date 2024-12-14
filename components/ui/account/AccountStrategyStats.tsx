@@ -1,13 +1,13 @@
 /** @format */
 
+import { AccountStats } from "@/types/statsAndTracking";
 import { Card, CardBody } from "@nextui-org/react";
-import { AccountStats } from "./AccountCard";
 
 export interface StrategyStatsProps {
   stats: AccountStats;
 }
 
-export function StrategyStats({ stats }: StrategyStatsProps) {
+export function AccountStrategyStats({ stats }: StrategyStatsProps) {
   return (
     <Card>
       <CardBody>

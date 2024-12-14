@@ -74,6 +74,22 @@ const processExecutionEvents = (
   return { lastExecution, executionCount, totalAmountReturned };
 };
 
+// Add event listeners for StrategySubscription and FeesDistributed
+const addEventListeners = (dcaAccount: DCAAccount) => {
+  dcaAccount.on(
+    dcaAccount.filters.StrategySubscribed(),
+    (DCAAccountAddress_, strategyId_, strategyInterval_, active_, event) => {
+      console.log("StrategySubscription event:", {
+        DCAAccountAddress_,
+        strategyId_,
+        strategyInterval_,
+        active_,
+      });
+      // Handle strategy subscription logic here
+    }
+  );
+};
+
 export function useAccountStats() {
   const { getUsersAccounts } = useDCAFactory();
   const {
@@ -260,6 +276,9 @@ export function useAccountStats() {
       try {
         const dcaAccount = await getOrCreateAccountInstance(accountAddress);
         if (!dcaAccount) return [];
+
+        // Add event listeners
+        addEventListeners(dcaAccount);
 
         const strategyEvents = await getAccountStrategyCreationEvents(
           dcaAccount

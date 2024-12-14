@@ -52,8 +52,6 @@ export function FundUnfundAccountModal({
     (selectedToken?.tokenAddress as string) || ""
   );
 
-  console.log("Tokens to modal ", tokens);
-
   useEffect(() => {
     if (selectedToken) {
       // Fetch the contract's balance for the selected token

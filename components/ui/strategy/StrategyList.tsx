@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { formatUnits } from "viem";
 import { useState, useEffect } from "react";
 import { getTokenIcon, getTokenTicker } from "@/lib/helpers/tokenData";
-import { FundUnfundAccountModal } from "../modals/FundUnfundAccountModal";
+import { FundUnfundAccountModal } from "../../modals/FundUnfundAccountModal";
 import { EthereumAddress } from "@/types/generic";
 
 interface StrategyListProps {

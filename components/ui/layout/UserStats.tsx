@@ -8,7 +8,7 @@ import { useStrategyStore } from "@/lib/store/strategyStore";
 import { useEffect, useState } from "react";
 import { useAccountStats } from "@/hooks/useAccountStats";
 
-export default function StatsOverview() {
+export function UserStatsOverview() {
   const { accounts } = useAccountStore();
   const { strategies } = useStrategyStore();
   const { totalExecutions, isLoading } = useAccountStats();
@@ -21,7 +21,9 @@ export default function StatsOverview() {
   // Calculate statistics
   const totalAccounts = accounts.length;
   const totalStrategies = strategies.length;
-  const totalActiveStrategies = strategies.filter(strategy => strategy.active).length;
+  const totalActiveStrategies = strategies.filter(
+    (strategy) => strategy.active
+  ).length;
 
   if (!mounted || isLoading) {
     return (

@@ -2,29 +2,18 @@
 
 "use client";
 
-import { Card, CardBody, Chip, Button } from "@nextui-org/react";
-import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
+import { Card, CardBody } from "@nextui-org/react";
 import { useAccountStats } from "@/hooks/useAccountStats";
 import { useAccountStore } from "@/lib/store/accountStore";
 import { useState, useEffect } from "react";
-import { StrategyList } from "../ui/StrategyList";
 import { EthereumAddress } from "@/types/generic";
 import { useDCAFactory } from "@/hooks/useDCAFactory";
 import { useAppKitAccount } from "@reown/appkit/react";
 import { FundUnfundAccountModal } from "../modals/FundUnfundAccountModal";
-import Image from "next/image";
-import {
-  getTokenDecimals,
-  getTokenIcon,
-  getTokenTicker,
-} from "@/lib/helpers/tokenData";
-import { formatDistanceToNow } from "date-fns";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
-import { useDCAAccount } from "@/hooks/useDCAAccount";
 import useSigner from "@/hooks/useSigner";
-import { buildNetworkScanLink } from "@/lib/helpers/buildScanLink";
-import { ethers } from "ethers";
-import { AccountCard } from "../ui/AccountCard";
+
+import { AccountCard } from "../ui/account/AccountCard";
 
 interface AccountsViewProps {
   onAccountSelect: (address: string) => void;
