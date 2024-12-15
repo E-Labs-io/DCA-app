@@ -15,14 +15,26 @@ export default function ConnectionCard({
 }: ConnectionCardProps) {
   return (
     <div className="flex justify-center items-center h-screen">
-      <Card className="w-[40%] max-w-md">
-        <CardHeader>
-          <h1 className="text-2xl font-bold">Connect Your Wallet</h1>
-        </CardHeader>
-        <CardBody>
-          {!isConnected && <WalletButton />}
-          {isWrongNetwork && <NetworkConnect />}
-        </CardBody>
+      <Card className="w-full max-w-md">
+        {!isConnected && (
+          <CardBody className="flex flex-col items-center gap-4 p-8">
+            <h1 className="text-2xl font-bold mb-4">Connect Wallet</h1>
+            <p className="text-center text-gray-400 mb-6">
+              Please connect your wallet to access the Ation Control
+            </p>
+            <appkit-button />
+          </CardBody>
+        )}
+        {isConnected && isWrongNetwork && (
+          <CardBody className="flex flex-col items-center gap-4 p-8">
+            <h1 className="text-2xl font-bold mb-4">Wrong Network</h1>
+            <p className="text-center text-gray-400 mb-6">
+              Ation Control is only available on the Sepolia network. Please
+              switch to the Sepolia network to continue.
+            </p>
+            <appkit-network-button />
+          </CardBody>
+        )}
       </Card>
     </div>
   );

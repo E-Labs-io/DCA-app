@@ -128,10 +128,13 @@ export default function AppContent() {
 
   if (!isConnected || isWrongNetwork) {
     return (
-      <ConnectionCard
-        isConnected={isConnected}
-        isWrongNetwork={isWrongNetwork}
-      />
+      <div className="min-h-screen p-4 md:p-8">
+        <h1 className="text-3xl font-bold text-center">ÅTION CONTROL</h1>
+        <ConnectionCard
+          isConnected={isConnected}
+          isWrongNetwork={isWrongNetwork}
+        />
+      </div>
     );
   }
 
