@@ -1,7 +1,7 @@
 /** @format */
 
-import React, { useState } from "react";
-import { Card, CardBody, Chip } from "@nextui-org/react";
+import React from "react";
+import { Card, CardBody } from "@nextui-org/react";
 import { ExternalLink, ChevronUp, ChevronDown } from "lucide-react";
 import { buildNetworkScanLink } from "@/lib/helpers/buildScanLink";
 import { EthereumAddress } from "@/types/generic";
@@ -27,6 +27,7 @@ export interface AccountCardProps {
     type: "fund" | "unfund" | "withdraw",
     tokens: IDCADataStructures.TokenDataStruct[]
   ) => void;
+  isExpanded: boolean;
 }
 
 export const AccountCard: React.FC<AccountCardProps> = ({
@@ -35,6 +36,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
   ACTIVE_NETWORK,
   Signer,
   handleFundingModal,
+  isExpanded,
 }) => {
   const { selectedAccount, accountStrategies } = useAccountStore();
   const {
@@ -43,9 +45,6 @@ export const AccountCard: React.FC<AccountCardProps> = ({
     tokenBalances,
     executionTimings,
   } = useAccountStats();
-  const [expandedAccount, setExpandedAccount] = useState<string | null>(null);
-
-  let account = accountAddress as string;
 
   const getAccountStats = (): AccountStats => {
     const strategies = accountStrategies[accountAddress as string] || [];
@@ -83,30 +82,28 @@ export const AccountCard: React.FC<AccountCardProps> = ({
   const getEtherscanUrl = (address: string) =>
     buildNetworkScanLink({ network: ACTIVE_NETWORK!, address });
 
-  const handleExpandClick = (account: string) => {
-    if (expandedAccount === account) {
-      handleAccountClick(account);
-      setExpandedAccount(null);
-    } else {
-      handleAccountClick(account);
-      setExpandedAccount(account);
-    }
-  };
+  const addressString = accountAddress as string;
 
   return (
-    <Card className="w-full transition-all duration-200">
+    <Card
+      className={`w-full transition-all duration-200 ${
+        selectedAccount === accountAddress
+          ? "border-2 border-primary"
+          : "border-0"
+      }`}
+    >
       <CardBody>
         <div className="flex flex-col gap-4">
           <div
             className="flex justify-between items-center cursor-pointer"
-            onClick={() => handleExpandClick(account)}
+            onClick={() => handleAccountClick(addressString)}
           >
             <div className="flex items-center gap-2">
               <h3 className="text-lg font-semibold">
-                {`${account.slice(0, 6)}...${account.slice(-4)}`}
+                {`${addressString.slice(0, 6)}...${addressString.slice(-4)}`}
               </h3>
               <a
-                href={getEtherscanUrl(account)}
+                href={getEtherscanUrl(accountAddress as string)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:text-primary-400"
@@ -121,15 +118,11 @@ export const AccountCard: React.FC<AccountCardProps> = ({
             </div>
 
             <div className="flex items-center gap-4">
-              {expandedAccount === account ? (
-                <ChevronUp size={20} />
-              ) : (
-                <ChevronDown size={20} />
-              )}
+              {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </div>
           </div>
 
-          {expandedAccount === account && (
+          {isExpanded && (
             <div
               className="mt-4 space-y-6 border-t pt-4"
               onClick={(e) => e.stopPropagation()}
@@ -146,14 +139,16 @@ export const AccountCard: React.FC<AccountCardProps> = ({
                   ACTIVE_NETWORK={ACTIVE_NETWORK}
                   Signer={Signer}
                   accountBalances={accountBalances}
-                  accountStrategies={accountStrategies[account]}
+                  accountStrategies={
+                    accountStrategies[accountAddress as string]
+                  }
                   selectedAccount={selectedAccount}
                 />
               </div>
 
               <StrategyList
-                accountAddress={account}
-                strategies={accountStrategies[account] || []}
+                accountAddress={accountAddress as string}
+                strategies={accountStrategies[accountAddress as string] || []}
               />
             </div>
           )}

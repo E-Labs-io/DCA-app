@@ -31,6 +31,7 @@ export interface StrategyCardProps {
     tokens: IDCADataStructures.TokenDataStruct[],
     accountAddress: EthereumAddress
   ) => void;
+  isExpanded: boolean;
 }
 
 export function StrategyCard({
@@ -39,6 +40,7 @@ export function StrategyCard({
   ACTIVE_NETWORK,
   setSelectedStrategy,
   handleFundingModal,
+  isExpanded,
 }: StrategyCardProps) {
   const { executionTimings } = useAccountStats();
 
@@ -47,80 +49,47 @@ export function StrategyCard({
       executionTimings[strategy.accountAddress as string]?.[
         Number(strategy.strategyId)
       ];
-    const isExpanded = selectedStrategy === strategy.strategyId;
-
-    // Mock values - replace with real data from events
     const executionCount = 10;
     const totalSpent = BigInt(1000000);
     const averageExecution = totalSpent / BigInt(executionCount);
+    const strategyWorth = BigInt(5000000);
 
-    return { isExpanded, timing, executionCount, totalSpent, averageExecution };
+    return {
+      timing,
+      executionCount,
+      totalSpent,
+      averageExecution,
+      strategyWorth,
+    };
   };
 
-  // Mock chart data - replace with real data from events
   const mockChartData = Array.from({ length: 10 }, (_, i) => ({
     execution: `Execution ${i + 1}`,
     amount: Math.random() * 1000 + 500,
   }));
 
+  const onSelect = () => {
+    setSelectedStrategy(isExpanded ? null : strategy.strategyId.toString());
+  };
+
   return (
     <Card
       key={`${strategy.accountAddress}-${strategy.strategyId}`}
       className="w-full cursor-pointer"
-      onClick={() =>
-        setSelectedStrategy(
-          getStrategyStats().isExpanded ? null : strategy.strategyId.toString()
-        )
-      }
+      onClick={onSelect}
     >
       <CardBody>
         <div className="flex flex-col gap-4">
-          <div className="flex justify-between items-center">
-            <StrategyHeader
-              strategy={strategy}
-              executionCount={getStrategyStats().executionCount}
-              totalSpent={getStrategyStats().totalSpent}
-              averageExecution={getStrategyStats().averageExecution}
-            />
+          <StrategyHeader
+            ACTIVE_NETWORK={ACTIVE_NETWORK}
+            strategy={strategy}
+            averageExecution={getStrategyStats().averageExecution}
+            isExpanded={isExpanded}
+            onToggle={onSelect}
+          />
 
-            <div className="flex items-center gap-2">
-              <Button
-                as="a"
-                href={buildNetworkScanLink({
-                  network: ACTIVE_NETWORK!,
-                  address: strategy.accountAddress as string,
-                })}
-                target="_blank"
-                rel="noopener noreferrer"
-                isIconOnly
-                variant="light"
-                size="sm"
-              >
-                <ExternalLink size={18} />
-              </Button>
-            </div>
-          </div>
-
-          {/* Basic Stats Always Visible */}
-          <div className="flex justify-between items-center text-sm text-gray-500">
-            <div>
-              Next Execution:{" "}
-              {getStrategyStats().timing?.nextExecution
-                ? formatDistanceToNow(
-                    new Date(getStrategyStats().timing.nextExecution * 1000),
-                    {
-                      addSuffix: true,
-                    }
-                  )
-                : "N/A"}
-            </div>
-            <div>Total Executions: {getStrategyStats().executionCount}</div>
-          </div>
-
-          {/* Expanded Content */}
-          {getStrategyStats().isExpanded && (
+          {isExpanded && (
             <div className="mt-4 space-y-6">
-              {/* Chart */}
               <div className="h-64 w-full">
                 <ResponsiveContainer>
                   <LineChart data={mockChartData}>
@@ -138,7 +107,13 @@ export function StrategyCard({
                 </ResponsiveContainer>
               </div>
 
-              {/* Action Buttons */}
+              <div className="flex justify-between items-center text-sm text-gray-500">
+                <div>Total Executions: {getStrategyStats().executionCount}</div>
+                <div>
+                  Strategy Worth: {getStrategyStats().strategyWorth.toString()}
+                </div>
+              </div>
+
               <div className="flex justify-between items-center">
                 <div className="flex gap-2">
                   <Button

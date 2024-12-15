@@ -11,11 +11,11 @@ import { useDCAFactory } from "@/hooks/useDCAFactory";
 import { useAppKitAccount } from "@reown/appkit/react";
 import { FundUnfundAccountModal } from "../modals/FundUnfundAccountModal";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
-import useSigner from "@/hooks/useSigner";
 
 import { AccountCard } from "../ui/account/AccountCard";
 import { Signer } from "ethers";
 import { NetworkKeys } from "@/types";
+import { LoadingCard } from "../common/LoadingCard";
 
 interface AccountsViewProps {
   onAccountSelect: (address: string) => void;
@@ -30,17 +30,12 @@ export function AccountsView({
 }: AccountsViewProps) {
   const { accounts, selectedAccount, setSelectedAccount, setAccounts } =
     useAccountStore();
-  const {
-    getAllData,
-    isLoading: isStatsLoading,
-    tokenBalances,
-    executionTimings,
-  } = useAccountStats();
+  const { getAllData, isLoading: isStatsLoading } = useAccountStats();
 
-  const { getUsersAccounts } = useDCAFactory();
+  // const { getUsersAccounts } = useDCAFactory();
   const { isConnected } = useAppKitAccount();
   const [expandedAccount, setExpandedAccount] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // const [isLoading, setIsLoading] = useState(true);
   const [isFundModalOpen, setIsFundModalOpen] = useState(false);
   const [modalTokens, setModalTokens] = useState<
     IDCADataStructures.TokenDataStruct[]
@@ -49,8 +44,8 @@ export function AccountsView({
     "fund"
   );
 
-  useEffect(() => {
-    console.log("useEffect triggered with isConnected:", isConnected);
+  /*   useEffect(() => {
+    console.log("[Accounts View]: useEffect triggered with isConnected:", isConnected);
     const loadAccounts = async () => {
       if (!isConnected) {
         console.log("Not connected, setting isLoading to false");
@@ -80,7 +75,7 @@ export function AccountsView({
 
     loadAccounts();
   }, [isConnected, getUsersAccounts, setAccounts, getAllData, accounts]);
-
+ */
   const handleAccountClick = (address: EthereumAddress) => {
     console.log("Account clicked:", address);
     if (expandedAccount === address) {
@@ -103,23 +98,12 @@ export function AccountsView({
     setIsFundModalOpen(true);
   };
 
-  if (!isConnected) {
-    return (
-      <Card>
-        <CardBody className="text-center py-8">
-          <p className="text-gray-400">
-            Please connect your wallet to view your DCA accounts.
-          </p>
-        </CardBody>
-      </Card>
-    );
-  }
-  if (isLoading || isStatsLoading) {
+  if (isStatsLoading) {
     return (
       <div className="grid grid-cols-1 gap-6">
         {[1, 2].map((i) => (
           <Card key={i} className="w-full animate-pulse">
-            <CardBody className="h-24" />
+            <LoadingCard />
           </Card>
         ))}
       </div>
@@ -148,6 +132,7 @@ export function AccountsView({
                 ACTIVE_NETWORK={ACTIVE_NETWORK!}
                 Signer={Signer!}
                 accountAddress={accountAddress}
+                isExpanded={expandedAccount === (accountAddress as string)}
               />
             </div>
           );

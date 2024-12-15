@@ -45,60 +45,15 @@ interface ExecutionTimings {
   [strategyId: string]: StrategyExecutionTiming;
 }
 
-// Define a new interface for storing execution details
-interface StrategyExecutionDetails {
-  lastExecution: number;
-  nextExecution: number;
-  amountIn: bigint;
-  reInvested: boolean;
-}
-
-// Add a function to process events and calculate statistics
-const processExecutionEvents = (
-  executions: AccountStrategyExecutionEvent[]
-) => {
-  const lastExecution = executions.reduce((latest, event) => {
-    return event.blockNumber > latest ? event.blockNumber : latest;
-  }, 0);
-
-  const executionCount = executions.length;
-
-  const totalAmountReturned = executions.reduce((total, event) => {
-    return total + BigInt(event.amountIn);
-  }, BigInt(0));
-
-  return { lastExecution, executionCount, totalAmountReturned };
-};
-
-// Add event listeners for StrategySubscription and FeesDistributed
-const addEventListeners = (dcaAccount: DCAAccount) => {
-  dcaAccount.on(
-    dcaAccount.filters.StrategySubscribed(),
-    (DCAAccountAddress_, strategyId_, strategyInterval_, active_, event) => {
-      console.log("StrategySubscription event:", {
-        DCAAccountAddress_,
-        strategyId_,
-        strategyInterval_,
-        active_,
-      });
-      // Handle strategy subscription logic here
-    }
-  );
-};
-
 export function useAccountStats() {
-  const { getUsersAccounts } = useDCAFactory();
   const {
     accounts,
-    setAccounts,
-    accountStrategies,
     setAccountStrategies,
     accountInstances,
     setAccountInstance,
   } = useAccountStore();
-  const { strategies, setStrategies } = useStrategyStore();
-
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const { setStrategies, strategies } = useStrategyStore();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [totalExecutions, setTotalExecutions] = useState<number>(0);
   const [tokenBalances, setTokenBalances] = useState<{
     [accountAddress: string]: TokenBalances;
@@ -127,6 +82,65 @@ export function useAccountStats() {
     [accountInstances, Signer, setAccountInstance]
   );
 
+  const fetchAccountStrategies = useCallback(
+    async (accountAddress: string) => {
+      if (!Signer) return [];
+      const dcaAccount = await getOrCreateAccountInstance(accountAddress);
+      if (!dcaAccount) return [];
+
+      const strategyEvents = await getAccountStrategyCreationEvents(dcaAccount);
+      const strategies = await Promise.all(
+        strategyEvents.map(async (event) => {
+          const rawStrategyData = await dcaAccount.getStrategyData(event.id);
+          const formattedStrategy = buildStrategyStruct(rawStrategyData);
+
+          return {
+            ...formattedStrategy,
+            account: accountAddress,
+            accountContract: dcaAccount,
+            blockNumber: event.blockNumber,
+            transactionHash: event.transactionHash,
+          };
+        })
+      );
+
+      setAccountStrategies(accountAddress, strategies);
+      setStrategies(strategies);
+      return strategies;
+    },
+    [Signer, setAccountStrategies, setStrategies, getOrCreateAccountInstance]
+  );
+
+  const fetchExecutionEvents = useCallback(
+    async (accountAddress: string, strategyId: number) => {
+      const dcaAccount = await getOrCreateAccountInstance(accountAddress);
+      if (!dcaAccount) return [];
+      const executionEvents = await getStrategyExecutionEvents(
+        dcaAccount,
+        strategyId
+      );
+      return executionEvents;
+    },
+    [getOrCreateAccountInstance]
+  );
+
+  const processExecutionEvents = useCallback(
+    (executionEvents: AccountStrategyExecutionEvent[]) => {
+      const executionCount = executionEvents.length;
+      const lastExecution = executionEvents.reduce((latest, event) => {
+        return event.blockNumber > latest ? event.blockNumber : latest;
+      }, 0);
+
+      const totalAmountReturned = executionEvents.reduce((total, event) => {
+        return total + BigInt(event.amountIn);
+      }, BigInt(0));
+
+      setTotalExecutions(executionCount);
+      // Update other stats as needed
+    },
+    []
+  );
+
   const fetchTokenBalances = useCallback(
     async (
       accountAddress: string,
@@ -136,8 +150,6 @@ export function useAccountStats() {
       if (!Signer) return {};
 
       const balances: TokenBalances = {};
-
-      // Group strategies by both base and target tokens
       const tokenStrategies = strategies.reduce((acc, strategy) => {
         const baseTokenAddress = strategy.baseToken.tokenAddress.toString();
         const targetTokenAddress = strategy.targetToken.tokenAddress.toString();
@@ -155,7 +167,6 @@ export function useAccountStats() {
         return acc;
       }, {} as { [tokenAddress: string]: IDCADataStructures.StrategyStruct[] });
 
-      // Fetch balances and calculate executions for each token
       await Promise.all(
         Object.entries(tokenStrategies).map(
           async ([tokenAddress, strategies]) => {
@@ -165,12 +176,10 @@ export function useAccountStats() {
                 tokenAddress
               );
 
-              // Calculate total amount needed per execution for this token
               const totalPerExecution = strategies.reduce((sum, strategy) => {
                 return strategy.active ? sum + BigInt(strategy.amount) : sum;
               }, BigInt(0));
 
-              // Calculate remaining executions
               const remainingExecutions =
                 totalPerExecution > 0
                   ? Number(baseBalance / totalPerExecution)
@@ -226,7 +235,6 @@ export function useAccountStats() {
               nextExecution,
             };
 
-            // Listen for execution events to update timings
             dcaAccount.on(
               dcaAccount.filters.StrategyExecuted(),
               (strategyId, amountIn, reInvested, event) => {
@@ -264,85 +272,45 @@ export function useAccountStats() {
     [Signer, getOrCreateAccountInstance]
   );
 
-  const fetchAccountStrategies = useCallback(
-    async (accountAddress: string) => {
-      if (!Signer) return [];
-      setIsLoading(true);
-
-      try {
-        const dcaAccount = await getOrCreateAccountInstance(accountAddress);
-        if (!dcaAccount) return [];
-
-        // Add event listeners
-        //addEventListeners(dcaAccount);
-
-        const strategyEvents = await getAccountStrategyCreationEvents(
-          dcaAccount
-        );
-        const strategies = await Promise.all(
-          strategyEvents.map(async (event) => {
-            const rawStrategyData = await dcaAccount.getStrategyData(event.id);
-            const formattedStrategy = buildStrategyStruct(rawStrategyData);
-            return {
-              ...formattedStrategy,
-              account: accountAddress,
-              accountContract: dcaAccount,
-              blockNumber: event.blockNumber,
-              transactionHash: event.transactionHash,
-            };
-          })
-        );
-
-        setAccountStrategies(accountAddress, strategies);
-        setStrategies(strategies);
-
-        // Fetch token balances for this account
-        const balances = await fetchTokenBalances(
-          accountAddress,
-          strategies,
-          dcaAccount
-        );
-        setTokenBalances((prev) => ({
-          ...prev,
-          [accountAddress]: balances,
-        }));
-
-        // Calculate execution timings
-        const timings = await calculateExecutionTimings(
-          accountAddress,
-          strategies
-        );
-        setExecutionTimings((prev) => ({
-          ...prev,
-          [accountAddress]: timings,
-        }));
-
-        return strategies;
-      } catch (error) {
-        console.error("Error fetching strategies:", error);
-        return [];
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [
-      Signer,
-      setAccountStrategies,
-      setStrategies,
-      fetchTokenBalances,
-      calculateExecutionTimings,
-      getOrCreateAccountInstance,
-    ]
-  );
-
   const getAllData = useCallback(async () => {
+    if (isLoading) return;
+
     if (!Signer || !accounts.length) return;
     setIsLoading(true);
 
     try {
       await Promise.all(
-        accounts.map(async (accountAddress) => {
-          await fetchAccountStrategies(accountAddress as string);
+        accounts.map(async (accountAdd) => {
+          const accountAddress = accountAdd as string;
+          const strategies = await fetchAccountStrategies(accountAddress);
+          const executionEvents = await Promise.all(
+            strategies.map((strategy) =>
+              fetchExecutionEvents(accountAddress, Number(strategy.strategyId))
+            )
+          );
+          executionEvents.forEach(processExecutionEvents);
+
+          const dcaAccount = await getOrCreateAccountInstance(accountAddress);
+          if (dcaAccount) {
+            const balances = await fetchTokenBalances(
+              accountAddress,
+              strategies,
+              dcaAccount
+            );
+            setTokenBalances((prev) => ({
+              ...prev,
+              [accountAddress]: balances,
+            }));
+
+            const timings = await calculateExecutionTimings(
+              accountAddress,
+              strategies
+            );
+            setExecutionTimings((prev) => ({
+              ...prev,
+              [accountAddress]: timings,
+            }));
+          }
         })
       );
       setLastRefresh(Date.now());
@@ -351,19 +319,16 @@ export function useAccountStats() {
     } finally {
       setIsLoading(false);
     }
-  }, [Signer, accounts, fetchAccountStrategies]);
-
-  // Initial data fetch
-  useEffect(() => {
-    if (Signer && accounts.length > 0) {
-      console.log("Fetching all data for accounts:", accounts);
-      getAllData();
-    }
-  }, [Signer, accounts]);
-
-  useEffect(() => {
-    console.log("Strategies updated:", strategies);
-  }, [strategies]);
+  }, [
+    Signer,
+    accounts,
+    fetchAccountStrategies,
+    fetchExecutionEvents,
+    processExecutionEvents,
+    fetchTokenBalances,
+    calculateExecutionTimings,
+    getOrCreateAccountInstance,
+  ]);
 
   return {
     isLoading,

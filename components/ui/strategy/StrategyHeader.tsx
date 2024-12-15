@@ -10,21 +10,25 @@ import { getTokenIcon } from "@/lib/helpers/tokenData";
 import Image from "next/image";
 import { intervalOptions } from "@/constants/intervals";
 import { formatDistanceToNow } from "date-fns";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { NetworkKeys } from "@/types/Chains";
 
 interface StrategyHeaderProps {
   strategy: IDCADataStructures.StrategyStruct;
-  executionCount: number;
-  totalSpent: bigint;
+  ACTIVE_NETWORK: NetworkKeys;
   averageExecution: bigint;
   nextExecution?: number;
+  isExpanded: boolean;
+  onToggle: () => void;
 }
 
 export function StrategyHeader({
   strategy,
-  executionCount,
-  totalSpent,
+  ACTIVE_NETWORK,
   averageExecution,
   nextExecution,
+  isExpanded,
+  onToggle,
 }: StrategyHeaderProps) {
   const { formatTokenAmount } = useTokenFormatter();
 
@@ -32,8 +36,13 @@ export function StrategyHeader({
     (option) => option.value === Number(strategy.interval)
   );
 
+  const intervalLabel = intervalOption ? intervalOption.label : "Unknown";
+
   return (
-    <div className="flex flex-col gap-2">
+    <div
+      className="flex items-center justify-between cursor-pointer"
+      onClick={onToggle}
+    >
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-2">
           <Image
@@ -56,28 +65,36 @@ export function StrategyHeader({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mt-2">
-        <Chip size="sm" variant="flat">
-          Amount:{" "}
-          {formatTokenAmount(BigInt(strategy.amount), strategy.baseToken)}{" "}
-          {strategy.baseToken.ticker}
-        </Chip>
-        <Chip size="sm" variant="flat">
-          Interval: {intervalOption?.label || "Unknown"}
-        </Chip>
-        {strategy.active && nextExecution && (
-          <Chip size="sm" color="success">
-            Next Execution:{" "}
-            {formatDistanceToNow(nextExecution * 1000, { addSuffix: true })}
-          </Chip>
-        )}
+      <div className="flex flex-wrap gap-2">
         <Chip size="sm" color={strategy.active ? "success" : "danger"}>
           {strategy.active ? "Active" : "Inactive"}
         </Chip>
+        <Chip size="sm" color="default">
+          {`Every ${intervalLabel}`}
+        </Chip>
+        {nextExecution && strategy.active && (
+          <Chip size="sm" color="default">
+            {`Next Execution: ${formatDistanceToNow(nextExecution * 1000, {
+              addSuffix: true,
+            })}`}
+          </Chip>
+        )}
+        {strategy.reinvest.active && (
+          <Chip size="sm" color="success">
+            Reinvest Active
+          </Chip>
+        )}
       </div>
 
-      <div className="text-sm text-gray-400 mt-1">
-        <AddressDisplay address={strategy.accountAddress as string} />
+      <div className="flex items-center gap-2">
+        <div className="text-sm text-gray-400">
+          <AddressDisplay
+            link
+            network={ACTIVE_NETWORK}
+            address={strategy.accountAddress as string}
+          />
+        </div>
+        {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
       </div>
     </div>
   );

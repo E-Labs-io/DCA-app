@@ -5,17 +5,17 @@
 import { Tabs, Tab } from "@nextui-org/react";
 import { sepolia } from "viem/chains";
 import { LineChart, Settings } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useAppKitAccount, useAppKitNetwork } from "@reown/appkit/react";
-import WalletButton from "../common/WalletButton";
-import { NetworkConnect } from "../common/NetworkConnect";
 import { LoadingCard } from "../common/LoadingCard";
 import { LoadingStats } from "../common/LoadingStats";
 import { AppHeader } from "../ui/layout/AppHeader";
 import useSigner from "@/hooks/useSigner";
-import { useStrategyStore } from "@/lib/store/strategyStore";
-import LoadingAnimation from "../common/LoadingPage";
+import { useAccountStats } from "@/hooks/useAccountStats";
+import { useDCAFactory } from "@/hooks/useDCAFactory";
+import { useAccountStore } from "@/lib/store/accountStore";
+import ConnectionCard from "../common/ConnectionCard";
 
 // Dynamically import components with proper default exports
 const CreateAccountModal = dynamic(
@@ -78,23 +78,61 @@ const UserStatsOverview = dynamic(
 export default function AppContent() {
   const { isConnected } = useAppKitAccount();
   const { chainId } = useAppKitNetwork();
-  const { strategies } = useStrategyStore();
 
   const { ACTIVE_NETWORK, Signer } = useSigner();
+  const { getAllData, isLoading: isStatsLoading } = useAccountStats();
+  const { getUsersAccounts } = useDCAFactory();
+  const { accounts, selectedAccount, setSelectedAccount, setAccounts } =
+    useAccountStore();
 
   const [isCreateAccountOpen, setIsCreateAccountOpen] = useState(false);
   const [isCreateStrategyOpen, setIsCreateStrategyOpen] = useState(false);
   const [selectedView, setSelectedView] = useState("accounts");
-  const [selectedAccount, setSelectedAccount] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   const isWrongNetwork = chainId !== sepolia.id;
 
-  if (!isConnected) {
-    return <WalletButton />;
-  }
+  useEffect(() => {
+    console.log(
+      "[Accounts View]: useEffect triggered with isConnected:",
+      isConnected
+    );
+    const loadAccounts = async () => {
+      if (!isConnected) {
+        console.log("Not connected, setting isLoading to false");
+        return;
+      }
 
-  if (isWrongNetwork) {
-    return <NetworkConnect />;
+      try {
+        console.log("Loading accounts...");
+        setIsLoading(true);
+        const userAccounts = await getUsersAccounts();
+        console.log("User accounts loaded:", userAccounts);
+        if (JSON.stringify(userAccounts) !== JSON.stringify(accounts)) {
+          setAccounts(userAccounts as `0x${string}`[]);
+        }
+        if (userAccounts.length > 0) {
+          console.log("Fetching all data...");
+          await getAllData();
+        }
+      } catch (error) {
+        console.error("Error loading accounts:", error);
+      } finally {
+        console.log("Setting isLoading to false");
+        setIsLoading(false);
+      }
+    };
+
+    loadAccounts();
+  }, [isConnected, getUsersAccounts, setAccounts, getAllData, accounts]);
+
+  if (!isConnected || isWrongNetwork) {
+    return (
+      <ConnectionCard
+        isConnected={isConnected}
+        isWrongNetwork={isWrongNetwork}
+      />
+    );
   }
 
   return (
@@ -153,11 +191,7 @@ export default function AppContent() {
           <PairsView ACTIVE_NETWORK={ACTIVE_NETWORK!} Signer={Signer!} />
         )}
         {selectedView === "strategies" && (
-          <StrategyView
-            strategies={strategies}
-            ACTIVE_NETWORK={ACTIVE_NETWORK!}
-            Signer={Signer!}
-          />
+          <StrategyView ACTIVE_NETWORK={ACTIVE_NETWORK!} Signer={Signer!} />
         )}
 
         {isCreateAccountOpen && (
@@ -171,7 +205,7 @@ export default function AppContent() {
           <CreateStrategyModal
             isOpen={isCreateStrategyOpen}
             onClose={() => setIsCreateStrategyOpen(false)}
-            accountAddress={selectedAccount}
+            accountAddress={selectedAccount as string}
             ACTIVE_NETWORK={ACTIVE_NETWORK!}
           />
         )}

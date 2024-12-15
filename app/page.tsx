@@ -2,7 +2,6 @@
 
 import { Suspense } from "react";
 import dynamic from "next/dynamic";
-import { Card, CardBody } from "@nextui-org/react";
 import LoadingPage from "@/components/common/LoadingPage";
 
 // Dynamically import the main app component to avoid hydration issues
