@@ -21,7 +21,7 @@ const connectToContract = async ({
   providerOrSigner,
 }: connectToContractInterface): Promise<Contract | false> => {
   if (!providerOrSigner || !ContractAddress) {
-    console.log("Missing components");
+    console.warn("Missing components");
     return false;
   }
   const activeContract = await newContract({

@@ -1,19 +1,28 @@
-'use client';
+/** @format */
 
-import { Card, CardBody, Progress } from '@nextui-org/react';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+"use client";
 
-export function PairsView() {
+import { NetworkKeys } from "@/types";
+import { Card, CardBody, Progress } from "@nextui-org/react";
+import { Signer } from "ethers";
+import { TrendingUp, TrendingDown } from "lucide-react";
+
+export interface PairsViewProps {
+  ACTIVE_NETWORK: NetworkKeys;
+  Signer: Signer;
+}
+
+export function PairsView({ ACTIVE_NETWORK, Signer }: PairsViewProps) {
   const pairs = [
     {
-      id: '1',
-      pair: 'ETH/USDC',
-      totalValue: '$3,200',
-      change24h: '+5.2%',
+      id: "1",
+      pair: "ETH/USDC",
+      totalValue: "$3,200",
+      change24h: "+5.2%",
       isPositive: true,
       strategies: 3,
-      nextExecution: '6h',
-      progress: 65
+      nextExecution: "6h",
+      progress: 65,
     },
     // Add more mock data as needed
   ];
@@ -27,10 +36,22 @@ export function PairsView() {
               <div>
                 <h3 className="text-lg font-semibold">{pair.pair}</h3>
                 <div className="flex items-center gap-2">
-                  <span className={pair.isPositive ? 'text-green-500' : 'text-red-500'}>
-                    {pair.isPositive ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                  <span
+                    className={
+                      pair.isPositive ? "text-green-500" : "text-red-500"
+                    }
+                  >
+                    {pair.isPositive ? (
+                      <TrendingUp size={16} />
+                    ) : (
+                      <TrendingDown size={16} />
+                    )}
                   </span>
-                  <span className={pair.isPositive ? 'text-green-500' : 'text-red-500'}>
+                  <span
+                    className={
+                      pair.isPositive ? "text-green-500" : "text-red-500"
+                    }
+                  >
                     {pair.change24h}
                   </span>
                 </div>

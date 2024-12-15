@@ -14,12 +14,20 @@ import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount"
 import useSigner from "@/hooks/useSigner";
 
 import { AccountCard } from "../ui/account/AccountCard";
+import { Signer } from "ethers";
+import { NetworkKeys } from "@/types";
 
 interface AccountsViewProps {
   onAccountSelect: (address: string) => void;
+  ACTIVE_NETWORK: NetworkKeys;
+  Signer: Signer;
 }
 
-export function AccountsView({ onAccountSelect }: AccountsViewProps) {
+export function AccountsView({
+  onAccountSelect,
+  ACTIVE_NETWORK,
+  Signer,
+}: AccountsViewProps) {
   const { accounts, selectedAccount, setSelectedAccount, setAccounts } =
     useAccountStore();
   const {
@@ -31,7 +39,6 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
 
   const { getUsersAccounts } = useDCAFactory();
   const { isConnected } = useAppKitAccount();
-  const { ACTIVE_NETWORK } = useSigner();
   const [expandedAccount, setExpandedAccount] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFundModalOpen, setIsFundModalOpen] = useState(false);
@@ -139,6 +146,7 @@ export function AccountsView({ onAccountSelect }: AccountsViewProps) {
                 handleFundingModal={handleFundingModal}
                 selectedAccount={selectedAccount}
                 ACTIVE_NETWORK={ACTIVE_NETWORK!}
+                Signer={Signer!}
                 accountAddress={accountAddress}
               />
             </div>

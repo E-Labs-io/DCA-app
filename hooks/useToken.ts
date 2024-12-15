@@ -19,6 +19,11 @@ export function useToken(tokenAddress: EthereumAddress, decimals: number = 18) {
   const [ERC20Instance, setERC20Instance] = useState<erc20.IERC20 | null>(null);
 
   useEffect(() => {
+    if (!Signer) {
+      console.warn("Signer is not available yet");
+      return;
+    }
+
     if (ERC20Instance?.target !== tokenAddress) {
       !ERC20Instance && connectToToken();
     }

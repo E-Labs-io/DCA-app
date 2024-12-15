@@ -12,7 +12,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import useSigner from "@/hooks/useSigner";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
 import { StrategyHeader } from "./StrategyHeader";
 import { useAccountStats } from "@/hooks/useAccountStats";
@@ -20,10 +19,12 @@ import { EthereumAddress } from "@/types/generic";
 import { ExternalLink } from "lucide-react";
 import { buildNetworkScanLink } from "@/lib/helpers/buildScanLink";
 import { formatDistanceToNow } from "date-fns";
+import { NetworkKeys } from "@/types/Chains";
 
 export interface StrategyCardProps {
   strategy: IDCADataStructures.StrategyStruct;
   selectedStrategy: string | null;
+  ACTIVE_NETWORK: NetworkKeys;
   setSelectedStrategy: (strategyId: string | null) => void;
   handleFundingModal: (
     type: "fund" | "unfund" | "withdraw",
@@ -35,10 +36,10 @@ export interface StrategyCardProps {
 export function StrategyCard({
   strategy,
   selectedStrategy,
+  ACTIVE_NETWORK,
   setSelectedStrategy,
   handleFundingModal,
 }: StrategyCardProps) {
-  const { ACTIVE_NETWORK } = useSigner();
   const { executionTimings } = useAccountStats();
 
   const getStrategyStats = () => {

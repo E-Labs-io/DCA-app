@@ -26,6 +26,7 @@ import {
   IntervalOption,
   intervalOptions,
 } from "@/constants/intervals";
+import { NetworkKeys } from "@/types";
 
 interface FormData {
   baseToken: string;
@@ -39,12 +40,14 @@ interface CreateStrategyModalProps {
   isOpen: boolean;
   onClose: () => void;
   accountAddress: string;
+  ACTIVE_NETWORK: NetworkKeys;
 }
 
 export function CreateStrategyModal({
   isOpen,
   onClose,
   accountAddress,
+  ACTIVE_NETWORK,
 }: CreateStrategyModalProps) {
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);

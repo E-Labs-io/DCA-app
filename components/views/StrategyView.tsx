@@ -2,23 +2,31 @@
 
 "use client";
 
-import { Card, CardBody, Button, ButtonGroup } from "@nextui-org/react";
+import { Card, CardBody } from "@nextui-org/react";
 
 import { useStrategyStore } from "@/lib/store/strategyStore";
 import { useAccountStats } from "@/hooks/useAccountStats";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
 import { EthereumAddress } from "@/types/generic";
 import { FundUnfundAccountModal } from "@/components/modals/FundUnfundAccountModal";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { useAppKitAccount } from "@reown/appkit/react";
-import useSigner from "@/hooks/useSigner";
 import { StrategyCard } from "../ui/strategy/StrategyCard";
+import { NetworkKeys } from "@/types";
+import { Signer } from "ethers";
 
+export interface StrategyViewProps {
+  ACTIVE_NETWORK: NetworkKeys;
+  Signer: Signer;
+  strategies: IDCADataStructures.StrategyStruct[];
+}
 
-
-export function StrategyView() {
-  const { strategies } = useStrategyStore();
+export function StrategyView({
+  ACTIVE_NETWORK,
+  Signer,
+  strategies,
+}: StrategyViewProps) {
   const { isLoading } = useAccountStats();
   const { isConnected } = useAppKitAccount();
   const [selectedStrategy, setSelectedStrategy] = useState<string | null>(null);
@@ -73,32 +81,32 @@ export function StrategyView() {
           <p className="text-gray-400">
             No strategies found. Create a strategy to get started!
           </p>
-          å
         </CardBody>
       </Card>
     );
-  }
+  } else
+    return (
+      <div className="grid grid-cols-1 gap-6">
+        {strategies.map((strategy: IDCADataStructures.StrategyStruct) => {
+          return (
+            <StrategyCard
+              key={strategy.strategyId}
+              strategy={strategy}
+              selectedStrategy={selectedStrategy}
+              ACTIVE_NETWORK={ACTIVE_NETWORK}
+              setSelectedStrategy={setSelectedStrategy}
+              handleFundingModal={handleFundingModal}
+            />
+          );
+        })}
 
-  return (
-    <div className="grid grid-cols-1 gap-6">
-      {strategies.map((strategy: IDCADataStructures.StrategyStruct) => {
-        return (
-          <StrategyCard
-            strategy={strategy}
-            selectedStrategy={selectedStrategy}
-            setSelectedStrategy={setSelectedStrategy}
-            handleFundingModal={handleFundingModal}
-          />
-        );
-      })}
-
-      <FundUnfundAccountModal
-        isOpen={isFundModalOpen}
-        onClose={() => setIsFundModalOpen(false)}
-        tokens={modalTokens}
-        actionType={actionType}
-        accountAddress={selectedAccount}
-      />
-    </div>
-  );
+        <FundUnfundAccountModal
+          isOpen={isFundModalOpen}
+          onClose={() => setIsFundModalOpen(false)}
+          tokens={modalTokens}
+          actionType={actionType}
+          accountAddress={selectedAccount}
+        />
+      </div>
+    );
 }

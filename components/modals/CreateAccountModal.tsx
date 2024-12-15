@@ -14,10 +14,7 @@ import { useDCAFactory } from "@/hooks/useDCAFactory";
 import { useAppKitAccount, useAppKitProvider } from "@reown/appkit/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { sep } from "path";
-import { sepolia } from "@reown/appkit/networks";
-import { Signer } from "ethers";
-import useSigner from "@/hooks/useSigner";
+
 
 interface CreateAccountModalProps {
   isOpen: boolean;
@@ -30,7 +27,6 @@ export function CreateAccountModal({
 }: CreateAccountModalProps) {
   const { createAccount } = useDCAFactory();
   const { address } = useAppKitAccount();
-  const { walletProvider } = useAppKitProvider("eip155");
 
   const [isWaitingForTx, setIsWaitingForTx] = useState(false);
   const [txHash, setTxHash] = useState("");

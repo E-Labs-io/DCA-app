@@ -9,6 +9,7 @@ import { AddressDisplay } from "../../common/AddressDisplay";
 import { getTokenIcon } from "@/lib/helpers/tokenData";
 import Image from "next/image";
 import { intervalOptions } from "@/constants/intervals";
+import { formatDistanceToNow } from "date-fns";
 
 interface StrategyHeaderProps {
   strategy: IDCADataStructures.StrategyStruct;
@@ -76,7 +77,7 @@ export function StrategyHeader({
       </div>
 
       <div className="text-sm text-gray-400 mt-1">
-        <AddressDisplay address={strategy.accountAddress} />
+        <AddressDisplay address={strategy.accountAddress as string} />
       </div>
     </div>
   );

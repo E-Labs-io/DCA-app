@@ -1,7 +1,7 @@
 /** @format */
 
 import React from "react";
-import { ethers } from "ethers";
+import { ethers, Signer } from "ethers";
 import Image from "next/image";
 import {
   getTokenDecimals,
@@ -14,21 +14,22 @@ import { Card, CardBody } from "@nextui-org/react";
 import { TokenBalances } from "@/hooks/useAccountStats";
 import { formatUnits } from "ethers";
 import { buildNetworkScanLink } from "@/lib/helpers/buildScanLink";
-import { ACTIVE_CHAIN } from "@/constants/contracts";
-import useSigner from "@/hooks/useSigner";
-
+import { NetworkKeys } from "@/types";
 interface AccountBalancesProps {
   accountBalances: TokenBalances;
   selectedAccount: EthereumAddress;
   accountStrategies: IDCADataStructures.StrategyStruct[];
+  ACTIVE_NETWORK: NetworkKeys;
+  Signer: Signer;
 }
 
 export const AccountBalances: React.FC<AccountBalancesProps> = ({
   accountBalances,
   selectedAccount,
   accountStrategies,
+  ACTIVE_NETWORK,
+  Signer,
 }) => {
-  const { ACTIVE_NETWORK } = useSigner();
   return (
     <Card>
       <CardBody>

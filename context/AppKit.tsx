@@ -1,5 +1,4 @@
 /** @format */
-import App from "@/app/page";
 
 import { createAppKit } from "@reown/appkit/react";
 import { EthersAdapter } from "@reown/appkit-adapter-ethers";

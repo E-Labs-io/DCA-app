@@ -162,11 +162,11 @@ export function FundUnfundAccountModal({
   const getCompletionMessage = () => {
     switch (actionType) {
       case "fund":
-        return `Account funded with ${balance} ${selectedToken?.ticker}`;
+        return `Account funded with ${amount} ${selectedToken?.ticker}`;
       case "unfund":
-        return `Account was defunded of ${balance} ${selectedToken?.ticker}`;
+        return `Account was defunded of ${amount} ${selectedToken?.ticker}`;
       case "withdraw":
-        return `${balance} ${selectedToken?.ticker} Savings where withdrawn`;
+        return `${amount} ${selectedToken?.ticker} Savings where withdrawn`;
     }
   };
 

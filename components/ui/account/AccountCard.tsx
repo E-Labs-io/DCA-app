@@ -1,11 +1,11 @@
 /** @format */
 
 import React, { useState } from "react";
-import { Button, Card, CardBody, Chip } from "@nextui-org/react";
+import { Card, CardBody, Chip } from "@nextui-org/react";
 import { ExternalLink, ChevronUp, ChevronDown } from "lucide-react";
 import { buildNetworkScanLink } from "@/lib/helpers/buildScanLink";
 import { EthereumAddress } from "@/types/generic";
-import { StrategyList } from "../strategy/StrategyList";
+import { StrategyList } from "./StrategyList";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
 import { NetworkKeys } from "@/types";
 import { useAccountStore } from "@/lib/store/accountStore";
@@ -15,12 +15,14 @@ import { AccountInfo } from "./AccountInfo";
 import { AccountStrategyStats } from "./AccountStrategyStats";
 import { AccountBalances } from "../../common/BalanceDisplay";
 import { AccountStats } from "@/types/statsAndTracking";
+import { Signer } from "ethers";
 
 export interface AccountCardProps {
   accountAddress: EthereumAddress;
   handleAccountClick: (address: EthereumAddress) => void;
   selectedAccount: EthereumAddress;
   ACTIVE_NETWORK: NetworkKeys;
+  Signer: Signer;
   handleFundingModal: (
     type: "fund" | "unfund" | "withdraw",
     tokens: IDCADataStructures.TokenDataStruct[]
@@ -31,6 +33,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
   accountAddress,
   handleAccountClick,
   ACTIVE_NETWORK,
+  Signer,
   handleFundingModal,
 }) => {
   const { selectedAccount, accountStrategies } = useAccountStore();
@@ -140,6 +143,8 @@ export const AccountCard: React.FC<AccountCardProps> = ({
                 />
                 <AccountStrategyStats stats={stats} />
                 <AccountBalances
+                  ACTIVE_NETWORK={ACTIVE_NETWORK}
+                  Signer={Signer}
                   accountBalances={accountBalances}
                   accountStrategies={accountStrategies[account]}
                   selectedAccount={selectedAccount}

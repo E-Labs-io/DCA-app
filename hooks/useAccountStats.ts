@@ -53,10 +53,6 @@ interface StrategyExecutionDetails {
   reInvested: boolean;
 }
 
-// Update the ExecutionTimings interface to include execution details
-
-const REFRESH_INTERVAL = 30000; // 30 seconds
-
 // Add a function to process events and calculate statistics
 const processExecutionEvents = (
   executions: AccountStrategyExecutionEvent[]
@@ -278,7 +274,7 @@ export function useAccountStats() {
         if (!dcaAccount) return [];
 
         // Add event listeners
-        addEventListeners(dcaAccount);
+        //addEventListeners(dcaAccount);
 
         const strategyEvents = await getAccountStrategyCreationEvents(
           dcaAccount
@@ -360,9 +356,14 @@ export function useAccountStats() {
   // Initial data fetch
   useEffect(() => {
     if (Signer && accounts.length > 0) {
+      console.log("Fetching all data for accounts:", accounts);
       getAllData();
     }
   }, [Signer, accounts]);
+
+  useEffect(() => {
+    console.log("Strategies updated:", strategies);
+  }, [strategies]);
 
   return {
     isLoading,

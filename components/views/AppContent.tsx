@@ -2,17 +2,20 @@
 
 "use client";
 
-import { Card, CardBody, Button, Tabs, Tab } from "@nextui-org/react";
+import { Tabs, Tab } from "@nextui-org/react";
 import { sepolia } from "viem/chains";
-import { PlusCircle, LineChart, Settings } from "lucide-react";
+import { LineChart, Settings } from "lucide-react";
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { useAppKitAccount, useAppKitNetwork } from "@reown/appkit/react";
 import WalletButton from "../common/WalletButton";
 import { NetworkConnect } from "../common/NetworkConnect";
-import { LoadingCard } from "../ui/LoadingCard";
-import { LoadingStats } from "../ui/LoadingStats";
+import { LoadingCard } from "../common/LoadingCard";
+import { LoadingStats } from "../common/LoadingStats";
 import { AppHeader } from "../ui/layout/AppHeader";
+import useSigner from "@/hooks/useSigner";
+import { useStrategyStore } from "@/lib/store/strategyStore";
+import LoadingAnimation from "../common/LoadingPage";
 
 // Dynamically import components with proper default exports
 const CreateAccountModal = dynamic(
@@ -61,7 +64,7 @@ const StrategyView = dynamic(
   }
 );
 
-const StatsOverview = dynamic(
+const UserStatsOverview = dynamic(
   () =>
     import("@/components/ui/layout/UserStats").then(
       (mod) => mod.UserStatsOverview
@@ -75,6 +78,9 @@ const StatsOverview = dynamic(
 export default function AppContent() {
   const { isConnected } = useAppKitAccount();
   const { chainId } = useAppKitNetwork();
+  const { strategies } = useStrategyStore();
+
+  const { ACTIVE_NETWORK, Signer } = useSigner();
 
   const [isCreateAccountOpen, setIsCreateAccountOpen] = useState(false);
   const [isCreateStrategyOpen, setIsCreateStrategyOpen] = useState(false);
@@ -100,7 +106,7 @@ export default function AppContent() {
           canCreateStrategy={!!selectedAccount}
         />
 
-        <StatsOverview />
+        <UserStatsOverview />
 
         <Tabs
           selectedKey={selectedView}
@@ -137,10 +143,22 @@ export default function AppContent() {
         </Tabs>
 
         {selectedView === "accounts" && (
-          <AccountsView onAccountSelect={setSelectedAccount} />
+          <AccountsView
+            onAccountSelect={setSelectedAccount}
+            ACTIVE_NETWORK={ACTIVE_NETWORK!}
+            Signer={Signer!}
+          />
         )}
-        {selectedView === "pairs" && <PairsView />}
-        {selectedView === "strategies" && <StrategyView />}
+        {selectedView === "pairs" && (
+          <PairsView ACTIVE_NETWORK={ACTIVE_NETWORK!} Signer={Signer!} />
+        )}
+        {selectedView === "strategies" && (
+          <StrategyView
+            strategies={strategies}
+            ACTIVE_NETWORK={ACTIVE_NETWORK!}
+            Signer={Signer!}
+          />
+        )}
 
         {isCreateAccountOpen && (
           <CreateAccountModal
@@ -154,6 +172,7 @@ export default function AppContent() {
             isOpen={isCreateStrategyOpen}
             onClose={() => setIsCreateStrategyOpen(false)}
             accountAddress={selectedAccount}
+            ACTIVE_NETWORK={ACTIVE_NETWORK!}
           />
         )}
       </div>
