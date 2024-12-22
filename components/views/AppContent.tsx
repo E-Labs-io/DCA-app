@@ -88,7 +88,8 @@ export default function AppContent() {
   const [isCreateAccountOpen, setIsCreateAccountOpen] = useState(false);
   const [isCreateStrategyOpen, setIsCreateStrategyOpen] = useState(false);
   const [selectedView, setSelectedView] = useState("accounts");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   const isWrongNetwork = chainId !== sepolia.id;
 
@@ -99,32 +100,38 @@ export default function AppContent() {
     );
     const loadAccounts = async () => {
       if (!isConnected) {
-        console.log("Not connected, setting isLoading to false");
+        console.log("[AppContent] Not connected, setting isLoading to false");
         return;
       }
 
       try {
-        console.log("Loading accounts...");
+        console.log("[AppContent] Loading accounts...");
         setIsLoading(true);
         const userAccounts = await getUsersAccounts();
-        console.log("User accounts loaded:", userAccounts);
-        if (JSON.stringify(userAccounts) !== JSON.stringify(accounts)) {
-          setAccounts(userAccounts as `0x${string}`[]);
-        }
+        console.log("[AppContent] User accounts loaded:", userAccounts);
+        setAccounts(userAccounts as `0x${string}`[]);
         if (userAccounts.length > 0) {
-          console.log("Fetching all data...");
+          console.log("[AppContent] Fetching all data...");
           await getAllData();
         }
+        setLoaded(true);
       } catch (error) {
-        console.error("Error loading accounts:", error);
+        console.error("[AppContent] Error loading accounts:", error);
+        setLoaded(false);
       } finally {
-        console.log("Setting isLoading to false");
+        console.log("[AppContent]   Setting isLoading to false");
         setIsLoading(false);
       }
     };
-
-    loadAccounts();
-  }, [isConnected, getUsersAccounts, setAccounts, getAllData, accounts]);
+    if (!isLoading && !loaded) loadAccounts();
+  }, [
+    isConnected,
+    getUsersAccounts,
+    setAccounts,
+    getAllData,
+    loaded,
+    isLoading,
+  ]);
 
   if (!isConnected || isWrongNetwork) {
     return (
@@ -174,6 +181,7 @@ export default function AppContent() {
           />
           <Tab
             key="pairs"
+            disabled={true}
             title={
               <div className="flex items-center gap-2">
                 <LineChart size={18} />

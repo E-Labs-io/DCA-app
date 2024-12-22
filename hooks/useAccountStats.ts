@@ -2,13 +2,11 @@
 
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { useAccountStore } from "@/lib/store/accountStore";
 import { useStrategyStore } from "@/lib/store/strategyStore";
 
-import { useDCAFactory } from "./useDCAFactory";
-import { Signer } from "ethers";
 import useSigner from "./useSigner";
 import {
   DCAAccount,
@@ -19,22 +17,25 @@ import {
   getAccountStrategyCreationEvents,
   getStrategyExecutionEvents,
 } from "./helpers/getAccountEvents";
-import {
-  StrategyCreationEvent,
-  AccountStrategyExecutionEvent,
-} from "@/types/eventTransactions";
+import { AccountStrategyExecutionEvent } from "@/types/eventTransactions";
 import { buildStrategyStruct } from "./helpers/buildDataTypes";
+import {
+  AccountStrategyIntervalCost,
+  buildAccountStrategyIntervalCost,
+  calculateExecutionsLeft,
+} from "./helpers/executionCalculations";
+import { TokenData } from "@/constants/tokens";
 
-export interface TokenBalance {
+export interface TokenBalanceData {
   balance: bigint;
-  targetBalance?: bigint;
+  targetBalance: bigint;
   remainingExecutions: number;
   needsTopUp: boolean;
 }
 
-export interface TokenBalances {
-  [tokenAddress: string]: TokenBalance;
-}
+export type TokenBalances = {
+  [tokenAddress: string]: TokenBalanceData;
+};
 
 export interface StrategyExecutionTiming {
   lastExecution: number;
@@ -51,6 +52,7 @@ export function useAccountStats() {
     setAccountStrategies,
     accountInstances,
     setAccountInstance,
+    accountStrategies,
   } = useAccountStore();
   const { setStrategies, strategies } = useStrategyStore();
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -79,12 +81,18 @@ export function useAccountStats() {
 
       return dcaAccount;
     },
-    [accountInstances, Signer, setAccountInstance]
+    [Signer, accountInstances, setAccountInstance]
   );
 
   const fetchAccountStrategies = useCallback(
     async (accountAddress: string) => {
       if (!Signer) return [];
+
+      const cachedStrategies = accountStrategies[accountAddress];
+      if (cachedStrategies && cachedStrategies.length > 0) {
+        return cachedStrategies;
+      }
+
       const dcaAccount = await getOrCreateAccountInstance(accountAddress);
       if (!dcaAccount) return [];
 
@@ -103,12 +111,35 @@ export function useAccountStats() {
           };
         })
       );
-
+      console.log("Got account strategies for", strategies);
       setAccountStrategies(accountAddress, strategies);
       setStrategies(strategies);
       return strategies;
     },
-    [Signer, setAccountStrategies, setStrategies, getOrCreateAccountInstance]
+    [
+      Signer,
+      accountStrategies,
+      getOrCreateAccountInstance,
+      setAccountStrategies,
+      setStrategies,
+    ]
+  );
+
+  const getAccountStrategyBaseRemaining = useCallback(
+    async (accountAddress: string, baseToken: TokenData) => {
+      const strategies = await fetchAccountStrategies(accountAddress);
+      const costArray = buildAccountStrategyIntervalCost(strategies, baseToken);
+
+      // Check local state for the base token balance
+      const baseTokenBalance =
+        tokenBalances[accountAddress]?.[baseToken.contractAddress as string]
+          ?.balance;
+
+      // If balance is not found in local state, fetch it
+      const finalBaseTokenBalance = baseTokenBalance;
+      return calculateExecutionsLeft(Number(finalBaseTokenBalance), costArray);
+    },
+    [fetchAccountStrategies, tokenBalances]
   );
 
   const fetchExecutionEvents = useCallback(
@@ -149,36 +180,46 @@ export function useAccountStats() {
     ) => {
       if (!Signer) return {};
 
+      console.log("Starting fetchTokenBalances for:", accountAddress);
+
       const balances: TokenBalances = {};
-      const tokenStrategies = strategies.reduce((acc, strategy) => {
-        const baseTokenAddress = strategy.baseToken.tokenAddress.toString();
-        const targetTokenAddress = strategy.targetToken.tokenAddress.toString();
 
-        if (!acc[baseTokenAddress]) {
-          acc[baseTokenAddress] = [];
-        }
-        acc[baseTokenAddress].push(strategy);
+      try {
+        // Get unique tokens from strategies
+        const uniqueTokens = new Set<string>();
+        strategies.forEach((strategy) => {
+          uniqueTokens.add(strategy.baseToken.tokenAddress.toString());
+          uniqueTokens.add(strategy.targetToken.tokenAddress.toString());
+        });
 
-        if (!acc[targetTokenAddress]) {
-          acc[targetTokenAddress] = [];
-        }
-        acc[targetTokenAddress].push(strategy);
+        console.log("Unique tokens to fetch:", Array.from(uniqueTokens));
 
-        return acc;
-      }, {} as { [tokenAddress: string]: IDCADataStructures.StrategyStruct[] });
-
-      await Promise.all(
-        Object.entries(tokenStrategies).map(
-          async ([tokenAddress, strategies]) => {
+        // Fetch balances for each token
+        await Promise.all(
+          Array.from(uniqueTokens).map(async (tokenAddress) => {
             try {
+              console.log(`Fetching balances for token ${tokenAddress}`);
+
               const baseBalance = await dcaAccount.getBaseBalance(tokenAddress);
               const targetBalance = await dcaAccount.getTargetBalance(
                 tokenAddress
               );
 
-              const totalPerExecution = strategies.reduce((sum, strategy) => {
-                return strategy.active ? sum + BigInt(strategy.amount) : sum;
-              }, BigInt(0));
+              console.log(`Balances for token ${tokenAddress}:`, {
+                baseBalance: baseBalance.toString(),
+                targetBalance: targetBalance.toString(),
+              });
+
+              // Get strategies that use this token as base token
+              const relevantStrategies = strategies.filter(
+                (s) => s.baseToken.tokenAddress.toString() === tokenAddress
+              );
+
+              // Calculate total amount needed per execution
+              const totalPerExecution = relevantStrategies.reduce(
+                (sum, strategy) => sum + BigInt(strategy.amount),
+                BigInt(0)
+              );
 
               const remainingExecutions =
                 totalPerExecution > 0
@@ -196,12 +237,35 @@ export function useAccountStats() {
                 `Error fetching balance for token ${tokenAddress}:`,
                 error
               );
+              balances[tokenAddress] = {
+                balance: BigInt(0),
+                targetBalance: BigInt(0),
+                remainingExecutions: 0,
+                needsTopUp: false,
+              };
             }
-          }
-        )
-      );
+          })
+        );
 
-      return balances;
+        console.log("Final balances for account:", {
+          accountAddress,
+          balances: Object.fromEntries(
+            Object.entries(balances).map(([key, value]) => [
+              key,
+              {
+                ...value,
+                balance: value.balance.toString(),
+                targetBalance: value.targetBalance.toString(),
+              },
+            ])
+          ),
+        });
+
+        return balances;
+      } catch (error) {
+        console.error("Error in fetchTokenBalances:", error);
+        return {};
+      }
     },
     [Signer]
   );
@@ -273,16 +337,72 @@ export function useAccountStats() {
   );
 
   const getAllData = useCallback(async () => {
-    if (isLoading) return;
+    console.log("[useAccountStats] getAllData Account object", accounts);
+    if (!accounts.length) return;
 
-    if (!Signer || !accounts.length) return;
+    console.log(
+      "[useAccountStats] Starting getAllData with accounts:",
+      accounts
+    );
     setIsLoading(true);
 
     try {
+      const newTokenBalances: { [accountAddress: string]: TokenBalances } = {};
+
       await Promise.all(
         accounts.map(async (accountAdd) => {
           const accountAddress = accountAdd as string;
+          console.log(
+            "[useAccountStats] Fetching data for account:",
+            accountAddress
+          );
+
+          // Get DCA account instance first
+          const dcaAccount = await getOrCreateAccountInstance(accountAddress);
+          if (!dcaAccount) {
+            console.error(
+              "[useAccountStats] Failed to get DCA account instance for:",
+              accountAddress
+            );
+            return;
+          }
+
+          // Fetch strategies first
           const strategies = await fetchAccountStrategies(accountAddress);
+          console.log("[useAccountStats] Fetched strategies for account:", {
+            accountAddress,
+            strategies,
+          });
+
+          // Store strategies in account store
+          setAccountStrategies(accountAddress, strategies);
+
+          // Fetch balances only if they are not already fetched
+          if (!tokenBalances[accountAddress]) {
+            const balances = await fetchTokenBalances(
+              accountAddress,
+              strategies,
+              dcaAccount
+            );
+            console.log("[useAccountStats] Fetched balances for account:", {
+              accountAddress,
+              balances: Object.fromEntries(
+                Object.entries(balances).map(([key, value]) => [
+                  key,
+                  {
+                    ...value,
+                    balance: value.balance.toString(),
+                    targetBalance: value.targetBalance.toString(),
+                  },
+                ])
+              ),
+            });
+
+            // Store balances in our accumulator
+            newTokenBalances[accountAddress] = balances;
+          }
+
+          // Fetch execution events
           const executionEvents = await Promise.all(
             strategies.map((strategy) =>
               fetchExecutionEvents(accountAddress, Number(strategy.strategyId))
@@ -290,44 +410,42 @@ export function useAccountStats() {
           );
           executionEvents.forEach(processExecutionEvents);
 
-          const dcaAccount = await getOrCreateAccountInstance(accountAddress);
-          if (dcaAccount) {
-            const balances = await fetchTokenBalances(
-              accountAddress,
-              strategies,
-              dcaAccount
-            );
-            setTokenBalances((prev) => ({
-              ...prev,
-              [accountAddress]: balances,
-            }));
-
-            const timings = await calculateExecutionTimings(
-              accountAddress,
-              strategies
-            );
-            setExecutionTimings((prev) => ({
-              ...prev,
-              [accountAddress]: timings,
-            }));
-          }
+          // Calculate execution timings
+          const timings = await calculateExecutionTimings(
+            accountAddress,
+            strategies
+          );
+          setExecutionTimings((prev) => ({
+            ...prev,
+            [accountAddress]: timings,
+          }));
         })
       );
+
+      // Update all token balances at once
+      console.log(
+        "[useAccountStats] Setting new token balances:",
+        newTokenBalances
+      );
+      setTokenBalances(newTokenBalances);
       setLastRefresh(Date.now());
     } catch (error) {
-      console.error("Error refreshing data:", error);
+      console.error("[useAccountStats] Error in getAllData:", error);
     } finally {
       setIsLoading(false);
     }
   }, [
+    isLoading,
     Signer,
     accounts,
-    fetchAccountStrategies,
-    fetchExecutionEvents,
-    processExecutionEvents,
-    fetchTokenBalances,
-    calculateExecutionTimings,
     getOrCreateAccountInstance,
+    fetchAccountStrategies,
+    setAccountStrategies,
+    tokenBalances,
+    processExecutionEvents,
+    calculateExecutionTimings,
+    fetchTokenBalances,
+    fetchExecutionEvents,
   ]);
 
   return {

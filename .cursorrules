@@ -1,0 +1,356 @@
+<!-- @format -->
+
+CURSORRULES: V0.2
+
+Project-Specific Overview
+
+    Project Name & Description:
+    •	Example: “MyProject - A decentralized marketplace for digital collectibles.”
+
+Goals & Objectives:
+• Example: “Implement a robust smart contract for trustless transactions, integrate a Next.js front-end for seamless user experience, ensure high test coverage, and maintain a clearly documented codebase.”
+
+Immediate To-Dos:
+• Example: 1. Finalize Solidity contract for escrow payments. 2. Set up NestJS services and Next.js pages for user onboarding. 3. Integrate Alchemy and ethers for on-chain queries. 4. Configure Tailwind and Radix UI components for responsive design. 5. Implement basic RAG-based feature with LangChain and ensure Supabase integration for data storage.
+
+(Update this section as the project evolves to help the AI remain aware of priorities and changes.)
+
+Global Standards & Best Practices
+
+1. Code Quality & Consistency
+   • Languages & Frameworks:
+   • Primary Languages: TypeScript for front-end and back-end logic, Solidity for smart contracts.
+   • Common Frameworks & Libraries: Next.js, Node.js/Express, Tailwind CSS, ethers.js, Alchemy SDK.
+   • Code Style:
+   • Follow a strict linting and formatting guideline. For TypeScript, adhere to ESLint and Prettier configurations.
+   • For Solidity, follow the latest recommended Solidity style guide (e.g., naming conventions, NatSpec comments).
+   • Ensure all code includes type definitions and strongly typed interfaces (no any unless absolutely necessary).
+   • Repository Structure:
+
+FRONT END
+/build # Service compiled output
+/docs # Project documentation, architectural decisions, API specs
+/src # TypeScript source (NestJS services, Next.js pages/components)
+/app # Next.js App Router structure (preferred for latest Next.js)
+/components # Shared UI components (use lowercase-dashed folder names)
+/ui # UI components
+/modals # Modals
+/common # Common components
+/layout # Layout components
+/config # Configuration files  
+ /constants # Constants and environment variables
+/hooks # Reusable hooks
+/helpers # Specific helper functions for hooks
+/utils # Utility functions
+/providers # Providers
+/contexts # Contexts
+/helpers # Helper functions
+/styles # Tailwind & CSS styles
+/types # TypeScript types, interfaces, and enums
+/scripts # Deployment, migration, utility scripts
+/public # Static assets
+.env # Environment variables
+.cursorrules # AI Context and Project rules
+
+BACK END
+/build # Service compiled output
+/src # TypeScript source (NestJS services, Next.js pages/components)
+/api # Next.js App Router structure (preferred for latest Next.js)
+/config # Configuration files  
+ /constants # Constants and environment variables
+/utils # Utility functions
+/classes # Classes
+/providers # Providers
+/contexts # Contexts
+/helpers # Helper functions
+/pages # Next.js pages (if applicable)
+.index.ts # Entry point for the backend
+/docs # Project documentation, architectural decisions, API specs
+/scripts # Deployment, migration, utility scripts
+.env # Environment variables
+.cursorrules # AI Context and Project rules
+
+SMART CONTRACTS
+/bin # Big data sets dump
+/build # Build artifacts
+/contracts # Solidity Contracts
+/base # Base Contracts
+/interfaces # Interfaces
+/libraries # Libraries
+/logic # Logic contracts
+/security # Security contracts
+/tokens # Token contracts
+/utils # Utility contracts
+/config # Configuration files  
+/deploy # Deployment scripts & arguments
+/deployers # Deployer scripts
+/arguments # Deployment arguments
+deploy.ts # Master deployment script
+deploymentArgs.ts # Deployment arguments
+/docs # Project documentation, architectural decisions, API specs
+/contracts # Documentation exports from Hardhat Documentation creation
+/reports # Hardhat reports
+/logs # Deployment logs
+/scripts # Deployment, migration, utility scripts
+/helpers # Helper functions
+/tests # Test specific helper functions
+/tasks # Hardhat tasks
+/tests # Test files
+/types # TypeScript types, interfaces, and enums and Output of Hardhat typechain
+/contracts # Output of Hardhat typechain
+.env # Environment variables
+.cursorrules # AI Context and Project rules
+.hardhat.config.ts # Hardhat configuration
+
+**Mono-Repo Note:**  
+For large mono-repos, separate deployable sections (`/backend`, `/contracts`, `/docs`, `/frontend`, etc.). If multiple services of the same type exist, name them accordingly (e.g., `backend-stats`, `backend-tracking`, `frontend-website`, `frontend-app`).
+
+---
+
+## 2. Documentation & Knowledge Sharing
+
+**Documentation Standards:**
+
+- Each feature/module: Document in `/docs`.
+- Solidity: Use NatSpec for all public/external functions.
+
+**Regular Updates:**
+
+- Update `/docs` after significant changes affecting data structures, APIs, or deployments.
+- Maintain a changelog or release notes.
+
+**Reading & Staying Informed:**
+
+- AI and team should regularly refer to `/docs` and code comments.
+- Before coding or refactoring, review recent changes and docs.
+
+---
+
+## 3. TypeScript General Guidelines
+
+**Basic Principles:**
+
+- Strong typing: Declare types for variables, parameters, return values.
+- Avoid `any`. Create interfaces/types as needed.
+- No blank lines within functions.
+- Use descriptive, correctly spelled names.
+- Use RO-RO (Receive Object, Return Object) for multiple parameters/returns.
+
+**Nomenclature:**
+
+- Classes: PascalCase
+- Variables/Functions/Methods: camelCase
+- Files/Directories: kebab-case
+- Environment Variables: UPPERCASE
+- Use verbs in function names, no magic numbers.
+
+**Functions:**
+
+- Short, single-purpose (<20 instructions).
+- Arrow functions for simple helpers (<3 instructions).
+- Named functions for complex logic.
+- Early returns to reduce nesting.
+- Use map/filter/reduce for clarity.
+- Default parameters over null checks.
+
+**Data:**
+
+- Encapsulate in composite types.
+- Prefer immutability (`readonly`, `as const`).
+
+**Classes (NestJS Services, etc.):**
+
+- Follow SOLID.
+- Prefer composition over inheritance.
+- Small classes (<200 lines, <10 methods, <10 properties).
+- Use interfaces for contracts.
+
+**Exceptions:**
+
+- Use exceptions for unexpected errors only.
+- Catch exceptions to fix known issues or add context.
+- Otherwise rely on global handlers.
+
+---
+
+## 4. NestJS-Specific Guidelines
+
+**Architecture:**
+
+- Modular: One module per domain/route.
+- One controller per main route; secondary routes as needed.
+- `models` for DTOs (validated by `class-validator`), simple output types.
+- Services handle business logic and persistence (MikroORM recommended).
+- Core module for global filters, middlewares, guards, interceptors.
+- Shared module for common utilities.
+
+**Testing (NestJS):**
+
+- Use Jest.
+- Test each controller, service, and have e2e tests.
+- Follow Arrange-Act-Assert, Given-When-Then.
+- `admin/test` endpoint as a smoke test if suitable.
+
+---
+
+## 5. Next.js, React, Tailwind, Shadcn UI, Radix UI Guidelines
+
+**Code Style & Structure:**
+
+- Functional & declarative; avoid classes in React.
+- Concise, readable TypeScript.
+- Descriptive variable names.
+
+**Naming Conventions:**
+
+- lowercase-with-dashes for directories.
+- Favor named exports for components.
+
+**TypeScript (React):**
+
+- Avoid enums; use maps.
+- Functional components with interfaces for props.
+
+**Syntax & Formatting:**
+
+- Use `function` for pure functions.
+- Concise conditionals.
+- Declarative JSX.
+
+**UI & Styling:**
+
+- Shadcn UI, Radix UI, Tailwind CSS for styling.
+- Responsive, mobile-first design.
+- Implement light/dark mode.
+
+**Performance Optimization (Frontend):**
+
+- Minimize `use client`, `useEffect`, `setState`; prefer React Server Components.
+- Wrap client components in `Suspense` with fallbacks.
+- Dynamic imports for non-critical components.
+- Optimize images with Next.js Image (WebP, lazy loading).
+
+**Key Conventions:**
+
+- Use `nuqs` for URL search parameters.
+- Optimize Web Vitals (LCP, CLS, FID).
+- Follow Next.js docs for data fetching, rendering, routing.
+- Use SSR/SSG where appropriate.
+- Consider LangChain for RAG use-cases.
+
+**Error Handling & State Management:**
+
+- Use React Context or state libraries for complexity.
+- Implement error boundaries.
+- Provide loading states, skeleton screens.
+
+**Testing (React/Next.js):**
+
+- Unit tests for components, integration tests for pages.
+- Use Jest, React Testing Library.
+
+---
+
+## 6. Web3 & Solidity Guidelines
+
+**Solidity Best Practices:**
+
+- Explicit visibility, NatSpec for public/external functions.
+- Checks-Effects-Interactions pattern.
+- ReentrancyGuard, AccessControl, Pausable (OpenZeppelin) if needed.
+- Simple, secure patterns.
+- Gas optimization (packing, minimal storage writes).
+- SafeERC20, handle errors gracefully, use custom errors.
+- Upgradeable contracts only if necessary.
+- Events for state changes.
+- Use static analysis (Slither, Mythril).
+- Thorough testing with Hardhat, property-based tests, coverage.
+
+**Web3 Integration:**
+
+- Use Hardhat for development and testing of Solidity contracts.
+- Use ethers.js for blockchain interactions.
+- Use Alchemy for node/provider services.
+- Use AppKit as needed for advanced Web3 tooling.
+- Implement proper randomness with Chainlink VRF if required.
+
+---
+
+## 7. Testing & QA Across All Stacks
+
+- High test coverage (unit, integration, e2e).
+- Automated testing in CI.
+- Property-based testing for edge cases.
+- Regular security audits (Solidity).
+- Clear, consistent test variable naming and structuring.
+
+---
+
+## 8. Performance & Scalability
+
+**Backend & Infrastructure:**
+
+- Caching, pagination, indexing as needed.
+- Optimize NestJS services and Next.js server components.
+- Efficient data fetching, minimal round trips.
+
+**Front-End:**
+
+- Code splitting, lazy loading, SSR/SSG optimizations.
+- React Suspense, concurrent features for smooth UX.
+
+---
+
+## 9. Documentation & CI/CD
+
+**Continuous Integration:**
+
+- Lint, test, and security checks on every commit.
+- No merges if the pipeline fails.
+
+**Documentation:**
+
+- Comprehensive docs in `/docs`.
+- Architectural diagrams, decision logs, updated API references.
+- Clear instructions for setup, running, and testing.
+
+---
+
+## 10. RAG (Retrieval Augmented Generation) & LangChain
+
+- Follow LangChain best practices.
+- Ensure correct vector storage (consider suitable vector DB or Firebase-adjacent solutions).
+- Validate prompt logic and retrieval steps.
+- Maintain readability and correctness in chain logic.
+
+---
+
+## 11. Firebase Integration
+
+- Use Google Firebase for data storage, authentication, and real-time database capabilities.
+- Store environment variables securely; never commit secrets.
+- Handle responses, errors, and retries correctly.
+- Replace references to Supabase with Firebase-based solutions.
+
+---
+
+12. Project Research, R&D, and Technical Paper Authoring
+
+Purpose:
+Before coding, produce a comprehensive technical paper detailing the project’s concept, architecture, and execution steps. This document should enable anyone—human or AI—to fully understand, plan, and build the solution.
+
+Guidelines:
+• Concept & Approaches: Start by clarifying the problem, its value, and user personas. Compare multiple solution approaches, detailing pros/cons, complexity, and scalability. Include references to related works, official docs, and frameworks.
+• Architecture & Design: Outline system architecture (front-end, back-end, contracts, data layers). Document chosen frameworks, libraries, and patterns (e.g., Next.js, NestJS, Hardhat, Tailwind, ethers, Firebase).
+• Features & Functionality: List all features. For each, provide user stories, data models, flows, validation, error handling, security, and performance considerations. Include UI/UX sketches, styling approaches, and navigation structures.
+• Tooling & Integration: Specify integrations (e.g., Alchemy, AppKit, Chainlink), environment variables, config patterns, and local-to-production workflows. Detail testing strategies (Jest, Hardhat tests), linting, CI/CD steps, and security audits.
+• Examples & References: Provide code snippets, pseudo-code, or references for clarity. Link to external docs, GitHub repos, and relevant research.
+• Team & Roadmap: Define team roles, communication channels, and review processes. Outline milestones, deliverables, and success criteria. Update this document as the project evolves.
+
+Outcome:
+A single, detailed, and evolving technical paper that any contributor or AI agent can read to understand the project’s purpose, how it will be built, and how to proceed step-by-step.
+
+---
+
+**Summary:**  
+This `cursorrules` file combines general and project-specific guidelines, ensuring consistent code quality, security, documentation, and best practices across all layers—front-end, back-end, and smart contracts. Update the top Project-Specific Overview as goals and tasks evolve. Refer to these rules regularly to maintain high-quality, maintainable, and secure code.

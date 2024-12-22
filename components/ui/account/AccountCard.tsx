@@ -1,6 +1,6 @@
 /** @format */
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Card, CardBody } from "@nextui-org/react";
 import { ExternalLink, ChevronUp, ChevronDown } from "lucide-react";
 import { buildNetworkScanLink } from "@/lib/helpers/buildScanLink";
@@ -46,6 +46,15 @@ export const AccountCard: React.FC<AccountCardProps> = ({
     executionTimings,
   } = useAccountStats();
 
+  useEffect(() => {
+    console.log("AccountCard Debug:", {
+      accountAddress,
+      tokenBalances,
+      accountStrategies: accountStrategies[accountAddress as string],
+      rawAccountBalances: tokenBalances[accountAddress as string],
+    });
+  }, [accountAddress, tokenBalances, accountStrategies]);
+
   const getAccountStats = (): AccountStats => {
     const strategies = accountStrategies[accountAddress as string] || [];
     const accountBalances = tokenBalances[accountAddress as string] || {};
@@ -66,10 +75,10 @@ export const AccountCard: React.FC<AccountCardProps> = ({
   };
 
   const stats = getAccountStats();
-  const accountBalances = tokenBalances[selectedAccount as string] || {};
+  const accountBalances = tokenBalances[accountAddress as string] || {};
 
   const accountExecutionTimings =
-    executionTimings[selectedAccount as string] ?? {};
+    executionTimings[accountAddress as string] ?? {};
 
   const lastExecutionTime: number = Object.values(
     accountExecutionTimings
@@ -140,9 +149,9 @@ export const AccountCard: React.FC<AccountCardProps> = ({
                   Signer={Signer}
                   accountBalances={accountBalances}
                   accountStrategies={
-                    accountStrategies[accountAddress as string]
+                    accountStrategies[accountAddress as string] || []
                   }
-                  selectedAccount={selectedAccount}
+                  selectedAccount={accountAddress}
                 />
               </div>
 

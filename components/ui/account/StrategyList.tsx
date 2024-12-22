@@ -207,6 +207,10 @@ export function StrategyList({
                           {strategy.active ? "Active" : "Paused"}
                         </Chip>
 
+                        <Chip color="default" size="sm">
+                          ID: {strategy.strategyId.toString()}
+                        </Chip>
+
                         {strategy.active &&
                           executionTiming &&
                           executionTiming.nextExecutionIn > 0 && (

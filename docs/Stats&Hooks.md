@@ -145,7 +145,7 @@ This hook provides access and calling logic for getting statistics on a spesific
 | Account Strategies | Number | Sum of `DCAAccount.StrategyCreated()` events with argumetns of `strategyId_` matching. |
 | Strategy Executions | Number | Sum of all `DCAAccount.StrategyExecuted()` from an account with the argument `strategyId_` aligning |
 | Execution Value | Number | The `amount_` of each individual `DCAAccount.StrategyExecuted() `event. |
-| Strategy Value | Number | The sum of `ampunt_ `from`DCAAccount.StrategyExecuted()`for the spesific strategy |
+| Strategy Value | Number | The sum of `amount_ `from`DCAAccount.StrategyExecuted()`for the spesific strategy |
 | Average Execution Return | Number | The average amount the Strategy Execution yields. |
 | Last Execution | Object | Seconds since last execution from calling `DCAAccount.getTimeTillWindow() ` |
 | Token Balances | Object | Totals, by strategy & by account, of account holdings of Base & Target tokens. |
@@ -155,7 +155,7 @@ This hook provides access and calling logic for getting statistics on a spesific
 
 The hook & storage system needs to allow us to store and search by Strategy & Account. Allowing us to be finite or big picture with out stats base, depending on the needs.
 
-The hook needs to maintain event listeners that will allow it to automaticaly react to and keep updated the stats and interactions on the screen.  
+The hook needs to maintain event listeners that will allow it to automaticaly react to and keep updated the stats and interactions on the screen.
 
 
-We want to beable to pull when the next execution for the spesific stat will be, with it counting down, then once at zero it should be waiting for the next execution event of that strategy to start the countdown again, allowing it to maintian some truth. 
+We want to beable to pull when the next execution for the spesific stat will be, with it counting down, then once at zero it should be waiting for the next execution event of that strategy to start the countdown again, allowing it to maintian some truth.

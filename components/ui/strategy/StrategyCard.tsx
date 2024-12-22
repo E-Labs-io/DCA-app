@@ -32,6 +32,24 @@ export interface StrategyCardProps {
     accountAddress: EthereumAddress
   ) => void;
   isExpanded: boolean;
+  tokenBalances: {
+    [accountAddress: string]: {
+      [tokenAddress: string]: {
+        balance: bigint;
+        targetBalance?: bigint;
+        remainingExecutions: number;
+        needsTopUp: boolean;
+      };
+    };
+  };
+  executionTimings: {
+    [accountAddress: string]: {
+      [strategyId: string]: {
+        lastExecution: number;
+        nextExecution: number;
+      };
+    };
+  };
 }
 
 export function StrategyCard({
@@ -41,18 +59,23 @@ export function StrategyCard({
   setSelectedStrategy,
   handleFundingModal,
   isExpanded,
+  tokenBalances,
+  executionTimings,
 }: StrategyCardProps) {
-  const { executionTimings } = useAccountStats();
-
   const getStrategyStats = () => {
     const timing =
       executionTimings[strategy.accountAddress as string]?.[
-        Number(strategy.strategyId)
+        strategy.strategyId.toString()
       ];
-    const executionCount = 10;
-    const totalSpent = BigInt(1000000);
-    const averageExecution = totalSpent / BigInt(executionCount);
-    const strategyWorth = BigInt(5000000);
+    const accountBalances =
+      tokenBalances[strategy.accountAddress as string] || {};
+    const baseTokenBalance =
+      accountBalances[strategy.baseToken.tokenAddress.toString()]?.balance ||
+      BigInt(0);
+    const executionCount = 10; // This should come from somewhere
+    const totalSpent = baseTokenBalance;
+    const averageExecution = totalSpent / BigInt(executionCount || 1);
+    const strategyWorth = BigInt(5000000); // This should be calculated
 
     return {
       timing,
@@ -84,6 +107,7 @@ export function StrategyCard({
             ACTIVE_NETWORK={ACTIVE_NETWORK}
             strategy={strategy}
             averageExecution={getStrategyStats().averageExecution}
+            executionTimings={executionTimings}
             isExpanded={isExpanded}
             onToggle={onSelect}
           />

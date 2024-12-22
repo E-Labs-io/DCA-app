@@ -7,7 +7,6 @@ import { useAccountStats } from "@/hooks/useAccountStats";
 import { useAccountStore } from "@/lib/store/accountStore";
 import { useState, useEffect } from "react";
 import { EthereumAddress } from "@/types/generic";
-import { useDCAFactory } from "@/hooks/useDCAFactory";
 import { useAppKitAccount } from "@reown/appkit/react";
 import { FundUnfundAccountModal } from "../modals/FundUnfundAccountModal";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";

@@ -17,7 +17,14 @@ interface StrategyHeaderProps {
   strategy: IDCADataStructures.StrategyStruct;
   ACTIVE_NETWORK: NetworkKeys;
   averageExecution: bigint;
-  nextExecution?: number;
+  executionTimings?: {
+    [accountAddress: string]: {
+      [strategyId: string]: {
+        lastExecution: number;
+        nextExecution: number;
+      };
+    };
+  };
   isExpanded: boolean;
   onToggle: () => void;
 }
@@ -26,7 +33,7 @@ export function StrategyHeader({
   strategy,
   ACTIVE_NETWORK,
   averageExecution,
-  nextExecution,
+  executionTimings,
   isExpanded,
   onToggle,
 }: StrategyHeaderProps) {
@@ -37,6 +44,11 @@ export function StrategyHeader({
   );
 
   const intervalLabel = intervalOption ? intervalOption.label : "Unknown";
+
+  const nextExecution =
+    executionTimings?.[strategy.accountAddress as string]?.[
+      strategy.strategyId.toString()
+    ]?.nextExecution;
 
   return (
     <div

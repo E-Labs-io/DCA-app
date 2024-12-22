@@ -1,20 +1,16 @@
 /** @format */
 
 import React from "react";
-import { ethers, Signer } from "ethers";
+import { Card, CardBody } from "@nextui-org/react";
 import Image from "next/image";
-import {
-  getTokenDecimals,
-  getTokenIcon,
-  getTokenTicker,
-} from "@/lib/helpers/tokenData";
+import { getTokenIcon, getTokenTicker } from "@/lib/helpers/tokenData";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
 import { EthereumAddress } from "@/types";
-import { Card, CardBody } from "@nextui-org/react";
 import { TokenBalances } from "@/hooks/useAccountStats";
-import { formatUnits } from "ethers";
+import { formatUnits, Signer } from "ethers";
 import { buildNetworkScanLink } from "@/lib/helpers/buildScanLink";
 import { NetworkKeys } from "@/types";
+
 interface AccountBalancesProps {
   accountBalances: TokenBalances;
   selectedAccount: EthereumAddress;
@@ -30,6 +26,13 @@ export const AccountBalances: React.FC<AccountBalancesProps> = ({
   ACTIVE_NETWORK,
   Signer,
 }) => {
+  // Get unique tokens from strategies
+  const uniqueTokens = new Set<string>();
+  accountStrategies.forEach((strategy) => {
+    uniqueTokens.add(strategy.baseToken.tokenAddress.toString());
+    uniqueTokens.add(strategy.targetToken.tokenAddress.toString());
+  });
+
   return (
     <Card>
       <CardBody>
@@ -38,20 +41,41 @@ export const AccountBalances: React.FC<AccountBalancesProps> = ({
           <span className="text-sm font-semibold mb-2 text-right">Savings</span>
         </div>
         <div className="space-y-2">
-          {Object.entries(accountBalances).map(([tokenAddress, data]) => {
-            const baseTokenData = accountStrategies.find(
-              (strategy: IDCADataStructures.StrategyStruct) =>
-                strategy.baseToken.tokenAddress === tokenAddress
-            )?.baseToken;
-            const targetTokenData = accountStrategies.find(
-              (strategy: IDCADataStructures.StrategyStruct) =>
-                strategy.targetToken.tokenAddress === tokenAddress &&
-                strategy.accountAddress === selectedAccount
-            )?.targetToken;
+          {Array.from(uniqueTokens).map((tokenAddress) => {
+            const strategy = accountStrategies.find(
+              (s) =>
+                s.baseToken.tokenAddress.toString() === tokenAddress ||
+                s.targetToken.tokenAddress.toString() === tokenAddress
+            );
 
-            if (!baseTokenData && !targetTokenData) return null;
+            if (!strategy) return null;
 
-            const tokenData = baseTokenData || targetTokenData;
+            const tokenData =
+              strategy.baseToken.tokenAddress.toString() === tokenAddress
+                ? strategy.baseToken
+                : strategy.targetToken;
+
+            const isBaseToken =
+              strategy.baseToken.tokenAddress.toString() === tokenAddress;
+
+            const balanceData = accountBalances[tokenAddress] || {
+              balance: BigInt(0),
+              targetBalance: BigInt(0),
+              remainingExecutions: 0,
+              needsTopUp: false,
+            };
+
+            const formattedBalance = balanceData.balance
+              ? parseFloat(
+                  formatUnits(balanceData.balance, tokenData.decimals)
+                ).toFixed(6)
+              : "0.000000";
+
+            const formattedTargetBalance = balanceData.targetBalance
+              ? parseFloat(
+                  formatUnits(balanceData.targetBalance, tokenData.decimals)
+                ).toFixed(6)
+              : "0.000000";
 
             return (
               <div
@@ -59,49 +83,39 @@ export const AccountBalances: React.FC<AccountBalancesProps> = ({
                 className="flex justify-between items-center"
               >
                 <div className="flex-1 text-left">
-                  <span>
-                    {baseTokenData && data.balance != null
-                      ? parseFloat(
-                          formatUnits(
-                            data.balance,
-                            getTokenDecimals(baseTokenData)
-                          )
-                        ).toFixed(3)
-                      : "0.00"}
+                  <span
+                    className={balanceData.needsTopUp ? "text-warning" : ""}
+                  >
+                    {formattedBalance}
                   </span>
-                </div>
-                <div className="flex-1 text-center">
-                  {tokenData && (
-                    <a
-                      href={buildNetworkScanLink({
-                        address: tokenAddress,
-                        network: ACTIVE_NETWORK!,
-                      })}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Image
-                        src={getTokenIcon(tokenData)}
-                        alt={getTokenTicker(tokenData)}
-                        width={16}
-                        height={16}
-                        className="inline-block mr-1"
-                      />
-                      {getTokenTicker(tokenData)}
-                    </a>
+                  {balanceData.needsTopUp && isBaseToken && (
+                    <span className="text-xs text-warning ml-1">
+                      (Low Balance)
+                    </span>
                   )}
                 </div>
+                <div className="flex-1 text-center">
+                  <a
+                    href={buildNetworkScanLink({
+                      address: tokenAddress,
+                      network: ACTIVE_NETWORK!,
+                    })}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1 hover:text-primary transition-colors"
+                  >
+                    <Image
+                      src={getTokenIcon(tokenData)}
+                      alt={getTokenTicker(tokenData)}
+                      width={16}
+                      height={16}
+                      className="inline-block"
+                    />
+                    <span>{getTokenTicker(tokenData)}</span>
+                  </a>
+                </div>
                 <div className="flex-1 text-right">
-                  <span>
-                    {targetTokenData && data.targetBalance != null
-                      ? parseFloat(
-                          formatUnits(
-                            data.targetBalance,
-                            getTokenDecimals(targetTokenData)
-                          )
-                        ).toFixed(3)
-                      : "0.00"}
-                  </span>
+                  <span>{formattedTargetBalance}</span>
                 </div>
               </div>
             );

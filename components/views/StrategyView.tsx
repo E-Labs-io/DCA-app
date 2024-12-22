@@ -4,12 +4,11 @@
 
 import { Card, CardBody } from "@nextui-org/react";
 
-import { useStrategyStore } from "@/lib/store/strategyStore";
 import { useAccountStats } from "@/hooks/useAccountStats";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
 import { EthereumAddress } from "@/types/generic";
 import { FundUnfundAccountModal } from "@/components/modals/FundUnfundAccountModal";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 import { useAppKitAccount } from "@reown/appkit/react";
 import { StrategyCard } from "../ui/strategy/StrategyCard";
@@ -17,18 +16,32 @@ import { NetworkKeys } from "@/types";
 import { Signer } from "ethers";
 import { useAccountStore } from "@/lib/store/accountStore";
 import { useDCAFactory } from "@/hooks/useDCAFactory";
+
 export interface StrategyViewProps {
   ACTIVE_NETWORK: NetworkKeys;
   Signer: Signer;
 }
 
 export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
-  const { getAllData } = useAccountStats();
-  const { accounts, selectedAccount, setSelectedAccount, setAccounts } =
-    useAccountStore();
+  const { getAllData, tokenBalances, executionTimings, totalExecutions } =
+    useAccountStats();
+  const {
+    accounts,
+    selectedAccount,
+    setSelectedAccount,
+    setAccounts,
+    accountStrategies,
+  } = useAccountStore();
   const { getUsersAccounts } = useDCAFactory();
 
-  const { strategies } = useStrategyStore();
+  // Get all strategies from all accounts
+  const allStrategies = Object.values(accountStrategies).flat();
+
+  // Calculate total active strategies
+  const totalActiveStrategies = allStrategies.filter(
+    (strategy) => strategy?.active
+  ).length;
+
   const { isConnected } = useAppKitAccount();
   const [selectedStrategy, setSelectedStrategy] = useState<string | null>(null);
   const [isFundModalOpen, setIsFundModalOpen] = useState(false);
@@ -39,6 +52,7 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
     "fund"
   );
   const [isLoading, setIsLoading] = useState(true);
+  const hasLoadedRef = useRef(false);
 
   const handleFundingModal = (
     type: "fund" | "unfund" | "withdraw",
@@ -52,39 +66,28 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
   };
 
   useEffect(() => {
-    console.log(
-      "[Accounts View]: useEffect triggered with isConnected:",
-      isConnected
-    );
-    const loadAccounts = async () => {
-      if (!isConnected) {
-        console.log("Not connected, setting isLoading to false");
-        setIsLoading(false);
-        return;
-      }
+    if (!isConnected || hasLoadedRef.current) return;
 
+    const loadAccounts = async () => {
       try {
-        console.log("Loading accounts...");
         setIsLoading(true);
         const userAccounts = await getUsersAccounts();
-        console.log("User accounts loaded:", userAccounts);
-        if (JSON.stringify(userAccounts) !== JSON.stringify(accounts)) {
+
+        if (userAccounts?.length > 0) {
           setAccounts(userAccounts as `0x${string}`[]);
-        }
-        if (userAccounts.length > 0) {
-          console.log("Fetching all data...");
           await getAllData();
         }
+
+        hasLoadedRef.current = true;
       } catch (error) {
         console.error("Error loading accounts:", error);
       } finally {
-        console.log("Setting isLoading to false");
         setIsLoading(false);
       }
     };
 
     loadAccounts();
-  }, [isConnected, getUsersAccounts, setAccounts, getAllData, accounts]);
+  }, [isConnected, getUsersAccounts, setAccounts, getAllData]);
 
   if (!isConnected) {
     return (
@@ -110,7 +113,7 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
     );
   }
 
-  if (!strategies.length) {
+  if (!allStrategies.length) {
     return (
       <Card>
         <CardBody className="text-center py-8">
@@ -123,8 +126,25 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
   } else
     return (
       <div className="grid grid-cols-1 gap-6">
-        {strategies.map((strategy: IDCADataStructures.StrategyStruct) => {
-          const isExpanded = selectedStrategy === strategy.strategyId.toString();
+        <Card>
+          <CardBody>
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-semibold">Strategy Overview</h3>
+                <p className="text-sm text-gray-400">
+                  {totalActiveStrategies} Active / {allStrategies.length} Total
+                  Strategies
+                </p>
+                <p className="text-sm text-gray-400">
+                  Total Executions: {totalExecutions}
+                </p>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+        {allStrategies.map((strategy: IDCADataStructures.StrategyStruct) => {
+          const isExpanded =
+            selectedStrategy === strategy?.strategyId.toString();
           return (
             <StrategyCard
               key={strategy.strategyId}
@@ -136,6 +156,8 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
               }}
               handleFundingModal={handleFundingModal}
               isExpanded={isExpanded}
+              tokenBalances={tokenBalances}
+              executionTimings={executionTimings}
             />
           );
         })}
