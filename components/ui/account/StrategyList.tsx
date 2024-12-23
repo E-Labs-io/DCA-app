@@ -18,6 +18,7 @@ import { FundUnfundAccountModal } from "../../modals/FundUnfundAccountModal";
 import { EthereumAddress } from "@/types/generic";
 import useSigner from "@/hooks/useSigner";
 import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
+import { CreateStrategyModal } from "@/components/modals/CreateStrategyModal";
 
 interface StrategyListProps {
   accountAddress: string;
@@ -37,8 +38,8 @@ export function StrategyList({
   accountAddress,
   strategies,
 }: StrategyListProps) {
-  const { Signer } = useSigner();
-  const { getAccountInstance } = useDCAProvider();
+  const { Signer, ACTIVE_NETWORK } = useSigner();
+  const { getAccountInstance, selectedAccount } = useDCAProvider();
   const { subscribeStrategy, getAccountBaseTokens, unsubscribeStrategy } =
     useDCAAccount(getAccountInstance(accountAddress as string)!, Signer!);
   const { tokenBalances, executionTimings, getAllData } = useAccountStats();
@@ -49,6 +50,8 @@ export function StrategyList({
   const [currentTime, setCurrentTime] = useState<number>(
     Math.floor(Date.now() / 1000)
   );
+
+  const [isCreateStrategyOpen, setIsCreateStrategyOpen] = useState(false);
 
   // Update current time every second
   useEffect(() => {
@@ -305,6 +308,14 @@ export function StrategyList({
               <p className="text-gray-400">
                 No strategies found. Create your first strategy to get started!
               </p>
+              <br />
+              <Button
+                color="secondary"
+                startContent={<Settings size={20} />}
+                onPress={() => setIsCreateStrategyOpen(true)}
+              >
+                New Strategy
+              </Button>
             </CardBody>
           </Card>
         )}
@@ -316,6 +327,14 @@ export function StrategyList({
           tokens={selectedStrategy ? [selectedStrategy.baseToken] : []}
           actionType="fund"
           accountAddress={accountAddress as EthereumAddress}
+        />
+      )}
+      {isCreateStrategyOpen && selectedAccount && (
+        <CreateStrategyModal
+          isOpen={isCreateStrategyOpen}
+          onClose={() => setIsCreateStrategyOpen(false)}
+          accountAddress={selectedAccount as string}
+          ACTIVE_NETWORK={ACTIVE_NETWORK!}
         />
       )}
     </div>

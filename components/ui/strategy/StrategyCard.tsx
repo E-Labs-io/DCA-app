@@ -14,16 +14,12 @@ import {
 } from "recharts";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
 import { StrategyHeader } from "./StrategyHeader";
-import { useAccountStats } from "@/hooks/useAccountStats";
 import { EthereumAddress } from "@/types/generic";
-import { ExternalLink } from "lucide-react";
-import { buildNetworkScanLink } from "@/lib/helpers/buildScanLink";
-import { formatDistanceToNow } from "date-fns";
 import { NetworkKeys } from "@/types/Chains";
+import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
 
 export interface StrategyCardProps {
   strategy: IDCADataStructures.StrategyStruct;
-  selectedStrategy: string | null;
   ACTIVE_NETWORK: NetworkKeys;
   setSelectedStrategy: (strategyId: string | null) => void;
   handleFundingModal: (
@@ -32,59 +28,16 @@ export interface StrategyCardProps {
     accountAddress: EthereumAddress
   ) => void;
   isExpanded: boolean;
-  tokenBalances: {
-    [accountAddress: string]: {
-      [tokenAddress: string]: {
-        balance: bigint;
-        targetBalance?: bigint;
-        remainingExecutions: number;
-        needsTopUp: boolean;
-      };
-    };
-  };
-  executionTimings: {
-    [accountAddress: string]: {
-      [strategyId: string]: {
-        lastExecution: number;
-        nextExecution: number;
-      };
-    };
-  };
 }
 
 export function StrategyCard({
   strategy,
-  selectedStrategy,
   ACTIVE_NETWORK,
   setSelectedStrategy,
   handleFundingModal,
   isExpanded,
-  tokenBalances,
-  executionTimings,
 }: StrategyCardProps) {
-  const getStrategyStats = () => {
-    const timing =
-      executionTimings[strategy.accountAddress as string]?.[
-        strategy.strategyId.toString()
-      ];
-    const accountBalances =
-      tokenBalances[strategy.accountAddress as string] || {};
-    const baseTokenBalance =
-      accountBalances[strategy.baseToken.tokenAddress.toString()]?.balance ||
-      BigInt(0);
-    const executionCount = 10; // This should come from somewhere
-    const totalSpent = baseTokenBalance;
-    const averageExecution = totalSpent / BigInt(executionCount || 1);
-    const strategyWorth = BigInt(5000000); // This should be calculated
-
-    return {
-      timing,
-      executionCount,
-      totalSpent,
-      averageExecution,
-      strategyWorth,
-    };
-  };
+  const { getStrategyStats } = useDCAProvider();
 
   const mockChartData = Array.from({ length: 10 }, (_, i) => ({
     execution: `Execution ${i + 1}`,
@@ -106,8 +59,12 @@ export function StrategyCard({
           <StrategyHeader
             ACTIVE_NETWORK={ACTIVE_NETWORK}
             strategy={strategy}
-            averageExecution={getStrategyStats().averageExecution}
-            executionTimings={executionTimings}
+            stats={
+              getStrategyStats(
+                strategy.accountAddress,
+                Number(strategy.strategyId)
+              )!
+            }
             isExpanded={isExpanded}
             onToggle={onSelect}
           />
@@ -132,9 +89,21 @@ export function StrategyCard({
               </div>
 
               <div className="flex justify-between items-center text-sm text-gray-500">
-                <div>Total Executions: {getStrategyStats().executionCount}</div>
                 <div>
-                  Strategy Worth: {getStrategyStats().strategyWorth.toString()}
+                  Total Executions:{" "}
+                  {
+                    getStrategyStats(
+                      strategy.accountAddress,
+                      Number(strategy.strategyId)
+                    )!.totalExecutions
+                  }
+                </div>
+                <div>
+                  Strategy Worth:{" "}
+                  {getStrategyStats(
+                    strategy.accountAddress,
+                    Number(strategy.strategyId)
+                  )!.totalCumulated.toString()}
                 </div>
               </div>
 

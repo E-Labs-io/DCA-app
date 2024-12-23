@@ -1,17 +1,7 @@
 /** @format */
 
-import { useAppKitAccount } from "@reown/appkit/react";
 import useSigner from "@/hooks/useSigner";
-import { useAppKitNetwork } from "@reown/appkit/react";
-import react, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
-import { TokenBalances, useAccountStats } from "@/hooks/useAccountStats";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import { useDCAFactory } from "@/hooks/useDCAFactory";
 import { EthereumAddress } from "@/types/generic";
 import { DCAAccount } from "@/types/contracts";
@@ -19,7 +9,6 @@ import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount"
 import { Signer } from "ethers";
 import { NetworkKeys } from "@/types";
 import { connectToDCAAccount } from "@/hooks/helpers/connectToContract";
-import { useDCAAccount } from "@/hooks/useDCAAccount";
 import { buildStrategyStruct } from "@/hooks/helpers/buildDataTypes";
 import {
   getAccountStrategyCreationEvents,
@@ -59,12 +48,20 @@ export interface ExecutionStats {
   timestamp: number;
 }
 
+export interface WalletStats {
+  totalExecutions: number;
+  totalActiveStrategies: number;
+  totalStrategies: number;
+  totalAccounts: number;
+}
+
 export interface DCAProviderContextInterface {
   Signer: Signer | null;
   ACTIVE_NETWORK: NetworkKeys | undefined;
   accounts: AccountStorage[];
   selectedAccount: EthereumAddress;
   isLoading: boolean;
+  walletStats: WalletStats | undefined;
   initiateUserAccounts: () => void;
   setSelectedAccount: (account: EthereumAddress) => void;
   addAccount: (account: AccountStorage) => void;
@@ -85,6 +82,10 @@ export interface DCAProviderContextInterface {
 
   getAccountBalances: (account: EthereumAddress) => TokenBalances | undefined;
   getAccountStats: (account: EthereumAddress) => AccountStats | null;
+  getStrategyStats: (
+    account: EthereumAddress,
+    strategyId: number
+  ) => StrategyStats | null;
 }
 
 export const DCAProviderContext = createContext(
@@ -105,6 +106,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
   const [firstLoad, setFirstLoad] = useState(false);
   const [accounts, setAccounts] = useState<AccountStorage[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<EthereumAddress>("");
+  const [walletStats, setWalletStats] = useState<WalletStats>();
 
   /** EFFECTS */
 
@@ -170,6 +172,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
       });
 
       setAccounts(accountStates);
+      buildWalletStats(accountStates);
       setFirstLoad(true);
     } catch (error) {
       console.error("Error in initiateUserAccounts level 2:", error);
@@ -209,6 +212,14 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
 
   const getAccountStats = (account: EthereumAddress): AccountStats | null =>
     accounts.find((a) => a.account === account)?.statistics || null;
+
+  const getStrategyStats = (
+    account: EthereumAddress,
+    strategyId: number
+  ): StrategyStats | null =>
+    accounts.find((a) => a.account === account)?.statistics?.strategy[
+      strategyId
+    ] || null;
 
   /** UPDATERS */
 
@@ -427,6 +438,28 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
     return data;
   };
 
+  const buildWalletStats = (accounts: AccountStorage[]) => {
+    let totalExecutions = 0;
+    let totalActiveStrategies = 0;
+    let totalStrategies = 0;
+
+    for (const account of accounts) {
+      totalExecutions += account?.statistics?.totalExecutions!;
+      totalActiveStrategies += account?.statistics?.totalActiveStrategies!;
+      totalStrategies += account?.strategies.length!;
+    }
+
+    const walletStats: WalletStats = {
+      totalExecutions,
+      totalActiveStrategies,
+      totalStrategies,
+      totalAccounts: accounts.length,
+    };
+
+    console.log("[DCAStatsProvider] buildWalletStats", walletStats);
+    setWalletStats(walletStats);
+  };
+
   return (
     <DCAProviderContext.Provider
       value={{
@@ -435,6 +468,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
         accounts,
         selectedAccount,
         isLoading,
+        walletStats,
         setSelectedAccount,
         addAccount,
         addStrategy,
@@ -444,6 +478,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
         getAccountStrategies,
         getAccountBalances,
         getAccountStats,
+        getStrategyStats,
         initiateUserAccounts,
       }}
     >
@@ -454,3 +489,23 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
 
 export const useDCAProvider = (): DCAProviderContextInterface =>
   useContext(DCAProviderContext);
+
+export interface TokenBalanceData {
+  balance: bigint;
+  targetBalance: bigint;
+  remainingExecutions?: number;
+  needsTopUp?: true;
+}
+
+export type TokenBalances = {
+  [tokenAddress: string]: TokenBalanceData;
+};
+
+export interface StrategyExecutionTiming {
+  lastExecution: number;
+  nextExecution: number;
+}
+
+export interface ExecutionTimings {
+  [strategyId: string]: StrategyExecutionTiming;
+}

@@ -16,7 +16,10 @@ import { NetworkKeys } from "@/types";
 import { Signer } from "ethers";
 import { useAccountStore } from "@/lib/store/accountStore";
 import { useDCAFactory } from "@/hooks/useDCAFactory";
-import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
+import {
+  StrategyStats,
+  useDCAProvider,
+} from "@/lib/providers/DCAStatsProvider";
 
 export interface StrategyViewProps {
   ACTIVE_NETWORK: NetworkKeys;
@@ -24,23 +27,17 @@ export interface StrategyViewProps {
 }
 
 export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
-  const { getAllData, tokenBalances, executionTimings, totalExecutions } =
-    useAccountStats();
   const {
     accounts,
+    walletStats,
     selectedAccount,
     setSelectedAccount,
-    setAccounts,
-    accountStrategies,
+    getAccountBalances,
   } = useDCAProvider();
 
-  // Get all strategies from all accounts
-  const allStrategies = Object.values(accountStrategies).flat();
-
-  // Calculate total active strategies
-  const totalActiveStrategies = allStrategies.filter(
-    (strategy) => strategy?.active
-  ).length;
+  const [allStrategies, setAllStrategies] = useState<
+    IDCADataStructures.StrategyStruct[]
+  >([]);
 
   const { isConnected } = useAppKitAccount();
   const [selectedStrategy, setSelectedStrategy] = useState<string | null>(null);
@@ -54,6 +51,21 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
   const [isLoading, setIsLoading] = useState(true);
   const hasLoadedRef = useRef(false);
 
+  useEffect(() => {
+    console.log("[StrategyView] accounts", accounts);
+    if (allStrategies.length === 0 && accounts.length > 0) {
+      setIsLoading(true);
+      const strategies: IDCADataStructures.StrategyStruct[] = [];
+      for (const account of accounts) {
+        for (const strategy of account.strategies) {
+          strategies.push(strategy);
+        }
+      }
+      setAllStrategies(strategies);
+      setIsLoading(false);
+    }
+  }, [accounts]);
+
   const handleFundingModal = (
     type: "fund" | "unfund" | "withdraw",
     tokens: IDCADataStructures.TokenDataStruct[],
@@ -64,30 +76,6 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
     setSelectedAccount(accountAddress as string);
     setIsFundModalOpen(true);
   };
-
-  useEffect(() => {
-    if (!isConnected || hasLoadedRef.current) return;
-
-    const loadAccounts = async () => {
-      try {
-        setIsLoading(true);
-        const userAccounts = await getUsersAccounts();
-
-        if (userAccounts?.length > 0) {
-          setAccounts(userAccounts as `0x${string}`[]);
-          await getAllData();
-        }
-
-        hasLoadedRef.current = true;
-      } catch (error) {
-        console.error("Error loading accounts:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadAccounts();
-  }, [isConnected, getUsersAccounts, setAccounts, getAllData]);
 
   if (!isConnected) {
     return (
@@ -113,7 +101,7 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
     );
   }
 
-  if (!allStrategies.length) {
+  if (!accounts.length) {
     return (
       <Card>
         <CardBody className="text-center py-8">
@@ -132,11 +120,11 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
               <div>
                 <h3 className="text-lg font-semibold">Strategy Overview</h3>
                 <p className="text-sm text-gray-400">
-                  {totalActiveStrategies} Active / {allStrategies.length} Total
-                  Strategies
+                  {walletStats?.totalActiveStrategies} Active /{" "}
+                  {allStrategies.length} Total Strategies
                 </p>
                 <p className="text-sm text-gray-400">
-                  Total Executions: {totalExecutions}
+                  Total Executions: {walletStats?.totalExecutions}
                 </p>
               </div>
             </div>
@@ -149,15 +137,12 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
             <StrategyCard
               key={strategy.strategyId}
               strategy={strategy}
-              selectedStrategy={selectedStrategy}
               ACTIVE_NETWORK={ACTIVE_NETWORK}
               setSelectedStrategy={(id) => {
                 setSelectedStrategy(isExpanded ? null : id);
               }}
               handleFundingModal={handleFundingModal}
               isExpanded={isExpanded}
-              tokenBalances={tokenBalances}
-              executionTimings={executionTimings}
             />
           );
         })}

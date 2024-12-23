@@ -12,19 +12,15 @@ import { intervalOptions } from "@/constants/intervals";
 import { formatDistanceToNow } from "date-fns";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { NetworkKeys } from "@/types/Chains";
+import {
+  ExecutionTimings,
+  StrategyStats,
+} from "@/lib/providers/DCAStatsProvider";
 
 interface StrategyHeaderProps {
   strategy: IDCADataStructures.StrategyStruct;
   ACTIVE_NETWORK: NetworkKeys;
-  averageExecution: bigint;
-  executionTimings?: {
-    [accountAddress: string]: {
-      [strategyId: string]: {
-        lastExecution: number;
-        nextExecution: number;
-      };
-    };
-  };
+  stats: StrategyStats;
   isExpanded: boolean;
   onToggle: () => void;
 }
@@ -32,23 +28,20 @@ interface StrategyHeaderProps {
 export function StrategyHeader({
   strategy,
   ACTIVE_NETWORK,
-  averageExecution,
-  executionTimings,
+  stats,
   isExpanded,
   onToggle,
 }: StrategyHeaderProps) {
-  const { formatTokenAmount } = useTokenFormatter();
-
   const intervalOption = intervalOptions.find(
     (option) => option.value === Number(strategy.interval)
   );
 
   const intervalLabel = intervalOption ? intervalOption.label : "Unknown";
 
-  const nextExecution =
-    executionTimings?.[strategy.accountAddress as string]?.[
-      strategy.strategyId.toString()
-    ]?.nextExecution;
+  const lastExecution = stats.lastExecution!;
+  const nextExecutionTime = lastExecution + Number(strategy.interval);
+  const currentTime = Math.floor(Date.now() / 1000);
+  const secondsUntilNextExecution = nextExecutionTime - currentTime;
 
   return (
     <div
@@ -84,9 +77,9 @@ export function StrategyHeader({
         <Chip size="sm" color="default">
           {`Every ${intervalLabel}`}
         </Chip>
-        {nextExecution && strategy.active && (
+        {nextExecutionTime && strategy.active && (
           <Chip size="sm" color="default">
-            {`Next Execution: ${formatDistanceToNow(nextExecution * 1000, {
+            {`Next Execution: ${formatDistanceToNow(nextExecutionTime * 1000, {
               addSuffix: true,
             })}`}
           </Chip>

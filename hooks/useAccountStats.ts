@@ -25,27 +25,9 @@ import {
   calculateExecutionsLeft,
 } from "./helpers/executionCalculations";
 import { TokenData } from "@/constants/tokens";
-import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
+import { TokenBalances, useDCAProvider } from "@/lib/providers/DCAStatsProvider";
 
-export interface TokenBalanceData {
-  balance: bigint;
-  targetBalance: bigint;
-  remainingExecutions?: number;
-  needsTopUp?: true;
-}
 
-export type TokenBalances = {
-  [tokenAddress: string]: TokenBalanceData;
-};
-
-export interface StrategyExecutionTiming {
-  lastExecution: number;
-  nextExecution: number;
-}
-
-interface ExecutionTimings {
-  [strategyId: string]: StrategyExecutionTiming;
-}
 
 export function useAccountStats() {
   const {} = useDCAProvider();

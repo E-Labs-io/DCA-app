@@ -7,50 +7,12 @@ import { useEffect, useState } from "react";
 import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
 
 export function UserStatsOverview() {
-  const { accounts } = useDCAProvider();
+  const { walletStats } = useDCAProvider();
   const [mounted, setMounted] = useState(false);
-  const [stats, setStats] = useState<{
-    totalAccounts: number;
-    totalStrategies: number;
-    totalActiveStrategies: number;
-    totalExecutions: number;
-  }>({
-    totalAccounts: 0,
-    totalStrategies: 0,
-    totalActiveStrategies: 0,
-    totalExecutions: 0,
-  });
 
   useEffect(() => {
-    // Calculate statistics
-    const totalAccounts = accounts.length;
-    let totalStrategies = 0;
-    for (const account of accounts) {
-      for (const strategy of account.strategies) {
-        totalStrategies += 1;
-      }
-    }
-    let totalActiveStrategies = 0;
-    for (const account of accounts) {
-      for (const strategy of account.strategies) {
-        if (strategy.active) {
-          totalActiveStrategies += 1;
-        }
-      }
-    }
-
-    let totalExecutions = 0;
-    for (const account of accounts) {
-      totalExecutions += account.statistics?.totalExecutions || 0;
-    }
-    setStats({
-      totalAccounts,
-      totalStrategies,
-      totalActiveStrategies,
-      totalExecutions,
-    });
-    setMounted(true);
-  }, [accounts]);
+    if (walletStats) setMounted(true);
+  }, [walletStats]);
 
   if (!mounted) {
     return (
@@ -88,21 +50,27 @@ export function UserStatsOverview() {
           <div className="flex gap-8">
             <div>
               <p className="text-sm text-gray-400">Total Accounts</p>
-              <p className="text-2xl font-bold">{stats.totalAccounts}</p>
+              <p className="text-2xl font-bold">
+                {walletStats?.totalAccounts || 0}
+              </p>
             </div>
             <div>
               <p className="text-sm text-gray-400">Total Strategies</p>
-              <p className="text-2xl font-bold">{stats.totalStrategies}</p>
+              <p className="text-2xl font-bold">
+                {walletStats?.totalStrategies || 0}
+              </p>
             </div>
             <div>
               <p className="text-sm text-gray-400">Active Strategies</p>
               <p className="text-2xl font-bold">
-                {stats.totalActiveStrategies}
+                {walletStats?.totalActiveStrategies || 0}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-400">Total Executions</p>
-              <p className="text-2xl font-bold">{stats.totalExecutions}</p>
+              <p className="text-2xl font-bold">
+                {walletStats?.totalExecutions || 0}
+              </p>
             </div>
           </div>
         </div>
