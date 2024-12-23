@@ -11,12 +11,17 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Legend,
 } from "recharts";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
 import { StrategyHeader } from "./StrategyHeader";
 import { EthereumAddress } from "@/types/generic";
 import { NetworkKeys } from "@/types/Chains";
-import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
+import {
+  ExecutionStats,
+  useDCAProvider,
+} from "@/lib/providers/DCAStatsProvider";
+import { format } from "date-fns";
 
 export interface StrategyCardProps {
   strategy: IDCADataStructures.StrategyStruct;
@@ -30,6 +35,41 @@ export interface StrategyCardProps {
   isExpanded: boolean;
 }
 
+interface ChartDataPoint {
+  timestamp: string;
+  baseAmount: number;
+  targetAmount: number;
+  rate?: number;
+}
+
+function prepareChartData(
+  executions: ExecutionStats[] | undefined,
+  strategy: IDCADataStructures.StrategyStruct
+): ChartDataPoint[] {
+  if (!executions || executions.length === 0) return [];
+
+  return executions.map((execution) => {
+    const timestamp = format(
+      new Date(execution.timestamp * 1000),
+      "MMM dd HH:mm"
+    );
+    const baseAmount =
+      Number(execution.amount) / 10 ** Number(strategy.baseToken.decimals);
+    const targetAmount =
+      Number(execution.amount) / 10 ** Number(strategy.targetToken.decimals);
+
+    // Calculate rate (optional)
+    const rate = baseAmount > 0 ? targetAmount / baseAmount : 0;
+
+    return {
+      timestamp,
+      baseAmount,
+      targetAmount,
+      rate,
+    };
+  });
+}
+
 export function StrategyCard({
   strategy,
   ACTIVE_NETWORK,
@@ -39,10 +79,12 @@ export function StrategyCard({
 }: StrategyCardProps) {
   const { getStrategyStats } = useDCAProvider();
 
-  const mockChartData = Array.from({ length: 10 }, (_, i) => ({
-    execution: `Execution ${i + 1}`,
-    amount: Math.random() * 1000 + 500,
-  }));
+  const executions = getStrategyStats(
+    strategy.accountAddress,
+    Number(strategy.strategyId)
+  )?.executions;
+
+  const chartData = prepareChartData(executions, strategy);
 
   const onSelect = () => {
     setSelectedStrategy(isExpanded ? null : strategy.strategyId.toString());
@@ -72,17 +114,24 @@ export function StrategyCard({
           {isExpanded && (
             <div className="mt-4 space-y-6">
               <div className="h-64 w-full">
-                <ResponsiveContainer>
-                  <LineChart data={mockChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="execution" />
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={chartData}>
+                    <XAxis dataKey="timestamp" />
                     <YAxis />
                     <Tooltip />
+                    <Legend />
+
                     <Line
                       type="monotone"
-                      dataKey="amount"
-                      stroke="#8884d8"
-                      strokeWidth={2}
+                      dataKey="targetAmount"
+                      name={`${strategy.targetToken.ticker} Amount`}
+                      stroke="#82ca9d"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="rate"
+                      name="Exchange Rate"
+                      stroke="#ffc658"
                     />
                   </LineChart>
                 </ResponsiveContainer>

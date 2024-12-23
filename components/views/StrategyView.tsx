@@ -114,7 +114,7 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
   } else
     return (
       <div className="grid grid-cols-1 gap-6">
-        <Card>
+        {/*      <Card>
           <CardBody>
             <div className="flex justify-between items-center">
               <div>
@@ -129,7 +129,7 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
               </div>
             </div>
           </CardBody>
-        </Card>
+        </Card> */}
         {allStrategies.map((strategy: IDCADataStructures.StrategyStruct) => {
           const isExpanded =
             selectedStrategy === strategy?.strategyId.toString();
