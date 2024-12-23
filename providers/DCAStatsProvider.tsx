@@ -79,7 +79,10 @@ export interface DCAProviderContextInterface {
   getAccountStrategies: (
     account: EthereumAddress
   ) => IDCADataStructures.StrategyStruct[] | undefined;
-
+  getStrategy: (
+    account: EthereumAddress,
+    strategyId: number
+  ) => IDCADataStructures.StrategyStruct;
   getAccountBalances: (account: EthereumAddress) => TokenBalances | undefined;
   getAccountStats: (account: EthereumAddress) => AccountStats | null;
   getStrategyStats: (
@@ -239,6 +242,17 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
     setAccounts(
       accounts.map((a) => (a.account === account ? { ...a, strategies } : a))
     );
+
+  const getStrategy = (
+    accountAddress: EthereumAddress,
+    strategyId: number
+  ): IDCADataStructures.StrategyStruct => {
+    let strat: IDCADataStructures.StrategyStruct;
+    for (const account in accounts) {
+      console.log("[useDCAProdivder] : Check get Strategy Account", account);
+    }
+    return strat!;
+  };
 
   /** SETTERS */
 
@@ -479,6 +493,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
         getAccountBalances,
         getAccountStats,
         getStrategyStats,
+        getStrategy,
         initiateUserAccounts,
       }}
     >

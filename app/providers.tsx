@@ -9,7 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode } from "react";
 import { Toaster } from "sonner";
 import AppKit from "@/context/AppKit";
-import { DCAStatsProvider } from "@/lib/providers/DCAStatsProvider";
+import { DCAStatsProvider } from "@/providers/DCAStatsProvider";
 
 const queryClient = new QueryClient();
 

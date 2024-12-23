@@ -14,7 +14,7 @@ import {
   Spinner,
 } from "@nextui-org/react";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
-import { getTokenIcon, getTokenTicker } from "@/lib/helpers/tokenData";
+import { getTokenIcon, getTokenTicker } from "@/helpers/tokenData";
 import { formatUnits, parseUnits } from "viem"; // Assuming viem is used for formatting
 import { useToken } from "@/hooks/useToken";
 import { useAppKitAccount } from "@reown/appkit/react";
@@ -22,7 +22,7 @@ import { useDCAAccount } from "@/hooks/useDCAAccount";
 import { EthereumAddress } from "@/types/generic";
 import { toast } from "sonner";
 import Image from "next/image";
-import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
+import { useDCAProvider } from "@/providers/DCAStatsProvider";
 
 interface FundUnfundAccountModalProps {
   isOpen: boolean;

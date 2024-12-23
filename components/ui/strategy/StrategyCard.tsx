@@ -17,11 +17,10 @@ import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount"
 import { StrategyHeader } from "./StrategyHeader";
 import { EthereumAddress } from "@/types/generic";
 import { NetworkKeys } from "@/types/Chains";
-import {
-  ExecutionStats,
-  useDCAProvider,
-} from "@/lib/providers/DCAStatsProvider";
+import { ExecutionStats, useDCAProvider } from "@/providers/DCAStatsProvider";
 import { format } from "date-fns";
+import { useTokenFormatter } from "@/hooks/useTokenFormatter";
+import { getTokenIcon, getTokenTicker } from "@/helpers/tokenData";
 
 export interface StrategyCardProps {
   strategy: IDCADataStructures.StrategyStruct;
@@ -77,7 +76,8 @@ export function StrategyCard({
   handleFundingModal,
   isExpanded,
 }: StrategyCardProps) {
-  const { getStrategyStats } = useDCAProvider();
+  const { getStrategyStats, getStrategy } = useDCAProvider();
+  const { formatTokenAmount } = useTokenFormatter();
 
   const executions = getStrategyStats(
     strategy.accountAddress,
@@ -149,10 +149,24 @@ export function StrategyCard({
                 </div>
                 <div>
                   Strategy Worth:{" "}
-                  {getStrategyStats(
-                    strategy.accountAddress,
-                    Number(strategy.strategyId)
-                  )!.totalCumulated.toString()}
+                  {formatTokenAmount(
+                    BigInt(
+                      getStrategyStats(
+                        strategy.accountAddress,
+                        Number(strategy.strategyId)
+                      )!.totalCumulated
+                    ),
+                    getStrategy(
+                      strategy.accountAddress,
+                      Number(strategy.strategyId)
+                    )?.targetToken
+                  )}
+                  {getTokenIcon(
+                    getStrategy(
+                      strategy.accountAddress,
+                      Number(strategy.strategyId)
+                    )?.targetToken
+                  )}
                 </div>
               </div>
 

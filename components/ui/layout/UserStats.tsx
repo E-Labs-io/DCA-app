@@ -4,7 +4,7 @@
 
 import { Card, CardBody, Skeleton } from "@nextui-org/react";
 import { useEffect, useState } from "react";
-import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
+import { useDCAProvider } from "@/providers/DCAStatsProvider";
 
 export function UserStatsOverview() {
   const { walletStats } = useDCAProvider();

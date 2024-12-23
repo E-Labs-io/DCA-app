@@ -13,7 +13,7 @@ import { LoadingStats } from "../common/LoadingStats";
 import { AppHeader } from "../ui/layout/AppHeader";
 import { useDCAFactory } from "@/hooks/useDCAFactory";
 import ConnectionCard from "../common/ConnectionCard";
-import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
+import { useDCAProvider } from "@/providers/DCAStatsProvider";
 
 // Dynamically import components with proper default exports
 const CreateAccountModal = dynamic(

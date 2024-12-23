@@ -1,7 +1,7 @@
 /** @format */
 
 import { StaticImageData } from "next/image";
-import { NetworkKeys } from "../lib/config/networks";
+import { NetworkKeys } from "../config/networks";
 import { AddressLike } from "ethers";
 
 export type TokenTickers = "USDC" | "USDT" | "DAI" | "WETH" | "WBTC";

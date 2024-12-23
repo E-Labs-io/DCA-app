@@ -3,13 +3,13 @@
 import React from "react";
 import { Card, CardBody } from "@nextui-org/react";
 import Image from "next/image";
-import { getTokenIcon, getTokenTicker } from "@/lib/helpers/tokenData";
+import { getTokenIcon, getTokenTicker } from "@/helpers/tokenData";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
 import { EthereumAddress } from "@/types";
 import { formatUnits, Signer } from "ethers";
-import { buildNetworkScanLink } from "@/lib/helpers/buildScanLink";
+import { buildNetworkScanLink } from "@/helpers/buildScanLink";
 import { NetworkKeys } from "@/types";
-import { TokenBalances } from "@/lib/providers/DCAStatsProvider";
+import { TokenBalances } from "@/providers/DCAStatsProvider";
 
 interface AccountBalancesProps {
   accountBalances: TokenBalances;

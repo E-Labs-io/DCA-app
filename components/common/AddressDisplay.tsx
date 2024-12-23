@@ -2,7 +2,7 @@
 
 "use client";
 
-import { buildNetworkScanLink } from "@/lib/helpers/buildScanLink";
+import { buildNetworkScanLink } from "@/helpers/buildScanLink";
 import { NetworkKeys } from "@/types";
 
 interface AddressDisplayProps {

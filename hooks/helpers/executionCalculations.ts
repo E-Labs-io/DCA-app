@@ -2,7 +2,7 @@
 
 import { Interval, intervalOptions } from "@/constants/intervals";
 import { TokenData } from "@/constants/tokens";
-import { getIntervalSeconds } from "@/lib/helpers/intervals";
+import { getIntervalSeconds } from "@/helpers/intervals";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
 
 export interface AccountStrategyIntervalCost {

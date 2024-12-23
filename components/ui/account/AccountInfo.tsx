@@ -7,7 +7,7 @@ import {
   IDCADataStructures,
 } from "@/types/contracts/contracts/base/DCAAccount";
 import { useDCAAccount } from "@/hooks/useDCAAccount";
-import { AccountStats, useDCAProvider } from "@/lib/providers/DCAStatsProvider";
+import { AccountStats, useDCAProvider } from "@/providers/DCAStatsProvider";
 import { Signer } from "ethers";
 
 interface AccountInfoProps {

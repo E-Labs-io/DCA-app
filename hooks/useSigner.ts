@@ -1,6 +1,6 @@
 /** @format */
 
-import { getNetworkKeyByChainId } from "@/lib/helpers/chainHelpers";
+import { getNetworkKeyByChainId } from "@/helpers/chainHelpers";
 import { NetworkKeys } from "@/types/Chains";
 import { useAppKitNetwork, useAppKitProvider } from "@reown/appkit/react";
 

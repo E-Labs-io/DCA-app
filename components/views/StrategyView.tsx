@@ -13,7 +13,7 @@ import { useAppKitAccount } from "@reown/appkit/react";
 import { StrategyCard } from "../ui/strategy/StrategyCard";
 import { NetworkKeys } from "@/types";
 import { Signer } from "ethers";
-import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
+import { useDCAProvider } from "@/providers/DCAStatsProvider";
 
 export interface StrategyViewProps {
   ACTIVE_NETWORK: NetworkKeys;

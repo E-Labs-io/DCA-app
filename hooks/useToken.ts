@@ -4,7 +4,6 @@
 
 import { parseUnits } from "viem";
 import { connectERC20 } from "./helpers/connectToContract";
-import { useAppKitProvider } from "@reown/appkit/react";
 
 import { toast } from "sonner";
 import useSigner from "./useSigner";
@@ -12,7 +11,6 @@ import { ContractTransactionReport } from "@/types/contractReturns";
 import { useEffect, useState } from "react";
 import { erc20 } from "@/types/contracts/@openzeppelin/contracts/token";
 import { EthereumAddress } from "@/types";
-import { BigNumberish } from "ethers";
 
 export function useToken(tokenAddress: EthereumAddress, decimals: number = 18) {
   const { Signer } = useSigner();

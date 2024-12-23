@@ -1,6 +1,6 @@
 /** @format */
 
-import { AccountStats } from "@/lib/providers/DCAStatsProvider";
+import { AccountStats } from "@/providers/DCAStatsProvider";
 import { Card, CardBody } from "@nextui-org/react";
 
 export interface StrategyStatsProps {

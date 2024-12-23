@@ -11,11 +11,11 @@ import { useDCAAccount } from "@/hooks/useDCAAccount";
 import { toast } from "sonner";
 import { formatUnits } from "viem";
 import { useState, useEffect } from "react";
-import { getTokenIcon, getTokenTicker } from "@/lib/helpers/tokenData";
+import { getTokenIcon, getTokenTicker } from "@/helpers/tokenData";
 import { FundUnfundAccountModal } from "../../modals/FundUnfundAccountModal";
 import { EthereumAddress } from "@/types/generic";
 import useSigner from "@/hooks/useSigner";
-import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
+import { useDCAProvider } from "@/providers/DCAStatsProvider";
 import { CreateStrategyModal } from "@/components/modals/CreateStrategyModal";
 
 interface StrategyListProps {

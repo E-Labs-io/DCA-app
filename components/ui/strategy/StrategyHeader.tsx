@@ -6,16 +6,13 @@ import { useTokenFormatter } from "@/hooks/useTokenFormatter";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
 import { Chip } from "@nextui-org/react";
 import { AddressDisplay } from "../../common/AddressDisplay";
-import { getTokenIcon } from "@/lib/helpers/tokenData";
+import { getTokenIcon } from "@/helpers/tokenData";
 import Image from "next/image";
 import { intervalOptions } from "@/constants/intervals";
 import { formatDistanceToNow } from "date-fns";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { NetworkKeys } from "@/types/Chains";
-import {
-  ExecutionTimings,
-  StrategyStats,
-} from "@/lib/providers/DCAStatsProvider";
+import { ExecutionTimings, StrategyStats } from "@/providers/DCAStatsProvider";
 
 interface StrategyHeaderProps {
   strategy: IDCADataStructures.StrategyStruct;

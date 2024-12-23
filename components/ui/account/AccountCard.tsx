@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import { Card, CardBody } from "@nextui-org/react";
 import { ExternalLink, ChevronUp, ChevronDown } from "lucide-react";
-import { buildNetworkScanLink } from "@/lib/helpers/buildScanLink";
+import { buildNetworkScanLink } from "@/helpers/buildScanLink";
 import { EthereumAddress } from "@/types/generic";
 import { StrategyList } from "./StrategyList";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
@@ -13,7 +13,7 @@ import { AccountInfo } from "./AccountInfo";
 import { AccountStrategyStats } from "./AccountStrategyStats";
 import { AccountBalances } from "../../common/BalanceDisplay";
 import { Signer } from "ethers";
-import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
+import { useDCAProvider } from "@/providers/DCAStatsProvider";
 
 export interface AccountCardProps {
   accountAddress: EthereumAddress;

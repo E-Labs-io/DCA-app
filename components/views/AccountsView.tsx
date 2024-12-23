@@ -12,7 +12,7 @@ import { AccountCard } from "../ui/account/AccountCard";
 import { Signer } from "ethers";
 import { NetworkKeys } from "@/types";
 import { LoadingCard } from "../common/LoadingCard";
-import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
+import { useDCAProvider } from "@/providers/DCAStatsProvider";
 
 interface AccountsViewProps {
   onAccountSelect: (address: string) => void;
