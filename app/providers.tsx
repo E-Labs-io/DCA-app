@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode } from "react";
 import { Toaster } from "sonner";
 import AppKit from "@/context/AppKit";
+import { DCAStatsProvider } from "@/lib/providers/DCAStatsProvider";
 
 const queryClient = new QueryClient();
 
@@ -17,16 +18,18 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <AppKit>
         <NextUIProvider>
-          <NextThemesProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem={false}
-            forcedTheme="dark"
-            disableTransitionOnChange
-          >
-            <Toaster richColors position="top-right" />
-            {children}
-          </NextThemesProvider>
+          <DCAStatsProvider>
+            <NextThemesProvider
+              attribute="class"
+              defaultTheme="dark"
+              enableSystem={false}
+              forcedTheme="dark"
+              disableTransitionOnChange
+            >
+              <Toaster richColors position="top-right" />
+              {children}
+            </NextThemesProvider>
+          </DCAStatsProvider>
         </NextUIProvider>
       </AppKit>
     </QueryClientProvider>

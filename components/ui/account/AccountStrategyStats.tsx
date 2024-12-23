@@ -1,6 +1,6 @@
 /** @format */
 
-import { AccountStats } from "@/types/statsAndTracking";
+import { AccountStats } from "@/lib/providers/DCAStatsProvider";
 import { Card, CardBody } from "@nextui-org/react";
 
 export interface StrategyStatsProps {
@@ -19,7 +19,7 @@ export function AccountStrategyStats({ stats }: StrategyStatsProps) {
           </div>
           <div className="flex justify-between">
             <span className="text-sm text-gray-400">Active Strategies:</span>
-            <span>{stats.activeStrategies}</span>
+            <span>{stats.totalActiveStrategies}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-sm text-gray-400">Total Executions:</span>

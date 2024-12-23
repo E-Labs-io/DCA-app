@@ -22,6 +22,7 @@ import { useDCAAccount } from "@/hooks/useDCAAccount";
 import { EthereumAddress } from "@/types/generic";
 import { toast } from "sonner";
 import Image from "next/image";
+import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
 
 interface FundUnfundAccountModalProps {
   isOpen: boolean;
@@ -46,8 +47,11 @@ export function FundUnfundAccountModal({
   const [isComplete, setIsComplete] = useState<boolean>(false);
 
   const { address } = useAppKitAccount();
-  const { fundAccount, defundAccount, withdrawSavings } =
-    useDCAAccount(accountAddress);
+  const { getAccountInstance, Signer } = useDCAProvider();
+  const { fundAccount, defundAccount, withdrawSavings } = useDCAAccount(
+    getAccountInstance(accountAddress)!,
+    Signer!
+  );
   const { getBalance } = useToken(
     (selectedToken?.tokenAddress as string) || ""
   );

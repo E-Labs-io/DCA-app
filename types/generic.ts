@@ -2,4 +2,4 @@
 
 import { AddressLike } from "ethers";
 
-export type EthereumAddress = `0x${string}` | AddressLike;
+export type EthereumAddress = `0x${string}` | AddressLike | string ;

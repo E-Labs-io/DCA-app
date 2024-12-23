@@ -16,6 +16,7 @@ import { NetworkKeys } from "@/types";
 import { Signer } from "ethers";
 import { useAccountStore } from "@/lib/store/accountStore";
 import { useDCAFactory } from "@/hooks/useDCAFactory";
+import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
 
 export interface StrategyViewProps {
   ACTIVE_NETWORK: NetworkKeys;
@@ -31,8 +32,7 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
     setSelectedAccount,
     setAccounts,
     accountStrategies,
-  } = useAccountStore();
-  const { getUsersAccounts } = useDCAFactory();
+  } = useDCAProvider();
 
   // Get all strategies from all accounts
   const allStrategies = Object.values(accountStrategies).flat();

@@ -25,12 +25,13 @@ import {
   calculateExecutionsLeft,
 } from "./helpers/executionCalculations";
 import { TokenData } from "@/constants/tokens";
+import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
 
 export interface TokenBalanceData {
   balance: bigint;
   targetBalance: bigint;
-  remainingExecutions: number;
-  needsTopUp: boolean;
+  remainingExecutions?: number;
+  needsTopUp?: true;
 }
 
 export type TokenBalances = {
@@ -47,6 +48,7 @@ interface ExecutionTimings {
 }
 
 export function useAccountStats() {
+  const {} = useDCAProvider();
   const {
     accounts,
     setAccountStrategies,
@@ -85,7 +87,10 @@ export function useAccountStats() {
   );
 
   const fetchAccountStrategies = useCallback(
-    async (accountAddress: string) => {
+    async (
+      accountAddress: string,
+      dcaAccount: DCAAccount
+    ): Promise<IDCADataStructures.StrategyStruct[]> => {
       if (!Signer) return [];
 
       const cachedStrategies = accountStrategies[accountAddress];
@@ -93,7 +98,6 @@ export function useAccountStats() {
         return cachedStrategies;
       }
 
-      const dcaAccount = await getOrCreateAccountInstance(accountAddress);
       if (!dcaAccount) return [];
 
       const strategyEvents = await getAccountStrategyCreationEvents(dcaAccount);
@@ -116,13 +120,7 @@ export function useAccountStats() {
       setStrategies(strategies);
       return strategies;
     },
-    [
-      Signer,
-      accountStrategies,
-      getOrCreateAccountInstance,
-      setAccountStrategies,
-      setStrategies,
-    ]
+    [Signer, accountStrategies, setAccountStrategies, setStrategies]
   );
 
   const getAccountStrategyBaseRemaining = useCallback(
@@ -454,6 +452,8 @@ export function useAccountStats() {
     tokenBalances,
     executionTimings,
     getAllData,
+    fetchAccountStrategies,
+    fetchTokenBalances,
     lastRefresh,
   };
 }

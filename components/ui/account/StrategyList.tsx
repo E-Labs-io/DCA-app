@@ -16,6 +16,8 @@ import { useState, useEffect } from "react";
 import { getTokenIcon, getTokenTicker } from "@/lib/helpers/tokenData";
 import { FundUnfundAccountModal } from "../../modals/FundUnfundAccountModal";
 import { EthereumAddress } from "@/types/generic";
+import useSigner from "@/hooks/useSigner";
+import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
 
 interface StrategyListProps {
   accountAddress: string;
@@ -35,8 +37,10 @@ export function StrategyList({
   accountAddress,
   strategies,
 }: StrategyListProps) {
+  const { Signer } = useSigner();
+  const { getAccountInstance } = useDCAProvider();
   const { subscribeStrategy, getAccountBaseTokens, unsubscribeStrategy } =
-    useDCAAccount(accountAddress);
+    useDCAAccount(getAccountInstance(accountAddress as string)!, Signer!);
   const { tokenBalances, executionTimings, getAllData } = useAccountStats();
   const { setAccountStrategies } = useAccountStore();
   const [selectedStrategy, setSelectedStrategy] =
@@ -80,7 +84,7 @@ export function StrategyList({
           }
         );
       } else {
-        await toast.promise(
+        toast.promise(
           subscribeStrategy(strategy.strategyId).then(async (result) => {
             if (result) {
               const updatedStrategies = strategies.map((s) =>

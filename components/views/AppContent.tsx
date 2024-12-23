@@ -11,11 +11,9 @@ import { useAppKitAccount, useAppKitNetwork } from "@reown/appkit/react";
 import { LoadingCard } from "../common/LoadingCard";
 import { LoadingStats } from "../common/LoadingStats";
 import { AppHeader } from "../ui/layout/AppHeader";
-import useSigner from "@/hooks/useSigner";
-import { useAccountStats } from "@/hooks/useAccountStats";
 import { useDCAFactory } from "@/hooks/useDCAFactory";
-import { useAccountStore } from "@/lib/store/accountStore";
 import ConnectionCard from "../common/ConnectionCard";
+import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
 
 // Dynamically import components with proper default exports
 const CreateAccountModal = dynamic(
@@ -79,59 +77,26 @@ export default function AppContent() {
   const { isConnected } = useAppKitAccount();
   const { chainId } = useAppKitNetwork();
 
-  const { ACTIVE_NETWORK, Signer } = useSigner();
-  const { getAllData, isLoading: isStatsLoading } = useAccountStats();
-  const { getUsersAccounts } = useDCAFactory();
-  const { accounts, selectedAccount, setSelectedAccount, setAccounts } =
-    useAccountStore();
+  const {
+    initiateUserAccounts,
+    isLoading,
+    selectedAccount,
+    setSelectedAccount,
+    ACTIVE_NETWORK,
+    Signer,
+  } = useDCAProvider();
+
+  const { DCAFactory } = useDCAFactory();
 
   const [isCreateAccountOpen, setIsCreateAccountOpen] = useState(false);
   const [isCreateStrategyOpen, setIsCreateStrategyOpen] = useState(false);
   const [selectedView, setSelectedView] = useState("accounts");
-  const [isLoading, setIsLoading] = useState(false);
-  const [loaded, setLoaded] = useState(false);
 
   const isWrongNetwork = chainId !== sepolia.id;
 
   useEffect(() => {
-    console.log(
-      "[Accounts View]: useEffect triggered with isConnected:",
-      isConnected
-    );
-    const loadAccounts = async () => {
-      if (!isConnected) {
-        console.log("[AppContent] Not connected, setting isLoading to false");
-        return;
-      }
-
-      try {
-        console.log("[AppContent] Loading accounts...");
-        setIsLoading(true);
-        const userAccounts = await getUsersAccounts();
-        console.log("[AppContent] User accounts loaded:", userAccounts);
-        setAccounts(userAccounts as `0x${string}`[]);
-        if (userAccounts.length > 0) {
-          console.log("[AppContent] Fetching all data...");
-          await getAllData();
-        }
-        setLoaded(true);
-      } catch (error) {
-        console.error("[AppContent] Error loading accounts:", error);
-        setLoaded(false);
-      } finally {
-        console.log("[AppContent]   Setting isLoading to false");
-        setIsLoading(false);
-      }
-    };
-    if (!isLoading && !loaded) loadAccounts();
-  }, [
-    isConnected,
-    getUsersAccounts,
-    setAccounts,
-    getAllData,
-    loaded,
-    isLoading,
-  ]);
+    if (isConnected || (!isLoading && DCAFactory)) initiateUserAccounts();
+  }, [isConnected, isLoading, DCAFactory, initiateUserAccounts]);
 
   if (!isConnected || isWrongNetwork) {
     return (

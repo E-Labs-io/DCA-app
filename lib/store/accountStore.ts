@@ -1,7 +1,10 @@
 /** @format */
 
 import { create } from "zustand";
-import { DCAAccount, IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
+import {
+  DCAAccount,
+  IDCADataStructures,
+} from "@/types/contracts/contracts/base/DCAAccount";
 import { EthereumAddress } from "@/types/generic";
 
 interface AccountState {

@@ -2,37 +2,20 @@
 
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useAppKitAccount } from "@reown/appkit/react";
+import { useCallback } from "react";
 import { toast } from "sonner";
 import {
   DCAAccount,
   IDCADataStructures,
 } from "@/types/contracts/contracts/base/DCAAccount";
-import { connectToDCAAccount } from "./helpers/connectToContract";
-import useSigner from "./useSigner";
 import { ContractTransactionReport } from "@/types/contractReturns";
-import { BigNumberish } from "ethers";
+import { BigNumberish, Signer } from "ethers";
 import { EthereumAddress } from "@/types/generic";
-import { TokenData } from "@/constants/tokens";
-import { useAccountStore } from "@/lib/store/accountStore";
 
-export function useDCAAccount(accountAddress?: EthereumAddress) {
-  const { address } = useAppKitAccount();
-  const { Signer } = useSigner();
-  const { accountStrategies } = useAccountStore();
+export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
 
-  const getOrCreateAccountInstance = useCallback(async () => {
-    if (!accountAddress || !Signer) return null;
 
-    try {
-      return await connectToDCAAccount(accountAddress.toString(), Signer);
-    } catch (error) {
-      console.error("Error connecting to DCA account:", error);
-      return null;
-    }
-  }, [accountAddress, Signer]);
-
+  
   const createStrategy = useCallback(
     async ({
       strategy,
@@ -43,13 +26,12 @@ export function useDCAAccount(accountAddress?: EthereumAddress) {
       fundAmount: bigint;
       subscribe: boolean;
     }): Promise<ContractTransactionReport | false> => {
-      if (!Signer || !address) {
+      if (!Signer) {
         toast.error("Please connect your wallet first");
         throw new Error("No signer available");
       }
 
       try {
-        const dcaAccount = await getOrCreateAccountInstance();
         if (!dcaAccount) throw new Error("Error connecting to account");
 
         const tx = await dcaAccount.SetupStrategy(
@@ -67,18 +49,17 @@ export function useDCAAccount(accountAddress?: EthereumAddress) {
         return false;
       }
     },
-    [Signer, address, getOrCreateAccountInstance]
+    [Signer, dcaAccount]
   );
 
   const fundAccount = useCallback(
     async (token: IDCADataStructures.TokenDataStruct, amount: bigint) => {
-      if (!Signer || !address) {
+      if (!Signer) {
         toast.error("Please connect your wallet first");
         throw new Error("No signer available");
       }
 
       try {
-        const dcaAccount = await getOrCreateAccountInstance();
         if (!dcaAccount) throw new Error("Error connecting to account");
         toast.info("Please accept the Funding Transaction...");
         const tx = await dcaAccount.FundAccount(token.tokenAddress, amount);
@@ -91,18 +72,17 @@ export function useDCAAccount(accountAddress?: EthereumAddress) {
         return false;
       }
     },
-    [Signer, address, getOrCreateAccountInstance]
+    [Signer, dcaAccount]
   );
 
   const defundAccount = useCallback(
     async (token: IDCADataStructures.TokenDataStruct, amount: bigint) => {
-      if (!Signer || !address) {
+      if (!Signer) {
         toast.error("Please connect your wallet first");
         throw new Error("No signer available");
       }
 
       try {
-        const dcaAccount = await getOrCreateAccountInstance();
         if (!dcaAccount) throw new Error("Error connecting to account");
         toast.info("Please accept the Transaction...");
 
@@ -116,18 +96,17 @@ export function useDCAAccount(accountAddress?: EthereumAddress) {
         return false;
       }
     },
-    [Signer, address, getOrCreateAccountInstance]
+    [Signer, dcaAccount]
   );
 
   const withdrawSavings = useCallback(
     async (token: IDCADataStructures.TokenDataStruct, amount: bigint) => {
-      if (!Signer || !address) {
+      if (!Signer) {
         toast.error("Please connect your wallet first");
         throw new Error("No signer available");
       }
 
       try {
-        const dcaAccount = await getOrCreateAccountInstance();
         if (!dcaAccount) throw new Error("Error connecting to account");
 
         toast.info("Please accept the Withdrawal Transaction");
@@ -142,18 +121,17 @@ export function useDCAAccount(accountAddress?: EthereumAddress) {
         return false;
       }
     },
-    [Signer, address, getOrCreateAccountInstance]
+    [Signer, dcaAccount]
   );
 
   const subscribeStrategy = useCallback(
     async (strategyId: BigNumberish) => {
-      if (!Signer || !address) {
+      if (!Signer) {
         toast.error("Please connect your wallet first");
         throw new Error("No signer available");
       }
 
       try {
-        const dcaAccount = await getOrCreateAccountInstance();
         if (!dcaAccount) throw new Error("Error connecting to account");
 
         toast.info("Please accept the transaction...");
@@ -171,18 +149,17 @@ export function useDCAAccount(accountAddress?: EthereumAddress) {
         return false;
       }
     },
-    [Signer, address, getOrCreateAccountInstance]
+    [Signer, dcaAccount]
   );
 
   const unsubscribeStrategy = useCallback(
     async (strategyId: BigNumberish) => {
-      if (!Signer || !address) {
+      if (!Signer) {
         toast.error("Please connect your wallet first");
         throw new Error("No signer available");
       }
 
       try {
-        const dcaAccount = await getOrCreateAccountInstance();
         if (!dcaAccount) throw new Error("Error connecting to account");
         toast.info("Please accept the transaction...");
         const tx = await dcaAccount.UnsubscribeStrategy(strategyId);
@@ -199,18 +176,17 @@ export function useDCAAccount(accountAddress?: EthereumAddress) {
         return false;
       }
     },
-    [Signer, address, getOrCreateAccountInstance]
+    [Signer, dcaAccount]
   );
 
   const getBaseBalance = useCallback(
     async (tokenAddress: EthereumAddress): Promise<number> => {
-      if (!Signer || !address) {
+      if (!Signer) {
         toast.error("Please connect your wallet first");
         throw new Error("No signer available");
       }
 
       try {
-        const dcaAccount = await getOrCreateAccountInstance();
         if (!dcaAccount) throw new Error("Error connecting to account");
 
         const balance = await dcaAccount.getBaseBalance(tokenAddress);
@@ -220,18 +196,17 @@ export function useDCAAccount(accountAddress?: EthereumAddress) {
         return 0;
       }
     },
-    [Signer, address, getOrCreateAccountInstance]
+    [Signer, dcaAccount]
   );
 
   const getTargetBalance = useCallback(
     async (tokenAddress: EthereumAddress): Promise<number> => {
-      if (!Signer || !address) {
+      if (!Signer) {
         toast.error("Please connect your wallet first");
         throw new Error("No signer available");
       }
 
       try {
-        const dcaAccount = await getOrCreateAccountInstance();
         if (!dcaAccount) throw new Error("Error connecting to account");
 
         const balance = await dcaAccount.getTargetBalance(tokenAddress);
@@ -241,19 +216,21 @@ export function useDCAAccount(accountAddress?: EthereumAddress) {
         return 0;
       }
     },
-    [Signer, address, getOrCreateAccountInstance]
+    [Signer, dcaAccount]
   );
 
-  const getAccountBaseTokens = () => {
-    const strategies = accountStrategies[accountAddress as string] || [];
+  const getAccountBaseTokens = (
+    strategies: IDCADataStructures.StrategyStruct[]
+  ) => {
     const tokens = strategies.map((strategy) => strategy.baseToken);
     return Array.from(
       new Map(tokens.map((token) => [token.ticker, token])).values()
     );
   };
 
-  const getAccountTargetTokens = () => {
-    const strategies = accountStrategies[accountAddress as string] || [];
+  const getAccountTargetTokens = (
+    strategies: IDCADataStructures.StrategyStruct[]
+  ) => {
     const tokens = strategies.map((strategy) => strategy.targetToken);
     return Array.from(
       new Map(tokens.map((token) => [token.ticker, token])).values()
@@ -269,7 +246,6 @@ export function useDCAAccount(accountAddress?: EthereumAddress) {
     unsubscribeStrategy,
     getBaseBalance,
     getTargetBalance,
-    getOrCreateAccountInstance,
     getAccountBaseTokens,
     getAccountTargetTokens,
   };

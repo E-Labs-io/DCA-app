@@ -24,4 +24,5 @@ export interface AccountStrategyExecutionEvent extends EventBase {
 export type EventBase = {
   blockNumber: number;
   transactionHash: string;
+  timestamp?: number;
 };

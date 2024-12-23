@@ -14,8 +14,8 @@ import { formatDistanceToNow } from "date-fns";
 import { AccountInfo } from "./AccountInfo";
 import { AccountStrategyStats } from "./AccountStrategyStats";
 import { AccountBalances } from "../../common/BalanceDisplay";
-import { AccountStats } from "@/types/statsAndTracking";
 import { Signer } from "ethers";
+import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
 
 export interface AccountCardProps {
   accountAddress: EthereumAddress;
@@ -37,52 +37,17 @@ export const AccountCard: React.FC<AccountCardProps> = ({
   Signer,
   handleFundingModal,
   isExpanded,
+  selectedAccount,
 }) => {
-  const { selectedAccount, accountStrategies } = useAccountStore();
   const {
-    isLoading: isStatsLoading,
-    totalExecutions,
-    tokenBalances,
-    executionTimings,
-  } = useAccountStats();
+    getAccountStrategies,
+    getAccountBalances,
+    getAccountStats,
+    getAccountInstance,
+  } = useDCAProvider();
 
-  useEffect(() => {
-    console.log("AccountCard Debug:", {
-      accountAddress,
-      tokenBalances,
-      accountStrategies: accountStrategies[accountAddress as string],
-      rawAccountBalances: tokenBalances[accountAddress as string],
-    });
-  }, [accountAddress, tokenBalances, accountStrategies]);
-
-  const getAccountStats = (): AccountStats => {
-    const strategies = accountStrategies[accountAddress as string] || [];
-    const accountBalances = tokenBalances[accountAddress as string] || {};
-
-    return {
-      totalStrategies: strategies.length,
-      activeStrategies: strategies.filter((s) => s.active).length,
-      totalExecutions: totalExecutions,
-      baseTokenBalances: Object.entries(accountBalances).reduce(
-        (acc, [token, data]) => {
-          acc[token] = data.balance;
-          return acc;
-        },
-        {} as { [key: string]: bigint }
-      ),
-      reinvestLibraryVersion: "v1.0",
-    };
-  };
-
-  const stats = getAccountStats();
-  const accountBalances = tokenBalances[accountAddress as string] || {};
-
-  const accountExecutionTimings =
-    executionTimings[accountAddress as string] ?? {};
-
-  const lastExecutionTime: number = Object.values(
-    accountExecutionTimings
-  ).reduce((max, timing) => Math.max(max, timing.lastExecution), 0);
+  const lastExecutionTime: number = getAccountStats(accountAddress as string)
+    ?.lastExecution!;
 
   const timeAgo = formatDistanceToNow(new Date(lastExecutionTime * 1000), {
     addSuffix: true,
@@ -121,7 +86,8 @@ export const AccountCard: React.FC<AccountCardProps> = ({
                 <ExternalLink size={16} />
               </a>
               <p className="text-sm text-gray-400">
-                {stats.activeStrategies} Active / {stats.totalStrategies} Total
+                {getAccountStats(accountAddress)?.totalActiveStrategies} Active
+                / {getAccountStats(accountAddress)?.totalStrategies} Total
                 Strategies
               </p>
             </div>
@@ -138,18 +104,23 @@ export const AccountCard: React.FC<AccountCardProps> = ({
             >
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <AccountInfo
-                  selectedAccount={selectedAccount}
                   timeAgo={timeAgo}
-                  stats={stats}
+                  stats={getAccountStats(accountAddress as string)!}
                   handleFundingModal={handleFundingModal}
+                  Signer={Signer}
+                  account={getAccountInstance(accountAddress as string)!}
                 />
-                <AccountStrategyStats stats={stats} />
+                <AccountStrategyStats
+                  stats={getAccountStats(accountAddress as string)!}
+                />
                 <AccountBalances
                   ACTIVE_NETWORK={ACTIVE_NETWORK}
                   Signer={Signer}
-                  accountBalances={accountBalances}
+                  accountBalances={
+                    getAccountBalances(accountAddress as string)!
+                  }
                   accountStrategies={
-                    accountStrategies[accountAddress as string] || []
+                    getAccountStrategies(accountAddress as string) || []
                   }
                   selectedAccount={accountAddress}
                 />
@@ -157,7 +128,9 @@ export const AccountCard: React.FC<AccountCardProps> = ({
 
               <StrategyList
                 accountAddress={accountAddress as string}
-                strategies={accountStrategies[accountAddress as string] || []}
+                strategies={
+                  getAccountStrategies(accountAddress as string) || []
+                }
               />
             </div>
           )}

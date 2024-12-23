@@ -10,35 +10,53 @@ import { connectToDCAFactory } from "./helpers/connectToContract";
 
 import { ContractTransactionReport } from "@/types/contractReturns";
 import { DCAFactory } from "@/types/contracts";
+
 import useSigner from "./useSigner";
 
-const DCA_FACTORY_ADDRESS = DCAFactoryAddress.ETH_SEPOLIA!;
-
 export function useDCAFactory() {
+  const { Signer, ACTIVE_NETWORK } = useSigner();
+
   const { address } = useAppKitAccount();
-  const { Signer } = useSigner();
-  const [accounts, setAccounts] = useState<string[]>([]);
   const [DCAFactory, setDCAFactory] = useState<DCAFactory | null>(null);
+  const [DCA_FACTORY_ADDRESS, setDCA_FACTORY_ADDRESS] = useState<string>();
+
+  useEffect(() => {
+    if (Signer && DCAFactory === null) {
+      const factoryAddress = DCAFactoryAddress[ACTIVE_NETWORK!]!;
+      connectToDCAFactory(factoryAddress, Signer).then((factory) => {
+        setDCAFactory(factory);
+      });
+      setDCA_FACTORY_ADDRESS(factoryAddress);
+    }
+  }, [Signer, DCA_FACTORY_ADDRESS, DCAFactory, ACTIVE_NETWORK]);
 
   useEffect(() => {
     if (Signer) {
-      connectToDCAFactory(DCA_FACTORY_ADDRESS, Signer).then((factory) =>
-        setDCAFactory(factory)
-      );
+      const factoryAddress = DCAFactoryAddress[ACTIVE_NETWORK!]!;
+      connectToDCAFactory(factoryAddress, Signer).then((factory) => {
+        setDCAFactory(factory);
+      });
+      setDCA_FACTORY_ADDRESS(factoryAddress);
     }
-  }, [Signer]);
+  }, [ACTIVE_NETWORK]);
 
-  const getUsersAccounts = useCallback(async (): Promise<string[]> => {
+  const getUsersAccountAddresses = useCallback(async (): Promise<string[]> => {
     if (!Signer || !address) {
       toast.error("Please connect your wallet first");
-      throw new Error("No signer available");
+      throw new Error("[useDCAFactory] No signer available");
     }
-
-    const factory = await connectToDCAFactory(DCA_FACTORY_ADDRESS, Signer);
+    const factory = await connectToDCAFactory(DCA_FACTORY_ADDRESS!, Signer);
     const accounts: string[] = await factory.getDCAAccountsOfUser(address);
-    setAccounts(accounts);
-    return accounts;
-  }, [address, Signer]);
+    const accountList: string[] = [];
+    const keys = Object.keys(accounts);
+    for (const key of keys) {
+      const account = accounts[key as keyof typeof accounts];
+      if (typeof account === "string") {
+        accountList.push(account);
+      }
+    }
+    return accountList;
+  }, [Signer, address, DCA_FACTORY_ADDRESS]);
 
   const createAccount = useCallback(async (): Promise<
     ContractTransactionReport | false
@@ -63,7 +81,12 @@ export function useDCAFactory() {
       toast.error("Failed to create DCA account");
       return false;
     }
-  }, [address, Signer]);
+  }, [Signer, address, DCAFactory]);
 
-  return { DCAFactory, createAccount, getUsersAccounts, accounts };
+  return {
+    DCAFactory,
+    DCA_FACTORY_ADDRESS,
+    createAccount,
+    getUsersAccountAddresses,
+  };
 }

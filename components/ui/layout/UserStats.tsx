@@ -3,29 +3,56 @@
 "use client";
 
 import { Card, CardBody, Skeleton } from "@nextui-org/react";
-import { useAccountStore } from "@/lib/store/accountStore";
-import { useStrategyStore } from "@/lib/store/strategyStore";
 import { useEffect, useState } from "react";
-import { useAccountStats } from "@/hooks/useAccountStats";
+import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
 
 export function UserStatsOverview() {
-  const { accounts } = useAccountStore();
-  const { strategies } = useStrategyStore();
-  const { totalExecutions, isLoading } = useAccountStats();
+  const { accounts } = useDCAProvider();
   const [mounted, setMounted] = useState(false);
+  const [stats, setStats] = useState<{
+    totalAccounts: number;
+    totalStrategies: number;
+    totalActiveStrategies: number;
+    totalExecutions: number;
+  }>({
+    totalAccounts: 0,
+    totalStrategies: 0,
+    totalActiveStrategies: 0,
+    totalExecutions: 0,
+  });
 
   useEffect(() => {
+    // Calculate statistics
+    const totalAccounts = accounts.length;
+    let totalStrategies = 0;
+    for (const account of accounts) {
+      for (const strategy of account.strategies) {
+        totalStrategies += 1;
+      }
+    }
+    let totalActiveStrategies = 0;
+    for (const account of accounts) {
+      for (const strategy of account.strategies) {
+        if (strategy.active) {
+          totalActiveStrategies += 1;
+        }
+      }
+    }
+
+    let totalExecutions = 0;
+    for (const account of accounts) {
+      totalExecutions += account.statistics?.totalExecutions || 0;
+    }
+    setStats({
+      totalAccounts,
+      totalStrategies,
+      totalActiveStrategies,
+      totalExecutions,
+    });
     setMounted(true);
-  }, []);
+  }, [accounts]);
 
-  // Calculate statistics
-  const totalAccounts = accounts.length;
-  const totalStrategies = strategies.length;
-  const totalActiveStrategies = strategies.filter(
-    (strategy) => strategy.active
-  ).length;
-
-  if (!mounted || isLoading) {
+  if (!mounted) {
     return (
       <Card className="mb-8">
         <CardBody>
@@ -61,19 +88,21 @@ export function UserStatsOverview() {
           <div className="flex gap-8">
             <div>
               <p className="text-sm text-gray-400">Total Accounts</p>
-              <p className="text-2xl font-bold">{totalAccounts}</p>
+              <p className="text-2xl font-bold">{stats.totalAccounts}</p>
             </div>
             <div>
               <p className="text-sm text-gray-400">Total Strategies</p>
-              <p className="text-2xl font-bold">{totalStrategies}</p>
+              <p className="text-2xl font-bold">{stats.totalStrategies}</p>
             </div>
             <div>
               <p className="text-sm text-gray-400">Active Strategies</p>
-              <p className="text-2xl font-bold">{totalActiveStrategies}</p>
+              <p className="text-2xl font-bold">
+                {stats.totalActiveStrategies}
+              </p>
             </div>
             <div>
               <p className="text-sm text-gray-400">Total Executions</p>
-              <p className="text-2xl font-bold">{totalExecutions}</p>
+              <p className="text-2xl font-bold">{stats.totalExecutions}</p>
             </div>
           </div>
         </div>

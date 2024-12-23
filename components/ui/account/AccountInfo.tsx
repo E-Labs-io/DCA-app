@@ -2,29 +2,53 @@
 
 import React from "react";
 import { Button, Card, CardBody, Chip } from "@nextui-org/react";
-import { EthereumAddress } from "@/types/generic";
-import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
+import {
+  DCAAccount,
+  IDCADataStructures,
+} from "@/types/contracts/contracts/base/DCAAccount";
 import { useDCAAccount } from "@/hooks/useDCAAccount";
-import { AccountStats } from "@/types/statsAndTracking";
+import { AccountStats, useDCAProvider } from "@/lib/providers/DCAStatsProvider";
+import { Signer } from "ethers";
 
 interface AccountInfoProps {
-  selectedAccount: EthereumAddress;
+  account: DCAAccount;
   timeAgo: string;
   stats: AccountStats;
   handleFundingModal: (
     type: "fund" | "unfund" | "withdraw",
     tokens: IDCADataStructures.TokenDataStruct[]
   ) => void;
+  Signer: Signer;
 }
 
 export const AccountInfo: React.FC<AccountInfoProps> = ({
-  selectedAccount,
   stats,
+  account,
   timeAgo,
   handleFundingModal,
+  Signer,
 }) => {
-  const { getAccountBaseTokens, getAccountTargetTokens } =
-    useDCAAccount(selectedAccount);
+  const { getAccountStrategies } = useDCAProvider();
+  const { getAccountBaseTokens, getAccountTargetTokens } = useDCAAccount(
+    account,
+    Signer
+  );
+
+  const reinvestCheck = (
+    reinvestLibraryVersion: string | false
+  ): {
+    message: string;
+    color: "primary" | "secondary" | "warning" | "danger" | "default";
+  } => {
+    if (
+      reinvestLibraryVersion !== "false" &&
+      reinvestLibraryVersion !== false
+    ) {
+      return { message: reinvestLibraryVersion, color: "primary" };
+    }
+    return { message: "Not Active", color: "default" };
+  };
+
   return (
     <Card>
       <CardBody>
@@ -32,8 +56,11 @@ export const AccountInfo: React.FC<AccountInfoProps> = ({
         <div className="space-y-2">
           <div className="flex justify-between">
             <span className="text-sm text-gray-400">Reinvest Library:</span>
-            <Chip size="sm" color="primary">
-              {stats.reinvestLibraryVersion}
+            <Chip
+              size="sm"
+              color={reinvestCheck(stats.reinvestLibraryVersion).color}
+            >
+              {reinvestCheck(stats.reinvestLibraryVersion).message}
             </Chip>
           </div>
           <div className="flex justify-between">
@@ -45,7 +72,10 @@ export const AccountInfo: React.FC<AccountInfoProps> = ({
               size="sm"
               color="primary"
               onPress={() => {
-                handleFundingModal("fund", getAccountBaseTokens());
+                handleFundingModal(
+                  "fund",
+                  getAccountBaseTokens(getAccountStrategies(account.target)!)
+                );
               }}
             >
               Fund
@@ -54,7 +84,10 @@ export const AccountInfo: React.FC<AccountInfoProps> = ({
               size="sm"
               color="secondary"
               onPress={() => {
-                handleFundingModal("unfund", getAccountBaseTokens());
+                handleFundingModal(
+                  "unfund",
+                  getAccountBaseTokens(getAccountStrategies(account.target)!)
+                );
               }}
             >
               Defund
@@ -63,7 +96,10 @@ export const AccountInfo: React.FC<AccountInfoProps> = ({
               size="sm"
               color="warning"
               onPress={() => {
-                handleFundingModal("withdraw", getAccountTargetTokens());
+                handleFundingModal(
+                  "withdraw",
+                  getAccountTargetTokens(getAccountStrategies(account.target)!)
+                );
               }}
             >
               Withdraw

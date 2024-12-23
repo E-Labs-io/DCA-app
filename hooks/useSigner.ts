@@ -22,10 +22,21 @@ export default function useSigner() {
       const provider = new BrowserProvider(walletProvider as any);
       const newSigner = await provider.getSigner();
       setSigner(newSigner);
+      const networkKey = getNetworkKeyByChainId(Number(chainId))!;
+      setActiveNetwork(networkKey);
       return newSigner;
     }
     return Signer;
   }, [Signer, walletProvider]);
+
+  const getBlock = useCallback(
+    async (blockNumber: number) => {
+      if (!walletProvider) return null;
+      const provider = new BrowserProvider(walletProvider as any);
+      return await provider.getBlock(blockNumber);
+    },
+    [walletProvider]
+  );
 
   useEffect(() => {
     if (!Signer && walletProvider) {
@@ -35,9 +46,8 @@ export default function useSigner() {
     if (Signer && !ACTIVE_NETWORK) {
       const networkKey = getNetworkKeyByChainId(Number(chainId))!;
       setActiveNetwork(networkKey);
-      console.log("chainId", networkKey);
     }
   }, [walletProvider, Signer, getProvider]);
 
-  return { Signer, address, getProvider, ACTIVE_NETWORK };
+  return { Signer, address, getProvider, ACTIVE_NETWORK, getBlock };
 }

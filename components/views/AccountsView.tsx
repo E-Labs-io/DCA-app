@@ -3,11 +3,8 @@
 "use client";
 
 import { Card, CardBody } from "@nextui-org/react";
-import { useAccountStats } from "@/hooks/useAccountStats";
-import { useAccountStore } from "@/lib/store/accountStore";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { EthereumAddress } from "@/types/generic";
-import { useAppKitAccount } from "@reown/appkit/react";
 import { FundUnfundAccountModal } from "../modals/FundUnfundAccountModal";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
 
@@ -15,6 +12,7 @@ import { AccountCard } from "../ui/account/AccountCard";
 import { Signer } from "ethers";
 import { NetworkKeys } from "@/types";
 import { LoadingCard } from "../common/LoadingCard";
+import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
 
 interface AccountsViewProps {
   onAccountSelect: (address: string) => void;
@@ -27,12 +25,10 @@ export function AccountsView({
   ACTIVE_NETWORK,
   Signer,
 }: AccountsViewProps) {
-  const { accounts, selectedAccount, setSelectedAccount, setAccounts } =
-    useAccountStore();
-  const { getAllData, isLoading: isStatsLoading } = useAccountStats();
+  const { accounts, selectedAccount, setSelectedAccount, isLoading } =
+    useDCAProvider();
 
   // const { getUsersAccounts } = useDCAFactory();
-  const { isConnected } = useAppKitAccount();
   const [expandedAccount, setExpandedAccount] = useState<string | null>(null);
   // const [isLoading, setIsLoading] = useState(true);
   const [isFundModalOpen, setIsFundModalOpen] = useState(false);
@@ -43,38 +39,10 @@ export function AccountsView({
     "fund"
   );
 
-  /*   useEffect(() => {
-    console.log("[Accounts View]: useEffect triggered with isConnected:", isConnected);
-    const loadAccounts = async () => {
-      if (!isConnected) {
-        console.log("Not connected, setting isLoading to false");
-        setIsLoading(false);
-        return;
-      }
+  useEffect(() => {
+    console.log("[AccountsView] accounts", accounts);
+  }, [accounts]);
 
-      try {
-        console.log("Loading accounts...");
-        setIsLoading(true);
-        const userAccounts = await getUsersAccounts();
-        console.log("User accounts loaded:", userAccounts);
-        if (JSON.stringify(userAccounts) !== JSON.stringify(accounts)) {
-          setAccounts(userAccounts as `0x${string}`[]);
-        }
-        if (userAccounts.length > 0) {
-          console.log("Fetching all data...");
-          await getAllData();
-        }
-      } catch (error) {
-        console.error("Error loading accounts:", error);
-      } finally {
-        console.log("Setting isLoading to false");
-        setIsLoading(false);
-      }
-    };
-
-    loadAccounts();
-  }, [isConnected, getUsersAccounts, setAccounts, getAllData, accounts]);
- */
   const handleAccountClick = (address: EthereumAddress) => {
     console.log("Account clicked:", address);
     if (expandedAccount === address) {
@@ -97,7 +65,7 @@ export function AccountsView({
     setIsFundModalOpen(true);
   };
 
-  if (isStatsLoading) {
+  if (isLoading) {
     return (
       <div className="grid grid-cols-1 gap-6">
         {[1, 2].map((i) => (
@@ -121,17 +89,17 @@ export function AccountsView({
   } else
     return (
       <div className="grid grid-cols-1 gap-6">
-        {accounts.map((accountAddress) => {
+        {accounts.map((account) => {
           return (
-            <div key={accountAddress as string}>
+            <div key={account.account as string}>
               <AccountCard
                 handleAccountClick={handleAccountClick}
                 handleFundingModal={handleFundingModal}
                 selectedAccount={selectedAccount}
                 ACTIVE_NETWORK={ACTIVE_NETWORK!}
                 Signer={Signer!}
-                accountAddress={accountAddress}
-                isExpanded={expandedAccount === (accountAddress as string)}
+                accountAddress={account.account}
+                isExpanded={expandedAccount === (account.account as string)}
               />
             </div>
           );
