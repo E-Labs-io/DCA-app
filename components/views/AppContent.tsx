@@ -84,6 +84,7 @@ export default function AppContent() {
     setSelectedAccount,
     ACTIVE_NETWORK,
     Signer,
+    getAccountInstance,
   } = useDCAProvider();
 
   const { DCAFactory } = useDCAFactory();
@@ -181,8 +182,9 @@ export default function AppContent() {
           <CreateStrategyModal
             isOpen={isCreateStrategyOpen}
             onClose={() => setIsCreateStrategyOpen(false)}
-            accountAddress={selectedAccount as string}
+            accountAddress={getAccountInstance(selectedAccount as string)!}
             ACTIVE_NETWORK={ACTIVE_NETWORK!}
+            Signer={Signer}
           />
         )}
       </div>

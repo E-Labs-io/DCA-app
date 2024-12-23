@@ -8,8 +8,6 @@ import { EthereumAddress } from "@/types/generic";
 import { StrategyList } from "./StrategyList";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
 import { NetworkKeys } from "@/types";
-import { useAccountStore } from "@/lib/store/accountStore";
-import { useAccountStats } from "@/hooks/useAccountStats";
 import { formatDistanceToNow } from "date-fns";
 import { AccountInfo } from "./AccountInfo";
 import { AccountStrategyStats } from "./AccountStrategyStats";

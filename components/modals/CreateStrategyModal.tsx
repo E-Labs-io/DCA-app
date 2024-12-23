@@ -19,7 +19,10 @@ import { tokenList, type TokenTickers } from "@/constants/tokens";
 import { useAppKitAccount } from "@reown/appkit/react";
 import { parseUnits } from "viem";
 import { toast } from "sonner";
-import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
+import {
+  DCAAccount,
+  IDCADataStructures,
+} from "@/types/contracts/contracts/base/DCAAccount";
 import { useToken } from "@/hooks/useToken";
 import {
   Interval,
@@ -27,6 +30,7 @@ import {
   intervalOptions,
 } from "@/constants/intervals";
 import { NetworkKeys } from "@/types";
+import { Signer } from "ethers";
 
 interface FormData {
   baseToken: string;
@@ -39,8 +43,9 @@ interface FormData {
 interface CreateStrategyModalProps {
   isOpen: boolean;
   onClose: () => void;
-  accountAddress: string;
+  accountAddress: DCAAccount;
   ACTIVE_NETWORK: NetworkKeys;
+  Signer: Signer | null;
 }
 
 export function CreateStrategyModal({
@@ -48,6 +53,7 @@ export function CreateStrategyModal({
   onClose,
   accountAddress,
   ACTIVE_NETWORK,
+  Signer,
 }: CreateStrategyModalProps) {
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -65,7 +71,7 @@ export function CreateStrategyModal({
     : 18;
 
   const { address } = useAppKitAccount();
-  const { createStrategy } = useDCAAccount(accountAddress);
+  const { createStrategy } = useDCAAccount(accountAddress, Signer!);
   const { getAllowance, approveToken, checkAllowance } = useToken(
     formData.baseToken
       ? (tokenList[formData.baseToken as TokenTickers]?.contractAddress
@@ -89,7 +95,7 @@ export function CreateStrategyModal({
     reinvestData: "0x" as `0x${string}`,
     active: false,
     investCode: 0,
-    dcaAccountAddress: accountAddress as `0x${string}`,
+    dcaAccountAddress: accountAddress.target as `0x${string}`,
   });
 
   const resetForm = () => {
@@ -132,7 +138,7 @@ export function CreateStrategyModal({
         try {
           hasAllowance = await checkAllowance(
             address,
-            accountAddress,
+            accountAddress.target as string,
             formData.fundAmount
           ).catch(() => false);
         } catch (error) {
@@ -146,7 +152,7 @@ export function CreateStrategyModal({
 
           try {
             const transaction = await approveToken(
-              accountAddress,
+              accountAddress.target as string,
               formData.fundAmount
             ).catch((error: any) => {
               console.warn("Approval warning:", error);
@@ -171,7 +177,7 @@ export function CreateStrategyModal({
       toast.loading("Creating strategy...");
 
       const strategyData: IDCADataStructures.StrategyStruct = {
-        accountAddress: accountAddress as `0x${string}`,
+        accountAddress: accountAddress.target as `0x${string}`,
         baseToken: createTokenData(formData.baseToken as TokenTickers),
         targetToken: createTokenData(formData.targetToken as TokenTickers),
         interval: BigInt(formData.interval),

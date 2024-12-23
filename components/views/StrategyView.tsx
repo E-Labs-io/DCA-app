@@ -4,7 +4,6 @@
 
 import { Card, CardBody } from "@nextui-org/react";
 
-import { useAccountStats } from "@/hooks/useAccountStats";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
 import { EthereumAddress } from "@/types/generic";
 import { FundUnfundAccountModal } from "@/components/modals/FundUnfundAccountModal";
@@ -14,12 +13,7 @@ import { useAppKitAccount } from "@reown/appkit/react";
 import { StrategyCard } from "../ui/strategy/StrategyCard";
 import { NetworkKeys } from "@/types";
 import { Signer } from "ethers";
-import { useAccountStore } from "@/lib/store/accountStore";
-import { useDCAFactory } from "@/hooks/useDCAFactory";
-import {
-  StrategyStats,
-  useDCAProvider,
-} from "@/lib/providers/DCAStatsProvider";
+import { useDCAProvider } from "@/lib/providers/DCAStatsProvider";
 
 export interface StrategyViewProps {
   ACTIVE_NETWORK: NetworkKeys;
@@ -114,22 +108,6 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
   } else
     return (
       <div className="grid grid-cols-1 gap-6">
-        {/*      <Card>
-          <CardBody>
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="text-lg font-semibold">Strategy Overview</h3>
-                <p className="text-sm text-gray-400">
-                  {walletStats?.totalActiveStrategies} Active /{" "}
-                  {allStrategies.length} Total Strategies
-                </p>
-                <p className="text-sm text-gray-400">
-                  Total Executions: {walletStats?.totalExecutions}
-                </p>
-              </div>
-            </div>
-          </CardBody>
-        </Card> */}
         {allStrategies.map((strategy: IDCADataStructures.StrategyStruct) => {
           const isExpanded =
             selectedStrategy === strategy?.strategyId.toString();

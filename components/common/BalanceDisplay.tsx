@@ -6,10 +6,10 @@ import Image from "next/image";
 import { getTokenIcon, getTokenTicker } from "@/lib/helpers/tokenData";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
 import { EthereumAddress } from "@/types";
-import { TokenBalances } from "@/hooks/useAccountStats";
 import { formatUnits, Signer } from "ethers";
 import { buildNetworkScanLink } from "@/lib/helpers/buildScanLink";
 import { NetworkKeys } from "@/types";
+import { TokenBalances } from "@/lib/providers/DCAStatsProvider";
 
 interface AccountBalancesProps {
   accountBalances: TokenBalances;

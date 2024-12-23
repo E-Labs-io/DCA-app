@@ -8,8 +8,6 @@ import { tokenList, TokenTickers } from "@/constants/tokens";
 import Image from "next/image";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
 import { useDCAAccount } from "@/hooks/useDCAAccount";
-import { useAccountStats } from "@/hooks/useAccountStats";
-import { useAccountStore } from "@/lib/store/accountStore";
 import { toast } from "sonner";
 import { formatUnits } from "viem";
 import { useState, useEffect } from "react";
@@ -39,11 +37,14 @@ export function StrategyList({
   strategies,
 }: StrategyListProps) {
   const { Signer, ACTIVE_NETWORK } = useSigner();
-  const { getAccountInstance, selectedAccount } = useDCAProvider();
+  const {
+    getAccountInstance,
+    selectedAccount,
+    getAccountBalances,
+    getStrategyStats,
+  } = useDCAProvider();
   const { subscribeStrategy, getAccountBaseTokens, unsubscribeStrategy } =
     useDCAAccount(getAccountInstance(accountAddress as string)!, Signer!);
-  const { tokenBalances, executionTimings, getAllData } = useAccountStats();
-  const { setAccountStrategies } = useAccountStore();
   const [selectedStrategy, setSelectedStrategy] =
     useState<IDCADataStructures.StrategyStruct | null>(null);
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
@@ -67,7 +68,7 @@ export function StrategyList({
     try {
       setIsUpdating(Number(strategy.strategyId).toString());
       if (strategy.active) {
-        await toast.promise(
+        toast.promise(
           unsubscribeStrategy(strategy.strategyId).then(async (result) => {
             if (result) {
               const updatedStrategies = strategies.map((s) =>
@@ -75,8 +76,6 @@ export function StrategyList({
                   ? { ...s, active: false }
                   : s
               );
-              setAccountStrategies(accountAddress, updatedStrategies);
-              await getAllData();
             }
             return result;
           }),
@@ -95,8 +94,6 @@ export function StrategyList({
                   ? { ...s, active: true }
                   : s
               );
-              setAccountStrategies(accountAddress, updatedStrategies);
-              await getAllData();
             }
             return result;
           }),
@@ -115,7 +112,7 @@ export function StrategyList({
   };
 
   const getTokenBalance = (token: IDCADataStructures.TokenDataStruct) => {
-    const accountBalances = tokenBalances[accountAddress];
+    const accountBalances = getAccountBalances(accountAddress);
     if (!accountBalances) return null;
 
     const balance = accountBalances[token.tokenAddress.toString()];
@@ -132,15 +129,14 @@ export function StrategyList({
   };
 
   const getExecutionTiming = (strategy: IDCADataStructures.StrategyStruct) => {
-    const accountTimings = executionTimings[accountAddress];
+    const accountTimings = getStrategyStats(
+      accountAddress,
+      Number(strategy.strategyId)
+    );
     if (!accountTimings) return null;
 
-    const timing = accountTimings[strategy.strategyId.toString()];
-    if (!timing) return null;
-
-    const nextExecutionIn = timing.nextExecution - currentTime;
+    const nextExecutionIn = accountTimings?.lastExecution ?? 0 - currentTime;
     return {
-      ...timing,
       nextExecutionIn,
       formattedNextExecution:
         nextExecutionIn > 0
@@ -333,7 +329,8 @@ export function StrategyList({
         <CreateStrategyModal
           isOpen={isCreateStrategyOpen}
           onClose={() => setIsCreateStrategyOpen(false)}
-          accountAddress={selectedAccount as string}
+          accountAddress={getAccountInstance(accountAddress as string)!}
+          Signer={Signer}
           ACTIVE_NETWORK={ACTIVE_NETWORK!}
         />
       )}

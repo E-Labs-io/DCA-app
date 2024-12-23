@@ -1,8 +1,6 @@
 /** @format */
 
 import { Card, CardBody, CardHeader } from "@nextui-org/react";
-import WalletButton from "./WalletButton";
-import { NetworkConnect } from "./NetworkConnect";
 
 interface ConnectionCardProps {
   isConnected: boolean;
