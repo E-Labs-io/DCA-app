@@ -44,8 +44,8 @@ export const AccountCard: React.FC<AccountCardProps> = ({
     getAccountInstance,
   } = useDCAProvider();
 
-  const lastExecutionTime: number = getAccountStats(accountAddress as string)
-    ?.lastExecution!;
+  const lastExecutionTime: number =
+    getAccountStats(accountAddress as string)?.lastExecution ?? 0;
 
   const timeAgo = formatDistanceToNow(new Date(lastExecutionTime * 1000), {
     addSuffix: true,

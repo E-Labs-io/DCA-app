@@ -14,6 +14,7 @@ import { AppHeader } from "../ui/layout/AppHeader";
 import { useDCAFactory } from "@/hooks/useDCAFactory";
 import ConnectionCard from "../common/ConnectionCard";
 import { useDCAProvider } from "@/providers/DCAStatsProvider";
+import LoadingPage from "../common/LoadingPage";
 
 // Dynamically import components with proper default exports
 const CreateAccountModal = dynamic(
@@ -85,6 +86,7 @@ export default function AppContent() {
     ACTIVE_NETWORK,
     Signer,
     getAccountInstance,
+    firstLoad,
   } = useDCAProvider();
 
   const { DCAFactory } = useDCAFactory();
@@ -111,6 +113,7 @@ export default function AppContent() {
     );
   }
 
+  if (!firstLoad) return <LoadingPage />;
   return (
     <div className="min-h-screen p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
