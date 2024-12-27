@@ -69,6 +69,7 @@ export interface DCAProviderContextInterface {
   isLoading: boolean;
   firstLoad: boolean;
   walletStats: WalletStats | undefined;
+  loadingMessage: string | null;
   initiateUserAccounts: () => void;
   setSelectedAccount: (account: EthereumAddress) => void;
   addAccount: (account: AccountStorage) => void;
@@ -118,6 +119,8 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
   const [selectedAccount, setSelectedAccount] = useState<EthereumAddress>("");
   const [walletStats, setWalletStats] = useState<WalletStats>();
 
+  const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
+
   /** EFFECTS */
 
   /** LOGIC */
@@ -126,7 +129,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
     if (!Signer || firstLoad || isLoading || !DCAFactory) return;
     console.log("[DCAStatsProvider] initiateUserAccounts Mounted");
     setIsLoading(true);
-
+    setLoadingMessage("Loading Accounts...");
     const accountStates: AccountStorage[] = [];
 
     try {
@@ -134,9 +137,12 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
         try {
           for (let i = 0; i < accounts.length; i++) {
             const account: string = accounts[i];
-
+            setLoadingMessage(`Loading Account ${i + 1} of ${accounts.length}`);
             const instance = await createAccountInstance(account);
             const strategies = await fetchAccountStrategies(account, instance!);
+            setLoadingMessage(
+              `Loading Strategies for Account ${i + 1} of ${accounts.length}`
+            );
 
             if (strategies.length > 0) {
               const balances = await fetchTokenBalances(
@@ -144,8 +150,13 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
                 strategies,
                 instance!
               );
-
+              setLoadingMessage(
+                `Loading Balances for Account ${i + 1} of ${accounts.length}`
+              );
               const statistics = await buildAccountStats(instance!, strategies);
+              setLoadingMessage(
+                `Loading Statistics for Account ${i + 1} of ${accounts.length}`
+              );
 
               const accountData: AccountStorage = {
                 account,
@@ -154,9 +165,20 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
                 balances,
                 statistics,
               };
+              setLoadingMessage(
+                `Got Account Data for Account ${i + 1} of ${accounts.length}`
+              );
               accountStates.push(accountData);
             } else {
+              setLoadingMessage(
+                `Loading Balances for Account ${i + 1} of ${accounts.length}`
+              );
+
               const balances = {};
+              setLoadingMessage(
+                `Loading Statistics for Account ${i + 1} of ${accounts.length}`
+              );
+
               const statistics = {
                 totalExecutions: 0,
                 totalActiveStrategies: 0,
@@ -173,6 +195,9 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
                 balances,
                 statistics,
               };
+              setLoadingMessage(
+                `Got Account Data for Account ${i + 1} of ${accounts.length}`
+              );
               accountStates.push(accountData);
             }
           }
@@ -180,6 +205,8 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
           console.error("Error in initiateUserAccounts level 1:", error);
         }
       });
+
+      setLoadingMessage(null);
 
       setAccounts(accountStates);
       buildWalletStats(accountStates);
@@ -657,6 +684,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
         isLoading,
         firstLoad,
         walletStats,
+        loadingMessage,
         setSelectedAccount,
         addAccount,
         addStrategy,

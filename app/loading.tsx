@@ -3,7 +3,11 @@
 import React from "react";
 import LoadingPage from "../components/common/LoadingPage";
 
-export default function Loading() {
+export interface LoadingProps {
+  loadingMessage?: string | null;
+}
+
+export default function Loading({ loadingMessage }: LoadingProps) {
   console.log("Loading Page Mounted");
-  return <LoadingPage />;
+  return <LoadingPage loadingMessage={loadingMessage} />;
 }

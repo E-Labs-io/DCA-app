@@ -87,6 +87,7 @@ export default function AppContent() {
     Signer,
     getAccountInstance,
     firstLoad,
+    loadingMessage,
   } = useDCAProvider();
 
   const { DCAFactory } = useDCAFactory();
@@ -113,7 +114,8 @@ export default function AppContent() {
     );
   }
 
-  if (!firstLoad) return <LoadingPage />;
+  if (!firstLoad)
+    return <LoadingPage loadingMessage={loadingMessage ?? null} />;
   return (
     <div className="min-h-screen p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
