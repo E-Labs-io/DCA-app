@@ -105,11 +105,17 @@ const listenForSubscription = (
   });
 
   const filterB = accountContract.filters.StrategyUnsubscribed();
-  accountContract.on(filterA, (event: any) => {
+  accountContract.on(filterB, (event: any) => {
     const [strategyId_] = event.args;
     console.log("[listeners] listenForSubscription UnSubscribed", strategyId_);
     callBack(Number(strategyId_), false, accountContract.target as string);
   });
+
+  // Add a cleanup function
+  return () => {
+    accountContract.off(filterA, () => {});
+    accountContract.off(filterB, () => {});
+  };
 };
 
 export {

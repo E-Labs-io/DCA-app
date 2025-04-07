@@ -34,14 +34,48 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
       try {
         if (!dcaAccount) throw new Error("Error connecting to account");
 
+        const loadingToastId = toast.loading("Creating strategy...");
         const tx = await dcaAccount.SetupStrategy(
           strategy,
           fundAmount,
           subscribe
         );
+        
+        // Wait for transaction to be mined to get strategyId from events
+        const receipt = await tx.wait();
+        toast.dismiss(loadingToastId);
+        
+        // Find the StrategyCreated event in the transaction receipt
+        const strategyCreatedEvent = receipt.logs.find(
+          (log: any) => 
+            log.topics[0] === dcaAccount.interface.getEvent('StrategyCreated').topicHash
+        );
+        
+        if (strategyCreatedEvent) {
+          // Parse the event to get the strategyId
+          const parsedEvent = dcaAccount.interface.parseLog(strategyCreatedEvent);
+          const newStrategyId = parsedEvent?.args[0]; // First arg is strategyId
+          
+          // If we got a strategyId, update the UI manually
+          if (newStrategyId) {
+            // Fetch the complete strategy data with the right ID
+            const strategyData = await dcaAccount.GetStrategy(newStrategyId);
+            
+            // Force a refresh by dispatching a custom event
+            window.dispatchEvent(new CustomEvent('strategy-created', { 
+              detail: { 
+                accountAddress: dcaAccount.target,
+                strategyId: Number(newStrategyId)
+              } 
+            }));
+          }
+        }
+        
+        toast.success("Strategy created successfully!");
         return { tx, hash: tx.hash };
       } catch (error: any) {
         if (error.code === 4001 || error.message?.includes("rejected")) {
+          toast.error("Transaction was rejected");
           throw error;
         }
         console.error("Error creating strategy:", error);

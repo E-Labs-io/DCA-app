@@ -1,7 +1,13 @@
 /** @format */
 
 import useSigner from "@/hooks/useSigner";
-import { createContext, useContext, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  type ReactNode,
+  useEffect,
+} from "react";
 import { useDCAFactory } from "@/hooks/useDCAFactory";
 import { EthereumAddress } from "@/types/generic";
 import { DCAAccount } from "@/types/contracts";
@@ -107,6 +113,17 @@ export interface DCAProviderProps {
   children?: ReactNode;
 }
 
+const blockCache = new Map<number, any>();
+
+const getCachedBlock = async (blockNumber: number, getBlock: Function) => {
+  if (blockCache.has(blockNumber)) {
+    return blockCache.get(blockNumber);
+  }
+  const block = await getBlock(blockNumber);
+  blockCache.set(blockNumber, block);
+  return block;
+};
+
 export function DCAStatsProvider({ children }: DCAProviderProps) {
   const { ACTIVE_NETWORK, Signer, getBlock, address } = useSigner();
   const { getUsersAccountAddresses, DCAFactory } = useDCAFactory();
@@ -123,100 +140,147 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
 
   /** EFFECTS */
 
+  useEffect(() => {
+    const handleStrategyCreated = async (e: CustomEvent) => {
+      const { accountAddress, strategyId } = e.detail;
+
+      // Refresh the specific account data
+      const instance = getAccountInstance(accountAddress);
+      if (instance) {
+        // Fetch fresh data
+        const strategies = await fetchAccountStrategies(
+          accountAddress,
+          instance
+        );
+        const balances = await fetchTokenBalances(
+          accountAddress,
+          strategies,
+          instance
+        );
+        const statistics = await buildAccountStats(instance, strategies);
+
+        // Update account in state
+        setAccounts((prev) =>
+          prev.map((account) =>
+            account.account === accountAddress
+              ? { ...account, strategies, balances, statistics }
+              : account
+          )
+        );
+
+        // Rebuild wallet stats
+        buildWalletStats(accounts);
+      }
+    };
+
+    window.addEventListener(
+      "strategy-created",
+      handleStrategyCreated as unknown as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "strategy-created",
+        handleStrategyCreated as unknown as EventListener
+      );
+    };
+  });
+
   /** LOGIC */
 
   const initiateUserAccounts = async () => {
     if (!Signer || firstLoad || isLoading || !DCAFactory) return;
-    console.log("[DCAStatsProvider] initiateUserAccounts Mounted");
     setIsLoading(true);
-    setLoadingMessage("Loading Accounts...");
-    const accountStates: AccountStorage[] = [];
+    setLoadingMessage("Initializing...");
 
     try {
-      await getUsersAccountAddresses().then(async (accounts) => {
-        try {
-          for (let i = 0; i < accounts.length; i++) {
-            const account: string = accounts[i];
-            setLoadingMessage(`Loading Account ${i + 1} of ${accounts.length}`);
-            const instance = await createAccountInstance(account);
-            setLoadingMessage(
-              `Loading Strategies for Account ${i + 1} of ${accounts.length}`
-            );
-            const strategies = await fetchAccountStrategies(account, instance!);
+      // 1. Get all user accounts in one call
+      const accountAddresses = await getUsersAccountAddresses();
 
-            if (strategies.length > 0) {
-              setLoadingMessage(
-                `Loading Balances for Account ${i + 1} of ${accounts.length}`
-              );
-              const balances = await fetchTokenBalances(
-                account,
-                strategies,
-                instance!
-              );
-              setLoadingMessage(
-                `Loading Statistics for Account ${i + 1} of ${accounts.length}`
-              );
-              const statistics = await buildAccountStats(instance!, strategies);
-              setLoadingMessage(
-                `Got Account Data for Account ${i + 1} of ${accounts.length}`
-              );
-              const accountData: AccountStorage = {
-                account,
-                instance: instance!,
-                strategies,
-                balances,
-                statistics,
-              };
+      // 2. Quick initial load with basic data
+      const basicAccountData: AccountStorage[] = await Promise.all(
+        accountAddresses.map(async (account) => {
+          const instance = await createAccountInstance(account);
+          return {
+            account: account as EthereumAddress,
+            instance: instance!,
+            strategies: [],
+            balances: {},
+            statistics: {
+              totalExecutions: 0,
+              totalActiveStrategies: 0,
+              totalStrategies: 0,
+              reinvestLibraryVersion: false as const,
+              strategy: {},
+            },
+          };
+        })
+      );
 
-              accountStates.push(accountData);
-            } else {
-              setLoadingMessage(
-                `Loading Balances for Account ${i + 1} of ${accounts.length}`
-              );
+      // Store basic data but DON'T set firstLoad yet
+      setAccounts(basicAccountData);
 
-              const balances = {};
-              setLoadingMessage(
-                `Loading Statistics for Account ${i + 1} of ${accounts.length}`
-              );
+      // 3. Add loading progress tracking
+      let loadedAccounts = 0;
+      const totalAccounts = accountAddresses.length;
 
-              const statistics = {
-                totalExecutions: 0,
-                totalActiveStrategies: 0,
-                totalStrategies: 0,
-                reinvestLibraryVersion: "false",
-                strategy: {},
-                lastExecution: 0,
-              };
+      // 4. Load detailed data in parallel
+      const detailedDataPromises = basicAccountData.map(
+        async ({ account, instance }, index) => {
+          if (!instance) return null;
 
-              const accountData: AccountStorage = {
-                account,
-                instance: instance!,
-                strategies,
-                balances,
-                statistics,
-              };
-              setLoadingMessage(
-                `Got Account Data for Account ${i + 1} of ${accounts.length}`
-              );
-              accountStates.push(accountData);
-            }
+          setLoadingMessage(
+            `Loading account ${index + 1} of ${totalAccounts}...`
+          );
+
+          // Load strategies and initial balances in parallel
+          const [strategies, initialBalances] = await Promise.all([
+            fetchAccountStrategies(account as string, instance),
+            fetchTokenBalances(account as string, [], instance),
+          ]);
+
+          // Load statistics and final balances in parallel
+          const [statistics, finalBalances] = await Promise.all([
+            buildAccountStats(instance, strategies),
+            fetchTokenBalances(account as string, strategies, instance),
+          ]);
+
+          // Increment loaded accounts counter
+          loadedAccounts++;
+
+          // If we've loaded most accounts (80%), we can show the UI
+          if (loadedAccounts / totalAccounts >= 0.8 && !firstLoad) {
+            setFirstLoad(true);
           }
-        } catch (error) {
-          console.error("Error in initiateUserAccounts level 1:", error);
+
+          return {
+            account,
+            instance,
+            strategies,
+            balances: finalBalances,
+            statistics,
+          };
         }
-      });
+      );
 
-      setLoadingMessage(null);
+      // 5. Process all detailed data
+      const completedAccounts = (
+        await Promise.all(detailedDataPromises)
+      ).filter(
+        (account): account is NonNullable<typeof account> => account !== null
+      );
 
-      setAccounts(accountStates);
-      buildWalletStats(accountStates);
-      startListeners(accountStates);
+      // 6. Final state update
+      setAccounts(completedAccounts);
+      buildWalletStats(completedAccounts);
+      startListeners(completedAccounts);
+
+      // Ensure firstLoad is true after everything is loaded
       setFirstLoad(true);
     } catch (error) {
-      console.error("Error in initiateUserAccounts level 2:", error);
-      setIsLoading(false);
-      return;
+      console.error("Error in initiateUserAccounts:", error);
     } finally {
+      setLoadingMessage(null);
       setIsLoading(false);
     }
   };
@@ -477,36 +541,40 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
     accountInstance: DCAAccount,
     strategies: IDCADataStructures.StrategyStruct[]
   ): Promise<AccountStats> => {
-    const reinvest = await accountInstance?.getAttachedReinvestLibraryVersion();
+    const [reinvest, strategyStatsArray] = await Promise.all([
+      accountInstance.getAttachedReinvestLibraryVersion(),
+      Promise.all(
+        strategies.map((strategy) =>
+          buildStrategyStats(accountInstance, strategy)
+        )
+      ),
+    ]);
+
     const strategyStats: { [strategyId: number]: StrategyStats } = {};
     let totalExecutions = 0;
-    for (const strategy of strategies) {
-      const stats = await buildStrategyStats(accountInstance, strategy);
-      strategyStats[Number(strategy?.strategyId)] = stats;
-      totalExecutions += stats.totalExecutions;
-    }
-
     let lastExecution: number | undefined = undefined;
 
-    for (const key in strategyStats) {
-      if (
-        strategyStats[key].lastExecution &&
-        (!lastExecution || strategyStats[key].lastExecution > lastExecution)
-      ) {
-        lastExecution = strategyStats[key].lastExecution;
-      }
-    }
+    strategyStatsArray.forEach((stats, index) => {
+      const strategyId = Number(strategies[index].strategyId);
+      strategyStats[strategyId] = stats;
+      totalExecutions += stats.totalExecutions;
 
-    const initStats: AccountStats = {
+      if (
+        stats.lastExecution &&
+        (!lastExecution || stats.lastExecution > lastExecution)
+      ) {
+        lastExecution = stats.lastExecution;
+      }
+    });
+
+    return {
       reinvestLibraryVersion: reinvest || false,
       totalStrategies: strategies.length,
-      totalActiveStrategies: strategies.filter((s) => s.active).length || 0,
+      totalActiveStrategies: strategies.filter((s) => s.active).length,
       totalExecutions,
       lastExecution,
       strategy: strategyStats,
     };
-    console.log("[DCAStatsProvider] initStats", initStats);
-    return initStats;
   };
 
   const buildStrategyStats = async (
@@ -534,14 +602,14 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
         return latest.blockNumber > current.blockNumber ? latest : current;
       });
 
-      const block = await getBlock(lastExecEvent.blockNumber);
+      const block = await getCachedBlock(lastExecEvent.blockNumber, getBlock);
 
       lastExecution = block?.timestamp!;
 
       let i = 0;
       for (const execution of executions) {
         i++;
-        const block = await getBlock(execution.blockNumber);
+        const block = await getCachedBlock(execution.blockNumber, getBlock);
         const timestamp = block?.timestamp!;
         executionEvents.push({
           amount: Number(execution.amountIn),
@@ -563,7 +631,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
     return data;
   };
 
-  const buildWalletStats = (accounts: AccountStorage[]) => {
+  const buildWalletStats = (accounts: NonNullable<AccountStorage>[]) => {
     let totalExecutions = 0;
     let totalActiveStrategies = 0;
     let totalStrategies = 0;
@@ -590,7 +658,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
   const onNewAccount = async (account: string) => {
     console.log("[DCAStatsProvider] onNewAccount", account);
     let accountStates: AccountStorage;
-    const instance = await createAccountInstance(account);
+    const instance = await createAccountInstance(account as EthereumAddress);
     const strategies = await fetchAccountStrategies(account, instance!);
 
     if (strategies.length > 0) {
@@ -599,7 +667,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
       const statistics = await buildAccountStats(instance!, strategies);
 
       const accountData: AccountStorage = {
-        account,
+        account: account as EthereumAddress,
         instance: instance!,
         strategies,
         balances,
@@ -618,9 +686,9 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
       };
 
       const accountData: AccountStorage = {
-        account,
+        account: account as EthereumAddress,
         instance: instance!,
-        strategies,
+        strategies: [],
         balances,
         statistics,
       };
@@ -711,12 +779,10 @@ export interface TokenBalanceData {
   balance: bigint;
   targetBalance: bigint;
   remainingExecutions?: number;
-  needsTopUp?: true;
+  needsTopUp?: boolean;
 }
 
-export type TokenBalances = {
-  [tokenAddress: string]: TokenBalanceData;
-};
+export type TokenBalances = Record<string, TokenBalanceData>;
 
 export interface StrategyExecutionTiming {
   lastExecution: number;

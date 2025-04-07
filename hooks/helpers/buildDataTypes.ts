@@ -52,24 +52,39 @@ export const buildAccountCreatedEvent = (
 };
 
 export const buildStrategyStruct = (
-  data: IDCADataStructures.StrategyStructOutput
+  data: any
 ): IDCADataStructures.StrategyStruct => {
+  if (!data) {
+    console.error("Strategy data is undefined");
+    throw new Error("Strategy data is undefined");
+  }
+
+  if (data.strategyId === undefined) {
+    console.error("Missing strategyId in data:", data);
+    data.strategyId = "pending";
+  }
+
   return {
     strategyId: data.strategyId.toString(),
     accountAddress: data.accountAddress,
     baseToken: {
       tokenAddress: data.baseToken[0],
-      decimals: data.baseToken[1],
+      decimals: data.baseToken[1].toString(),
       ticker: data.baseToken[2],
     },
     targetToken: {
       tokenAddress: data.targetToken[0],
-      decimals: data.targetToken[1],
+      decimals: data.targetToken[1].toString(),
       ticker: data.targetToken[2],
     },
-    interval: data.interval,
+    interval: data.interval.toString(),
     amount: data.amount.toString(),
-    reinvest: data.reinvest,
     active: data.active,
+    reinvest: {
+      reinvestData: data.reinvest[0],
+      active: data.reinvest[1],
+      investCode: data.reinvest[2].toString(),
+      dcaAccountAddress: data.reinvest[3],
+    },
   };
 };

@@ -47,18 +47,20 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
 
   useEffect(() => {
     console.log("[StrategyView] accounts", accounts);
-    if (allStrategies.length === 0 && accounts.length > 0) {
-      setIsLoading(true);
+    if (accounts && accounts.length > 0) {
       const strategies: IDCADataStructures.StrategyStruct[] = [];
-      for (const account of accounts) {
-        for (const strategy of account.strategies) {
-          strategies.push(strategy);
+      accounts.forEach((account) => {
+        if (account.strategies && account.strategies.length > 0) {
+          strategies.push(...account.strategies);
         }
-      }
+      });
       setAllStrategies(strategies);
       setIsLoading(false);
     }
-  }, [accounts]);
+  }, [accounts, accounts.map(a => 
+    // This will cause re-render when any strategy's active state changes
+    a.strategies?.map(s => s.active).join(',')
+  ).join(',')]);
 
   const handleFundingModal = (
     type: "fund" | "unfund" | "withdraw",

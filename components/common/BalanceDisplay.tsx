@@ -6,7 +6,7 @@ import Image from "next/image";
 import { getTokenIcon, getTokenTicker } from "@/helpers/tokenData";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
 import { EthereumAddress } from "@/types";
-import { formatUnits, Signer } from "ethers";
+import { formatUnits, Signer, BigNumberish } from "ethers";
 import { buildNetworkScanLink } from "@/helpers/buildScanLink";
 import { NetworkKeys } from "@/types";
 import { TokenBalances } from "@/providers/DCAStatsProvider";
@@ -18,6 +18,23 @@ interface AccountBalancesProps {
   ACTIVE_NETWORK: NetworkKeys;
   Signer: Signer;
 }
+
+const safeFormatUnits = (
+  value: BigNumberish,
+  decimals: number | string
+): string => {
+  try {
+    // Ensure decimals is a valid number
+    const parsedDecimals = Number(decimals);
+    if (isNaN(parsedDecimals) || parsedDecimals < 0 || parsedDecimals > 18) {
+      return formatUnits(value.toString(), 18); // Convert to string first
+    }
+    return formatUnits(value.toString(), parsedDecimals); // Convert to string first
+  } catch (error) {
+    console.error("Error formatting units:", error);
+    return "0.0";
+  }
+};
 
 export const AccountBalances: React.FC<AccountBalancesProps> = ({
   accountBalances,
@@ -67,13 +84,19 @@ export const AccountBalances: React.FC<AccountBalancesProps> = ({
 
             const formattedBalance = balanceData.balance
               ? parseFloat(
-                  formatUnits(balanceData.balance, tokenData.decimals)
+                  safeFormatUnits(
+                    balanceData.balance,
+                    Number(tokenData.decimals)
+                  )
                 ).toFixed(6)
               : "0.000000";
 
             const formattedTargetBalance = balanceData.targetBalance
               ? parseFloat(
-                  formatUnits(balanceData.targetBalance, tokenData.decimals)
+                  safeFormatUnits(
+                    balanceData.targetBalance,
+                    Number(tokenData.decimals)
+                  )
                 ).toFixed(6)
               : "0.000000";
 
