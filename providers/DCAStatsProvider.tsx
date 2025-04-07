@@ -139,25 +139,27 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
             const account: string = accounts[i];
             setLoadingMessage(`Loading Account ${i + 1} of ${accounts.length}`);
             const instance = await createAccountInstance(account);
-            const strategies = await fetchAccountStrategies(account, instance!);
             setLoadingMessage(
               `Loading Strategies for Account ${i + 1} of ${accounts.length}`
             );
+            const strategies = await fetchAccountStrategies(account, instance!);
 
             if (strategies.length > 0) {
+              setLoadingMessage(
+                `Loading Balances for Account ${i + 1} of ${accounts.length}`
+              );
               const balances = await fetchTokenBalances(
                 account,
                 strategies,
                 instance!
               );
               setLoadingMessage(
-                `Loading Balances for Account ${i + 1} of ${accounts.length}`
+                `Loading Statistics for Account ${i + 1} of ${accounts.length}`
               );
               const statistics = await buildAccountStats(instance!, strategies);
               setLoadingMessage(
-                `Loading Statistics for Account ${i + 1} of ${accounts.length}`
+                `Got Account Data for Account ${i + 1} of ${accounts.length}`
               );
-
               const accountData: AccountStorage = {
                 account,
                 instance: instance!,
@@ -165,9 +167,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
                 balances,
                 statistics,
               };
-              setLoadingMessage(
-                `Got Account Data for Account ${i + 1} of ${accounts.length}`
-              );
+
               accountStates.push(accountData);
             } else {
               setLoadingMessage(
