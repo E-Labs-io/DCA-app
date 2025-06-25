@@ -90,18 +90,19 @@ export declare namespace IDCADataStructures {
 export interface DCAAccountLogicInterface extends Interface {
   getFunction(
     nameOrSignature:
+      | "AddFunds"
       | "Execute"
       | "ExecutorDeactivate"
-      | "FundAccount"
       | "SWAP_ROUTER"
       | "SetupStrategy"
       | "SubscribeStrategy"
-      | "UnFundAccount"
       | "UnsubscribeStrategy"
+      | "WithdrawFunds"
       | "WithdrawSavings"
       | "changeExecutor"
       | "getBaseBalance"
       | "getExecutorAddress"
+      | "getReinvestTokenBalance"
       | "getTargetBalance"
       | "getTimeTillWindow"
       | "owner"
@@ -120,10 +121,13 @@ export interface DCAAccountLogicInterface extends Interface {
       | "ReinvestUnwound"
       | "StrategyCreated"
       | "StrategyExecuted"
-      | "StrategySubscribed"
-      | "StrategyUnsubscribed"
+      | "StrategySubscription"
   ): EventFragment;
 
+  encodeFunctionData(
+    functionFragment: "AddFunds",
+    values: [AddressLike, BigNumberish]
+  ): string;
   encodeFunctionData(
     functionFragment: "Execute",
     values: [BigNumberish, BigNumberish]
@@ -131,10 +135,6 @@ export interface DCAAccountLogicInterface extends Interface {
   encodeFunctionData(
     functionFragment: "ExecutorDeactivate",
     values: [BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "FundAccount",
-    values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "SWAP_ROUTER",
@@ -149,12 +149,12 @@ export interface DCAAccountLogicInterface extends Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "UnFundAccount",
-    values: [AddressLike, BigNumberish]
-  ): string;
-  encodeFunctionData(
     functionFragment: "UnsubscribeStrategy",
     values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "WithdrawFunds",
+    values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "WithdrawSavings",
@@ -171,6 +171,10 @@ export interface DCAAccountLogicInterface extends Interface {
   encodeFunctionData(
     functionFragment: "getExecutorAddress",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getReinvestTokenBalance",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "getTargetBalance",
@@ -198,13 +202,10 @@ export interface DCAAccountLogicInterface extends Interface {
     values: [AddressLike]
   ): string;
 
+  decodeFunctionResult(functionFragment: "AddFunds", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "Execute", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "ExecutorDeactivate",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "FundAccount",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -220,11 +221,11 @@ export interface DCAAccountLogicInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "UnFundAccount",
+    functionFragment: "UnsubscribeStrategy",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "UnsubscribeStrategy",
+    functionFragment: "WithdrawFunds",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -241,6 +242,10 @@ export interface DCAAccountLogicInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "getExecutorAddress",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getReinvestTokenBalance",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -330,20 +335,11 @@ export namespace ReinvestLibraryChangedEvent {
 }
 
 export namespace ReinvestUnwoundEvent {
-  export type InputTuple = [
-    strategyId: BigNumberish,
-    amount: BigNumberish,
-    success: boolean
-  ];
-  export type OutputTuple = [
-    strategyId: bigint,
-    amount: bigint,
-    success: boolean
-  ];
+  export type InputTuple = [strategyId: BigNumberish, amount: BigNumberish];
+  export type OutputTuple = [strategyId: bigint, amount: bigint];
   export interface OutputObject {
     strategyId: bigint;
     amount: bigint;
-    success: boolean;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -385,24 +381,21 @@ export namespace StrategyExecutedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
-export namespace StrategySubscribedEvent {
-  export type InputTuple = [strategyId_: BigNumberish, executor_: AddressLike];
-  export type OutputTuple = [strategyId_: bigint, executor_: string];
+export namespace StrategySubscriptionEvent {
+  export type InputTuple = [
+    strategyId_: BigNumberish,
+    executor_: AddressLike,
+    subscribed_: boolean
+  ];
+  export type OutputTuple = [
+    strategyId_: bigint,
+    executor_: string,
+    subscribed_: boolean
+  ];
   export interface OutputObject {
     strategyId_: bigint;
     executor_: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
-
-export namespace StrategyUnsubscribedEvent {
-  export type InputTuple = [strategyId_: BigNumberish];
-  export type OutputTuple = [strategyId_: bigint];
-  export interface OutputObject {
-    strategyId_: bigint;
+    subscribed_: boolean;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -453,6 +446,12 @@ export interface DCAAccountLogic extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
+  AddFunds: TypedContractMethod<
+    [token_: AddressLike, amount_: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   Execute: TypedContractMethod<
     [strategyId_: BigNumberish, feeAmount_: BigNumberish],
     [boolean],
@@ -461,12 +460,6 @@ export interface DCAAccountLogic extends BaseContract {
 
   ExecutorDeactivate: TypedContractMethod<
     [strategyId_: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-
-  FundAccount: TypedContractMethod<
-    [token_: AddressLike, amount_: BigNumberish],
     [void],
     "nonpayable"
   >;
@@ -489,14 +482,14 @@ export interface DCAAccountLogic extends BaseContract {
     "nonpayable"
   >;
 
-  UnFundAccount: TypedContractMethod<
-    [token_: AddressLike, amount_: BigNumberish],
+  UnsubscribeStrategy: TypedContractMethod<
+    [strategyId_: BigNumberish],
     [void],
     "nonpayable"
   >;
 
-  UnsubscribeStrategy: TypedContractMethod<
-    [strategyId_: BigNumberish],
+  WithdrawFunds: TypedContractMethod<
+    [token_: AddressLike, amount_: BigNumberish],
     [void],
     "nonpayable"
   >;
@@ -520,6 +513,12 @@ export interface DCAAccountLogic extends BaseContract {
   >;
 
   getExecutorAddress: TypedContractMethod<[], [string], "view">;
+
+  getReinvestTokenBalance: TypedContractMethod<
+    [strategyId_: BigNumberish],
+    [bigint],
+    "view"
+  >;
 
   getTargetBalance: TypedContractMethod<
     [token_: AddressLike],
@@ -562,6 +561,13 @@ export interface DCAAccountLogic extends BaseContract {
   ): T;
 
   getFunction(
+    nameOrSignature: "AddFunds"
+  ): TypedContractMethod<
+    [token_: AddressLike, amount_: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "Execute"
   ): TypedContractMethod<
     [strategyId_: BigNumberish, feeAmount_: BigNumberish],
@@ -571,13 +577,6 @@ export interface DCAAccountLogic extends BaseContract {
   getFunction(
     nameOrSignature: "ExecutorDeactivate"
   ): TypedContractMethod<[strategyId_: BigNumberish], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "FundAccount"
-  ): TypedContractMethod<
-    [token_: AddressLike, amount_: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
   getFunction(
     nameOrSignature: "SWAP_ROUTER"
   ): TypedContractMethod<[], [string], "view">;
@@ -596,15 +595,15 @@ export interface DCAAccountLogic extends BaseContract {
     nameOrSignature: "SubscribeStrategy"
   ): TypedContractMethod<[strategyId_: BigNumberish], [void], "nonpayable">;
   getFunction(
-    nameOrSignature: "UnFundAccount"
+    nameOrSignature: "UnsubscribeStrategy"
+  ): TypedContractMethod<[strategyId_: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "WithdrawFunds"
   ): TypedContractMethod<
     [token_: AddressLike, amount_: BigNumberish],
     [void],
     "nonpayable"
   >;
-  getFunction(
-    nameOrSignature: "UnsubscribeStrategy"
-  ): TypedContractMethod<[strategyId_: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "WithdrawSavings"
   ): TypedContractMethod<
@@ -621,6 +620,9 @@ export interface DCAAccountLogic extends BaseContract {
   getFunction(
     nameOrSignature: "getExecutorAddress"
   ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "getReinvestTokenBalance"
+  ): TypedContractMethod<[strategyId_: BigNumberish], [bigint], "view">;
   getFunction(
     nameOrSignature: "getTargetBalance"
   ): TypedContractMethod<[token_: AddressLike], [bigint], "nonpayable">;
@@ -707,18 +709,11 @@ export interface DCAAccountLogic extends BaseContract {
     StrategyExecutedEvent.OutputObject
   >;
   getEvent(
-    key: "StrategySubscribed"
+    key: "StrategySubscription"
   ): TypedContractEvent<
-    StrategySubscribedEvent.InputTuple,
-    StrategySubscribedEvent.OutputTuple,
-    StrategySubscribedEvent.OutputObject
-  >;
-  getEvent(
-    key: "StrategyUnsubscribed"
-  ): TypedContractEvent<
-    StrategyUnsubscribedEvent.InputTuple,
-    StrategyUnsubscribedEvent.OutputTuple,
-    StrategyUnsubscribedEvent.OutputObject
+    StrategySubscriptionEvent.InputTuple,
+    StrategySubscriptionEvent.OutputTuple,
+    StrategySubscriptionEvent.OutputObject
   >;
 
   filters: {
@@ -766,7 +761,7 @@ export interface DCAAccountLogic extends BaseContract {
       ReinvestLibraryChangedEvent.OutputObject
     >;
 
-    "ReinvestUnwound(uint256,uint256,bool)": TypedContractEvent<
+    "ReinvestUnwound(uint256,uint256)": TypedContractEvent<
       ReinvestUnwoundEvent.InputTuple,
       ReinvestUnwoundEvent.OutputTuple,
       ReinvestUnwoundEvent.OutputObject
@@ -799,26 +794,15 @@ export interface DCAAccountLogic extends BaseContract {
       StrategyExecutedEvent.OutputObject
     >;
 
-    "StrategySubscribed(uint256,address)": TypedContractEvent<
-      StrategySubscribedEvent.InputTuple,
-      StrategySubscribedEvent.OutputTuple,
-      StrategySubscribedEvent.OutputObject
+    "StrategySubscription(uint256,address,bool)": TypedContractEvent<
+      StrategySubscriptionEvent.InputTuple,
+      StrategySubscriptionEvent.OutputTuple,
+      StrategySubscriptionEvent.OutputObject
     >;
-    StrategySubscribed: TypedContractEvent<
-      StrategySubscribedEvent.InputTuple,
-      StrategySubscribedEvent.OutputTuple,
-      StrategySubscribedEvent.OutputObject
-    >;
-
-    "StrategyUnsubscribed(uint256)": TypedContractEvent<
-      StrategyUnsubscribedEvent.InputTuple,
-      StrategyUnsubscribedEvent.OutputTuple,
-      StrategyUnsubscribedEvent.OutputObject
-    >;
-    StrategyUnsubscribed: TypedContractEvent<
-      StrategyUnsubscribedEvent.InputTuple,
-      StrategyUnsubscribedEvent.OutputTuple,
-      StrategyUnsubscribedEvent.OutputObject
+    StrategySubscription: TypedContractEvent<
+      StrategySubscriptionEvent.InputTuple,
+      StrategySubscriptionEvent.OutputTuple,
+      StrategySubscriptionEvent.OutputObject
     >;
   };
 }

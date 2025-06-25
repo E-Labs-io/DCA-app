@@ -27,8 +27,8 @@ export default function ConnectionCard({
           <CardBody className="flex flex-col items-center gap-4 p-8">
             <h1 className="text-2xl font-bold mb-4">Wrong Network</h1>
             <p className="text-center text-gray-400 mb-6">
-              Ation Control is only available on the Sepolia network. Please
-              switch to the Sepolia network to continue.
+              Ation Control is only available on the Base network. Please switch
+              to the Base network to continue.
             </p>
             <appkit-network-button />
           </CardBody>

@@ -10,6 +10,36 @@ import type {
 
 const _abi = [
   {
+    inputs: [
+      {
+        internalType: "address",
+        name: "token_",
+        type: "address",
+      },
+    ],
+    name: "NotAllowedBaseToken",
+    type: "error",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "address",
+        name: "token_",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "bool",
+        name: "allowed_",
+        type: "bool",
+      },
+    ],
+    name: "BaseTokenAllowanceChanged",
+    type: "event",
+  },
+  {
     anonymous: false,
     inputs: [
       {
@@ -109,6 +139,11 @@ const _abi = [
         name: "strategyId_",
         type: "uint256",
       },
+      {
+        internalType: "enum IDCADataStructures.Interval",
+        name: "interval_",
+        type: "uint8",
+      },
     ],
     name: "Execute",
     outputs: [],
@@ -126,6 +161,11 @@ const _abi = [
         internalType: "uint256",
         name: "strategyId_",
         type: "uint256",
+      },
+      {
+        internalType: "enum IDCADataStructures.Interval",
+        name: "interval_",
+        type: "uint8",
       },
     ],
     name: "ForceUnsubscribe",
@@ -256,6 +296,11 @@ const _abi = [
         name: "strategyId_",
         type: "uint256",
       },
+      {
+        internalType: "enum IDCADataStructures.Interval",
+        name: "interval_",
+        type: "uint8",
+      },
     ],
     name: "Unsubscribe",
     outputs: [],
@@ -294,6 +339,24 @@ const _abi = [
       },
     ],
     stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "token_",
+        type: "address",
+      },
+      {
+        internalType: "bool",
+        name: "allowed_",
+        type: "bool",
+      },
+    ],
+    name: "setBaseTokenAllowance",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
   {

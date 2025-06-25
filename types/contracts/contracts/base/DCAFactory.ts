@@ -29,15 +29,17 @@ export interface DCAFactoryInterface extends Interface {
       | "CreateAccount"
       | "SWAP_ROUTER"
       | "accountsCreated"
+      | "getAccountsOfUser"
       | "getActiveExecutorAddress"
-      | "getDCAAccountsOfUser"
       | "getFactoryActiveState"
       | "getTotalDeployedAccounts"
       | "isActive"
       | "owner"
+      | "pauseFactory"
       | "reInvestLogicContract"
       | "renounceOwnership"
       | "transferOwnership"
+      | "unpauseFactory"
       | "updateExecutorAddress"
       | "updateReinvestLibraryAddress"
       | "userDCAAccounts"
@@ -65,12 +67,12 @@ export interface DCAFactoryInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "getActiveExecutorAddress",
-    values?: undefined
+    functionFragment: "getAccountsOfUser",
+    values: [AddressLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "getDCAAccountsOfUser",
-    values: [AddressLike]
+    functionFragment: "getActiveExecutorAddress",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "getFactoryActiveState",
@@ -83,6 +85,10 @@ export interface DCAFactoryInterface extends Interface {
   encodeFunctionData(functionFragment: "isActive", values?: undefined): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(
+    functionFragment: "pauseFactory",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "reInvestLogicContract",
     values?: undefined
   ): string;
@@ -93,6 +99,10 @@ export interface DCAFactoryInterface extends Interface {
   encodeFunctionData(
     functionFragment: "transferOwnership",
     values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "unpauseFactory",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "updateExecutorAddress",
@@ -120,11 +130,11 @@ export interface DCAFactoryInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "getActiveExecutorAddress",
+    functionFragment: "getAccountsOfUser",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "getDCAAccountsOfUser",
+    functionFragment: "getActiveExecutorAddress",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -138,6 +148,10 @@ export interface DCAFactoryInterface extends Interface {
   decodeFunctionResult(functionFragment: "isActive", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(
+    functionFragment: "pauseFactory",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "reInvestLogicContract",
     data: BytesLike
   ): Result;
@@ -147,6 +161,10 @@ export interface DCAFactoryInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "transferOwnership",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "unpauseFactory",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -274,13 +292,13 @@ export interface DCAFactory extends BaseContract {
 
   accountsCreated: TypedContractMethod<[], [bigint], "view">;
 
-  getActiveExecutorAddress: TypedContractMethod<[], [string], "view">;
-
-  getDCAAccountsOfUser: TypedContractMethod<
+  getAccountsOfUser: TypedContractMethod<
     [_user: AddressLike],
     [string[]],
     "view"
   >;
+
+  getActiveExecutorAddress: TypedContractMethod<[], [string], "view">;
 
   getFactoryActiveState: TypedContractMethod<[], [boolean], "view">;
 
@@ -289,6 +307,8 @@ export interface DCAFactory extends BaseContract {
   isActive: TypedContractMethod<[], [boolean], "view">;
 
   owner: TypedContractMethod<[], [string], "view">;
+
+  pauseFactory: TypedContractMethod<[], [void], "nonpayable">;
 
   reInvestLogicContract: TypedContractMethod<[], [string], "view">;
 
@@ -299,6 +319,8 @@ export interface DCAFactory extends BaseContract {
     [void],
     "nonpayable"
   >;
+
+  unpauseFactory: TypedContractMethod<[], [void], "nonpayable">;
 
   updateExecutorAddress: TypedContractMethod<
     [_newExecutorAddress: AddressLike],
@@ -332,11 +354,11 @@ export interface DCAFactory extends BaseContract {
     nameOrSignature: "accountsCreated"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
+    nameOrSignature: "getAccountsOfUser"
+  ): TypedContractMethod<[_user: AddressLike], [string[]], "view">;
+  getFunction(
     nameOrSignature: "getActiveExecutorAddress"
   ): TypedContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "getDCAAccountsOfUser"
-  ): TypedContractMethod<[_user: AddressLike], [string[]], "view">;
   getFunction(
     nameOrSignature: "getFactoryActiveState"
   ): TypedContractMethod<[], [boolean], "view">;
@@ -350,6 +372,9 @@ export interface DCAFactory extends BaseContract {
     nameOrSignature: "owner"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
+    nameOrSignature: "pauseFactory"
+  ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "reInvestLogicContract"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
@@ -358,6 +383,9 @@ export interface DCAFactory extends BaseContract {
   getFunction(
     nameOrSignature: "transferOwnership"
   ): TypedContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "unpauseFactory"
+  ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "updateExecutorAddress"
   ): TypedContractMethod<

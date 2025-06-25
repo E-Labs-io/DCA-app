@@ -66,14 +66,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Address__factory>;
     getContractFactory(
-      name: "IUniswapV3SwapCallback",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IUniswapV3SwapCallback__factory>;
-    getContractFactory(
-      name: "ISwapRouter",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.ISwapRouter__factory>;
-    getContractFactory(
       name: "DCAAccount",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.DCAAccount__factory>;
@@ -202,6 +194,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.OnlyExecutor__factory>;
     getContractFactory(
+      name: "SwapTest",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.SwapTest__factory>;
+    getContractFactory(
       name: "IERC20",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IERC20__factory>;
@@ -276,16 +272,6 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.Address>;
     getContractAt(
-      name: "IUniswapV3SwapCallback",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.IUniswapV3SwapCallback>;
-    getContractAt(
-      name: "ISwapRouter",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.ISwapRouter>;
-    getContractAt(
       name: "DCAAccount",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -445,6 +431,11 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.OnlyExecutor>;
+    getContractAt(
+      name: "SwapTest",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.SwapTest>;
     getContractAt(
       name: "IERC20",
       address: string | ethers.Addressable,
@@ -509,14 +500,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Address>;
     deployContract(
-      name: "IUniswapV3SwapCallback",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IUniswapV3SwapCallback>;
-    deployContract(
-      name: "ISwapRouter",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.ISwapRouter>;
-    deployContract(
       name: "DCAAccount",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.DCAAccount>;
@@ -644,6 +627,10 @@ declare module "hardhat/types/runtime" {
       name: "OnlyExecutor",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.OnlyExecutor>;
+    deployContract(
+      name: "SwapTest",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.SwapTest>;
     deployContract(
       name: "IERC20",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -719,16 +706,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Address>;
     deployContract(
-      name: "IUniswapV3SwapCallback",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IUniswapV3SwapCallback>;
-    deployContract(
-      name: "ISwapRouter",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.ISwapRouter>;
-    deployContract(
       name: "DCAAccount",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -888,6 +865,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.OnlyExecutor>;
+    deployContract(
+      name: "SwapTest",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.SwapTest>;
     deployContract(
       name: "IERC20",
       args: any[],

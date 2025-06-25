@@ -36,7 +36,9 @@ export interface IWETH9Interface extends Interface {
       | "withdraw"
   ): FunctionFragment;
 
-  getEvent(nameOrSignatureOrTopic: "Approval" | "Transfer"): EventFragment;
+  getEvent(
+    nameOrSignatureOrTopic: "Approval" | "Transfer" | "Withdrawal"
+  ): EventFragment;
 
   encodeFunctionData(
     functionFragment: "allowance",
@@ -120,6 +122,19 @@ export namespace TransferEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
+export namespace WithdrawalEvent {
+  export type InputTuple = [src: AddressLike, wad: BigNumberish];
+  export type OutputTuple = [src: string, wad: bigint];
+  export interface OutputObject {
+    src: string;
+    wad: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
 export interface IWETH9 extends BaseContract {
   connect(runner?: ContractRunner | null): IWETH9;
   waitForDeployment(): Promise<this>;
@@ -193,7 +208,7 @@ export interface IWETH9 extends BaseContract {
     "nonpayable"
   >;
 
-  withdraw: TypedContractMethod<[arg0: BigNumberish], [void], "nonpayable">;
+  withdraw: TypedContractMethod<[wad: BigNumberish], [void], "nonpayable">;
 
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
@@ -238,7 +253,7 @@ export interface IWETH9 extends BaseContract {
   >;
   getFunction(
     nameOrSignature: "withdraw"
-  ): TypedContractMethod<[arg0: BigNumberish], [void], "nonpayable">;
+  ): TypedContractMethod<[wad: BigNumberish], [void], "nonpayable">;
 
   getEvent(
     key: "Approval"
@@ -253,6 +268,13 @@ export interface IWETH9 extends BaseContract {
     TransferEvent.InputTuple,
     TransferEvent.OutputTuple,
     TransferEvent.OutputObject
+  >;
+  getEvent(
+    key: "Withdrawal"
+  ): TypedContractEvent<
+    WithdrawalEvent.InputTuple,
+    WithdrawalEvent.OutputTuple,
+    WithdrawalEvent.OutputObject
   >;
 
   filters: {
@@ -276,6 +298,17 @@ export interface IWETH9 extends BaseContract {
       TransferEvent.InputTuple,
       TransferEvent.OutputTuple,
       TransferEvent.OutputObject
+    >;
+
+    "Withdrawal(address,uint256)": TypedContractEvent<
+      WithdrawalEvent.InputTuple,
+      WithdrawalEvent.OutputTuple,
+      WithdrawalEvent.OutputObject
+    >;
+    Withdrawal: TypedContractEvent<
+      WithdrawalEvent.InputTuple,
+      WithdrawalEvent.OutputTuple,
+      WithdrawalEvent.OutputObject
     >;
   };
 }

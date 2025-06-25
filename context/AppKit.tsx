@@ -22,7 +22,7 @@ const ethAdapter = new EthersAdapter();
 createAppKit({
   adapters: [ethAdapter],
   networks: [sepolia, base],
-  defaultNetwork: sepolia,
+  defaultNetwork: base,
   projectId,
   enableWalletConnect: true,
   enableCoinbase: true,

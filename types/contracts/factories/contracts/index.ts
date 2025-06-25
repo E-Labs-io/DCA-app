@@ -8,5 +8,6 @@ export * as modules from "./modules";
 export * as protocols from "./protocols";
 export * as proxys from "./proxys";
 export * as security from "./security";
+export * as tests from "./tests";
 export * as tokens from "./tokens";
 export * as utils from "./utils";

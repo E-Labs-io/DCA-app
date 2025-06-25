@@ -3,7 +3,7 @@
 "use client";
 
 import { Tabs, Tab } from "@nextui-org/react";
-import { sepolia } from "viem/chains";
+import { base } from "viem/chains";
 import { LineChart, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
@@ -96,7 +96,7 @@ export default function AppContent() {
   const [isCreateStrategyOpen, setIsCreateStrategyOpen] = useState(false);
   const [selectedView, setSelectedView] = useState("accounts");
 
-  const isWrongNetwork = chainId !== sepolia.id;
+  const isWrongNetwork = chainId !== base.id;
 
   useEffect(() => {
     if (isConnected || (!isLoading && DCAFactory)) initiateUserAccounts();

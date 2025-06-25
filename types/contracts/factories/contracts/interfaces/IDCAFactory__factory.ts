@@ -62,19 +62,6 @@ const _abi = [
     type: "function",
   },
   {
-    inputs: [],
-    name: "getActiveExecutorAddress",
-    outputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
     inputs: [
       {
         internalType: "address",
@@ -82,12 +69,25 @@ const _abi = [
         type: "address",
       },
     ],
-    name: "getDCAAccountsOfUser",
+    name: "getAccountsOfUser",
     outputs: [
       {
         internalType: "address[]",
         name: "",
         type: "address[]",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getActiveExecutorAddress",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
       },
     ],
     stateMutability: "view",

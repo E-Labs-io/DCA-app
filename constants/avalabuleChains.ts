@@ -16,6 +16,7 @@ const availableChains: ActiveChainIndex = {
   OPT_GOERLI: true,
   ARB_GOERLI: false,
   MATIC_MUMBAI: false,
+  BASE_MAINNET: true,
 };
 
 const ChainIcons: ChainsIcons = {
@@ -130,7 +131,7 @@ const NetworkNameToChainID: ChainNumbers = {
     ticker: "baseETH",
     alchemyKey: "base",
     rpcUrl: "",
-    explorerUrl: "",
+    explorerUrl: etherscanPrefix.BASE_MAINNET!,
   },
   BASE_SEPOLIA: {
     number: 84532,

@@ -9,13 +9,10 @@ import {
   IDCADataStructures,
 } from "@/types/contracts/contracts/base/DCAAccount";
 import { ContractTransactionReport } from "@/types/contractReturns";
-import { BigNumberish, Signer } from "ethers";
+import { BigNumberish, Signer, keccak256, toUtf8Bytes } from "ethers";
 import { EthereumAddress } from "@/types/generic";
 
 export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
-
-
-  
   const createStrategy = useCallback(
     async ({
       strategy,
@@ -40,37 +37,43 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
           fundAmount,
           subscribe
         );
-        
+
         // Wait for transaction to be mined to get strategyId from events
         const receipt = await tx.wait();
         toast.dismiss(loadingToastId);
-        
+
         // Find the StrategyCreated event in the transaction receipt
-        const strategyCreatedEvent = receipt.logs.find(
-          (log: any) => 
-            log.topics[0] === dcaAccount.interface.getEvent('StrategyCreated').topicHash
+        const strategyCreatedEvent = receipt?.logs.find(
+          (log: any) =>
+            log.topics[0] ===
+            dcaAccount.interface.getEvent("StrategyCreated").topicHash
         );
-        
+
         if (strategyCreatedEvent) {
           // Parse the event to get the strategyId
-          const parsedEvent = dcaAccount.interface.parseLog(strategyCreatedEvent);
+          const parsedEvent =
+            dcaAccount.interface.parseLog(strategyCreatedEvent);
           const newStrategyId = parsedEvent?.args[0]; // First arg is strategyId
-          
+
           // If we got a strategyId, update the UI manually
           if (newStrategyId) {
             // Fetch the complete strategy data with the right ID
-            const strategyData = await dcaAccount.GetStrategy(newStrategyId);
-            
+            const strategyData = await dcaAccount.getStrategyData(
+              newStrategyId
+            );
+
             // Force a refresh by dispatching a custom event
-            window.dispatchEvent(new CustomEvent('strategy-created', { 
-              detail: { 
-                accountAddress: dcaAccount.target,
-                strategyId: Number(newStrategyId)
-              } 
-            }));
+            window.dispatchEvent(
+              new CustomEvent("strategy-created", {
+                detail: {
+                  accountAddress: dcaAccount.target,
+                  strategyId: Number(newStrategyId),
+                },
+              })
+            );
           }
         }
-        
+
         toast.success("Strategy created successfully!");
         return { tx, hash: tx.hash };
       } catch (error: any) {
@@ -96,7 +99,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
       try {
         if (!dcaAccount) throw new Error("Error connecting to account");
         toast.info("Please accept the Funding Transaction...");
-        const tx = await dcaAccount.FundAccount(token.tokenAddress, amount);
+        const tx = await dcaAccount.AddFunds(token.tokenAddress, amount);
         toast.loading("Funding Transaction is Confirming...");
         await tx.wait();
         toast.success("Funding Transaction Approved.");
@@ -120,7 +123,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         if (!dcaAccount) throw new Error("Error connecting to account");
         toast.info("Please accept the Transaction...");
 
-        const tx = await dcaAccount.UnFundAccount(token.tokenAddress, amount);
+        const tx = await dcaAccount.WithdrawFunds(token.tokenAddress, amount);
         toast.loading("Transaction is Confirming...");
         await tx.wait();
         toast.success("Transaction Approved.");

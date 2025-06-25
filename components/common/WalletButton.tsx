@@ -17,7 +17,7 @@ import {
   useAppKitNetwork,
   useDisconnect,
 } from "@reown/appkit/react";
-import { sepolia } from "@reown/appkit/networks";
+import { base } from "@reown/appkit/networks";
 
 export default function WalletButton() {
   const { isConnected, address } = useAppKitAccount();
@@ -51,7 +51,7 @@ export default function WalletButton() {
   }
 
   const truncatedAddress = `${address?.slice(0, 6)}...${address?.slice(-4)}`;
-  const explorerUrl = `https://sepolia.etherscan.io/address/${address}`;
+  const explorerUrl = `https://basescan.org/address/${address}`;
 
   return (
     <Dropdown>

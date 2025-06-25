@@ -62,12 +62,6 @@ const _abi = [
         name: "amount",
         type: "uint256",
       },
-      {
-        indexed: true,
-        internalType: "bool",
-        name: "success",
-        type: "bool",
-      },
     ],
     name: "ReinvestUnwound",
     type: "event",
@@ -125,22 +119,33 @@ const _abi = [
         name: "executor_",
         type: "address",
       },
+      {
+        indexed: true,
+        internalType: "bool",
+        name: "subscribed_",
+        type: "bool",
+      },
     ],
-    name: "StrategySubscribed",
+    name: "StrategySubscription",
     type: "event",
   },
   {
-    anonymous: false,
     inputs: [
       {
-        indexed: true,
+        internalType: "address",
+        name: "token_",
+        type: "address",
+      },
+      {
         internalType: "uint256",
-        name: "strategyId_",
+        name: "amount_",
         type: "uint256",
       },
     ],
-    name: "StrategyUnsubscribed",
-    type: "event",
+    name: "AddFunds",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
   },
   {
     inputs: [
@@ -175,24 +180,6 @@ const _abi = [
       },
     ],
     name: "ExecutorDeactivate",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "token_",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "amount_",
-        type: "uint256",
-      },
-    ],
-    name: "FundAccount",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -334,6 +321,19 @@ const _abi = [
   {
     inputs: [
       {
+        internalType: "uint256",
+        name: "strategyId_",
+        type: "uint256",
+      },
+    ],
+    name: "UnsubscribeStrategy",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
         internalType: "address",
         name: "token_",
         type: "address",
@@ -344,20 +344,7 @@ const _abi = [
         type: "uint256",
       },
     ],
-    name: "UnFundAccount",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "strategyId_",
-        type: "uint256",
-      },
-    ],
-    name: "UnsubscribeStrategy",
+    name: "WithdrawFunds",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",

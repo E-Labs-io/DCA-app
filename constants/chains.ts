@@ -13,6 +13,7 @@ const availableChains: Readonly<ActiveChainIndex> = {
   OPT_GOERLI: true,
   ARB_GOERLI: false,
   MATIC_MUMBAI: false,
+  BASE_MAINNET: true,
 };
 
 const web3ModalChains: modalChains = {
@@ -42,6 +43,15 @@ const web3ModalChains: modalChains = {
     rpcUrl: `https://opt-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_KEY}`,
     colour: "#ff0000",
     icon: "/icons/chains/Optimism.png",
+  },
+  BASE_MAINNET: {
+    chainId: NetworkNameToChainID.BASE_MAINNET!.number,
+    name: NetworkNameToChainID.BASE_MAINNET!.name,
+    currency: "ETH",
+    explorerUrl: NetworkNameToChainID.BASE_MAINNET!.explorerUrl,
+    rpcUrl: `https://base-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_KEY}`,
+    colour: "#0052FF",
+    icon: "/icons/chains/Base.png", // You'll need to add this icon
   },
 };
 

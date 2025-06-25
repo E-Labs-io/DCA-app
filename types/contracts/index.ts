@@ -3,8 +3,6 @@
 /* eslint-disable */
 import type * as openzeppelin from "./@openzeppelin";
 export type { openzeppelin };
-import type * as uniswap from "./@uniswap";
-export type { uniswap };
 import type * as contracts from "./contracts";
 export type { contracts };
 export * as factories from "./factories";
@@ -34,10 +32,6 @@ export type { SafeERC20 } from "./@openzeppelin/contracts/token/ERC20/utils/Safe
 export { SafeERC20__factory } from "./factories/@openzeppelin/contracts/token/ERC20/utils/SafeERC20__factory";
 export type { Address } from "./@openzeppelin/contracts/utils/Address";
 export { Address__factory } from "./factories/@openzeppelin/contracts/utils/Address__factory";
-export type { IUniswapV3SwapCallback } from "./@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback";
-export { IUniswapV3SwapCallback__factory } from "./factories/@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback__factory";
-export type { ISwapRouter } from "./@uniswap/v3-periphery/contracts/interfaces/ISwapRouter";
-export { ISwapRouter__factory } from "./factories/@uniswap/v3-periphery/contracts/interfaces/ISwapRouter__factory";
 export type { DCAAccount } from "./contracts/base/DCAAccount";
 export { DCAAccount__factory } from "./factories/contracts/base/DCAAccount__factory";
 export type { DCAExecutor } from "./contracts/base/DCAExecutor";
@@ -88,6 +82,8 @@ export type { CometStorage } from "./contracts/protocols/compoundV3/CometStorage
 export { CometStorage__factory } from "./factories/contracts/protocols/compoundV3/CometStorage__factory";
 export type { ILido } from "./contracts/protocols/lido/ILido";
 export { ILido__factory } from "./factories/contracts/protocols/lido/ILido__factory";
+export type { ISwapRouter } from "./contracts/protocols/uniswap/ISwapRouterv3.sol/ISwapRouter";
+export { ISwapRouter__factory } from "./factories/contracts/protocols/uniswap/ISwapRouterv3.sol/ISwapRouter__factory";
 export type { IWETH9 } from "./contracts/protocols/uniswap/ISwapRouterv3.sol/IWETH9";
 export { IWETH9__factory } from "./factories/contracts/protocols/uniswap/ISwapRouterv3.sol/IWETH9__factory";
 export type { IUniversalRouter } from "./contracts/protocols/uniswap/IUniversalRouter";
@@ -100,5 +96,7 @@ export type { OnlyAdmin } from "./contracts/security/onlyAdmin.sol/OnlyAdmin";
 export { OnlyAdmin__factory } from "./factories/contracts/security/onlyAdmin.sol/OnlyAdmin__factory";
 export type { OnlyExecutor } from "./contracts/security/onlyExecutor.sol/OnlyExecutor";
 export { OnlyExecutor__factory } from "./factories/contracts/security/onlyExecutor.sol/OnlyExecutor__factory";
+export type { SwapTest } from "./contracts/tests/swapTest.sol/SwapTest";
+export { SwapTest__factory } from "./factories/contracts/tests/swapTest.sol/SwapTest__factory";
 export type { Swap } from "./contracts/utils/swap.sol/Swap";
 export { Swap__factory } from "./factories/contracts/utils/swap.sol/Swap__factory";

@@ -194,8 +194,11 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
     setLoadingMessage("Initializing...");
 
     try {
+      console.log("[DCAStatsProvider] Pre Get Accounts");
+
       // 1. Get all user accounts in one call
       const accountAddresses = await getUsersAccountAddresses();
+      console.log("[DCAStatsProvider] initiateUserAccounts");
 
       // 2. Quick initial load with basic data
       const basicAccountData: AccountStorage[] = await Promise.all(
@@ -217,12 +220,16 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
         })
       );
 
+      console.log("[DCAStatsProvider] Got Basic Account Data");
+
       // Store basic data but DON'T set firstLoad yet
       setAccounts(basicAccountData);
 
       // 3. Add loading progress tracking
       let loadedAccounts = 0;
       const totalAccounts = accountAddresses.length;
+
+      console.log("[DCAStatsProvider] Loaded Accounts", loadedAccounts);
 
       // 4. Load detailed data in parallel
       const detailedDataPromises = basicAccountData.map(

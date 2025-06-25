@@ -60,6 +60,25 @@ const _abi = [
     type: "event",
   },
   {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "src",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "wad",
+        type: "uint256",
+      },
+    ],
+    name: "Withdrawal",
+    type: "event",
+  },
+  {
     inputs: [
       {
         internalType: "address",
@@ -203,7 +222,7 @@ const _abi = [
     inputs: [
       {
         internalType: "uint256",
-        name: "",
+        name: "wad",
         type: "uint256",
       },
     ],
