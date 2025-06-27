@@ -15,7 +15,7 @@ import {
 } from "@nextui-org/react";
 import { useState } from "react";
 import { useDCAAccount } from "@/hooks/useDCAAccount";
-import { tokenList, type TokenTickers } from "@/constants/tokens";
+import { stableCoins, tokenList, type TokenTickers } from "@/constants/tokens";
 import { useAppKitAccount } from "@reown/appkit/react";
 import { parseUnits } from "viem";
 import { toast } from "sonner";
@@ -85,9 +85,9 @@ export function CreateStrategyModal({
   ): IDCADataStructures.TokenDataStruct => {
     const token = tokenList[ticker];
     return {
-      tokenAddress: token.contractAddress.ETH_SEPOLIA as `0x${string}`,
-      decimals: BigInt(token.decimals),
-      ticker: token.ticker,
+      tokenAddress: token?.contractAddress.ETH_SEPOLIA as `0x${string}`,
+      decimals: BigInt(token!.decimals) ?? 0,
+      ticker: token?.ticker ?? "",
     };
   };
 
@@ -181,14 +181,14 @@ export function CreateStrategyModal({
         baseToken: createTokenData(formData.baseToken as TokenTickers),
         targetToken: createTokenData(formData.targetToken as TokenTickers),
         interval: BigInt(formData.interval),
-        amount: parseUnits(formData.amount, selectedTokenDecimals),
+        amount: parseUnits(formData.amount, selectedTokenDecimals!),
         strategyId: 0,
         active: true,
         reinvest: createReinvestData(),
       };
 
       const fundAmountBigInt = formData.fundAmount
-        ? parseUnits(formData.fundAmount, selectedTokenDecimals)
+        ? parseUnits(formData.fundAmount, selectedTokenDecimals!)
         : 0;
 
       const transaction = await createStrategy({
@@ -261,7 +261,7 @@ export function CreateStrategyModal({
             }
             isDisabled={isProcessing}
           >
-            {Object.values(tokenList).map((token) => (
+            {Object.values(stableCoins).map((token) => (
               <SelectItem key={token.ticker} value={token.ticker}>
                 {token.label}
               </SelectItem>

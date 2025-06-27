@@ -67,17 +67,17 @@ export default function WalletButton() {
       <DropdownMenu aria-label="Wallet Actions">
         <DropdownItem
           key="network"
-          description="Switch to Sepolia testnet"
+          description="Switch to Base Mainnet"
           startContent={
             <div
               className={`w-2 h-2 rounded-full ${
-                chainId === sepolia.id ? "bg-success" : "bg-danger"
+                chainId === base.id ? "bg-success" : "bg-danger"
               }`}
             />
           }
-          onPress={() => switchNetwork(sepolia)}
+          onPress={() => switchNetwork(base)}
         >
-          Network: {chainId === sepolia.id ? "Sepolia" : "Wrong Network"}
+          Network: {chainId === base.id ? "Base" : "Wrong Network"}
         </DropdownItem>
         <DropdownItem
           key="explorer"

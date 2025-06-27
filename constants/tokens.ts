@@ -16,11 +16,11 @@ export interface TokenData {
 }
 
 export interface TokenList {
-  WETH: TokenData;
-  USDC: TokenData;
-  USDT: TokenData;
-  DAI: TokenData;
-  WBTC: TokenData;
+  WETH?: TokenData;
+  USDC?: TokenData;
+  USDT?: TokenData;
+  DAI?: TokenData;
+  WBTC?: TokenData;
 }
 
 export const tokenList: TokenList = {
@@ -74,4 +74,10 @@ export const tokenList: TokenList = {
     name: "wrapped-bitcoin",
     icon: "/icons/tokens/wbtc.png",
   },
+};
+
+export const stableCoins: TokenList = {
+  USDC: tokenList.USDC,
+  USDT: tokenList.USDT,
+  DAI: tokenList.DAI,
 };

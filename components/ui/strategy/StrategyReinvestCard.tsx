@@ -45,7 +45,7 @@ export function StrategyReinvestCard({
   }
 
   // Get module info based on the active module
-  const moduleInfo = getModuleInfo(reinvestData.moduleId);
+  const moduleInfo = getModuleInfo(Number(reinvestData.investCode));
 
   // For active reinvestment
   return (
@@ -65,38 +65,14 @@ export function StrategyReinvestCard({
         </div>
 
         <div className="space-y-4 mb-6">
-          <div>
-            <div className="flex justify-between mb-1">
-              <span>Total Reinvested</span>
-              <span>
-                {formatUnits(
-                  strategy.totalReinvested || 0,
-                  strategy.targetToken.decimals
-                )}{" "}
-                {strategy.targetToken.ticker}
-              </span>
-            </div>
-            <Progress
-              value={strategy.reinvestPercentage || 0}
-              color="success"
-              size="sm"
-            />
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-500">APY</p>
               <p className="font-semibold">{moduleInfo.apy}%</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Earnings</p>
-              <p className="font-semibold">
-                {formatUnits(
-                  strategy.reinvestEarnings || 0,
-                  strategy.targetToken.decimals
-                )}{" "}
-                {strategy.targetToken.ticker}
-              </p>
+              <p className="text-sm text-gray-500">Status</p>
+              <p className="font-semibold text-success">Active</p>
             </div>
           </div>
         </div>

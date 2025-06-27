@@ -97,14 +97,14 @@ const listenForSubscription = (
     "[listeners] listenForSubscription on account",
     accountContract.target
   );
-  const filterA = accountContract.filters.StrategySubscribed();
+  const filterA = accountContract.filters.StrategySubscription();
   accountContract.on(filterA, (event: any) => {
     const [strategyId_, executor_] = event.args;
     console.log("[listeners] listenForSubscription Triggered", strategyId_);
     callBack(Number(strategyId_), true, accountContract.target as string);
   });
 
-  const filterB = accountContract.filters.StrategyUnsubscribed();
+  const filterB = accountContract.filters.StrategySubscription();
   accountContract.on(filterB, (event: any) => {
     const [strategyId_] = event.args;
     console.log("[listeners] listenForSubscription UnSubscribed", strategyId_);
