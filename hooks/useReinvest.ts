@@ -1,180 +1,202 @@
 /** @format */
 
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { DCAAccount } from "@/types/contracts";
+import { DCAAccount } from "@/types/contracts/contracts/base/DCAAccount";
 import { ReinvestModule } from "@/types/reinvest";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
-import { Signer, ethers } from "ethers";
+import { Signer } from "ethers";
+import { connectToDCAAccount } from "./helpers/connectToContract";
+import { DCAReinvestAddress } from "@/constants/contracts";
+import useSigner from "./useSigner";
 
-export function useReinvest(dcaAccount: DCAAccount, Signer: Signer) {
-  const [availableModules, setAvailableModules] = useState<ReinvestModule[]>(
-    []
-  );
+export function useReinvest(dcaAccount?: DCAAccount, userSigner?: Signer) {
   const [loading, setLoading] = useState(false);
+  const { Signer: hookSigner, ACTIVE_NETWORK } = useSigner();
 
-  // Fetch available reinvestment modules (simplified for now)
-  const fetchAvailableModules = useCallback(async () => {
-    setLoading(true);
+  // Use provided signer or fallback to hook signer
+  const signer = userSigner || hookSigner;
+
+  // Get reinvest contract information
+  const getReinvestContractInfo = useCallback(async () => {
     try {
-      // For now, return hardcoded modules until reinvest library is properly implemented
-      const modules: ReinvestModule[] = [
-        {
-          id: 0x01,
-          name: "Forward",
-          description: "Forward tokens to specified address",
-          protocolLogo: "/icons/forward.svg",
-          supportedTokens: ["ETH", "USDC", "DAI"],
-        },
-        {
-          id: 0x12,
-          name: "Aave V3",
-          description: "Deposit tokens to Aave V3 for yield",
-          protocolLogo: "/icons/platforms/aave-purple.svg",
-          supportedTokens: ["ETH", "USDC", "DAI"],
-        },
-        {
-          id: 0x11,
-          name: "Compound V3",
-          description: "Supply tokens to Compound V3",
-          protocolLogo: "/icons/platforms/compound.png",
-          supportedTokens: ["ETH", "USDC"],
-        },
-      ];
+      if (!ACTIVE_NETWORK) {
+        throw new Error("No active network");
+      }
 
-      setAvailableModules(modules);
+      const reinvestAddress = DCAReinvestAddress[ACTIVE_NETWORK];
+      if (!reinvestAddress) {
+        throw new Error("Reinvest contract not deployed on this network");
+      }
+
+      return {
+        address: reinvestAddress,
+        network: ACTIVE_NETWORK,
+        isDeployed: true,
+        version: "1.0.0", // This could be fetched from the contract if available
+      };
     } catch (error) {
-      console.error("Error fetching reinvest modules:", error);
-      toast.error("Failed to load reinvestment options");
-    } finally {
-      setLoading(false);
+      console.error("Error getting reinvest contract info:", error);
+      return {
+        address: null,
+        network: ACTIVE_NETWORK || null,
+        isDeployed: false,
+        version: "Unknown",
+      };
     }
-  }, [dcaAccount]);
+  }, [ACTIVE_NETWORK]);
 
-  // Enable reinvestment for a strategy
-  const enableReinvest = useCallback(
+  // Get available reinvest modules
+  const getAvailableModules = useCallback(() => {
+    // Based on the module IDs from StrategyReinvestCard
+    return [
+      {
+        id: 0x01,
+        name: "Forward",
+        description: "Forward tokens without yield generation",
+        icon: "/icons/forward.svg",
+      },
+      {
+        id: 0x12,
+        name: "Aave V3",
+        description: "Lend tokens on Aave V3 for yield",
+        icon: "/icons/platforms/aave-purple.svg",
+      },
+      {
+        id: 0x11,
+        name: "Compound V3",
+        description: "Lend tokens on Compound V3 for yield",
+        icon: "/icons/platforms/compound.png",
+      },
+    ];
+  }, []);
+
+  // Setup reinvestment for a strategy
+  const setupReinvest = useCallback(
     async (
       strategyId: number,
       investCode: number,
-      moduleData: string = "0x"
+      reinvestData: string = "0x"
     ) => {
-      if (!Signer) {
-        toast.error("Please connect your wallet first");
-        return false;
+      if (!dcaAccount) {
+        throw new Error("DCA account not available");
       }
 
+      setLoading(true);
       try {
-        setLoading(true);
-        toast.info("Setting up reinvestment strategy...");
-
-        // Create reinvest structure with correct properties
-        const reinvestData: IDCADataStructures.ReinvestStruct = {
-          reinvestData: moduleData,
+        // Create reinvest structure
+        const reinvestStruct: IDCADataStructures.ReinvestStruct = {
+          reinvestData: reinvestData,
           active: true,
           investCode,
-          dcaAccountAddress: dcaAccount.target,
+          dcaAccountAddress: await dcaAccount.getAddress(),
         };
 
-        // Use the correct method name
         const tx = await dcaAccount.setStrategyReinvest(
           strategyId,
-          reinvestData
+          reinvestStruct
         );
-
-        toast.loading("Confirming transaction...");
         await tx.wait();
-
-        toast.success("Reinvestment strategy activated!");
-        return true;
+        return { success: true, hash: tx.hash };
       } catch (error) {
-        console.error("Error enabling reinvest:", error);
-        toast.error("Failed to enable reinvestment");
-        return false;
+        console.error("Error setting up reinvest:", error);
+        return { success: false, error: error as Error };
       } finally {
         setLoading(false);
       }
     },
-    [Signer, dcaAccount]
+    [dcaAccount]
   );
 
   // Disable reinvestment for a strategy
   const disableReinvest = useCallback(
     async (strategyId: number) => {
-      if (!Signer) {
-        toast.error("Please connect your wallet first");
-        return false;
+      if (!dcaAccount) {
+        throw new Error("DCA account not available");
       }
 
+      setLoading(true);
       try {
-        setLoading(true);
-        toast.info("Disabling reinvestment strategy...");
-
         // Create disabled reinvest structure
-        const reinvestData: IDCADataStructures.ReinvestStruct = {
+        const reinvestStruct: IDCADataStructures.ReinvestStruct = {
           reinvestData: "0x",
           active: false,
           investCode: 0,
-          dcaAccountAddress: dcaAccount.target,
+          dcaAccountAddress: await dcaAccount.getAddress(),
         };
 
         const tx = await dcaAccount.setStrategyReinvest(
           strategyId,
-          reinvestData
+          reinvestStruct
         );
-
-        toast.loading("Confirming transaction...");
         await tx.wait();
-
-        toast.success("Reinvestment strategy disabled!");
-        return true;
+        return { success: true, hash: tx.hash };
       } catch (error) {
         console.error("Error disabling reinvest:", error);
-        toast.error("Failed to disable reinvestment");
-        return false;
+        return { success: false, error: error as Error };
       } finally {
         setLoading(false);
       }
     },
-    [Signer, dcaAccount]
+    [dcaAccount]
   );
 
-  // Helper function to encode module data (simplified)
-  const encodeModuleData = useCallback(
-    (moduleId: number, data: any): string => {
+  // Get reinvest data for a strategy
+  const getReinvestData = useCallback(
+    async (strategyId: number) => {
+      if (!dcaAccount) {
+        throw new Error("DCA account not available");
+      }
+
       try {
-        switch (moduleId) {
-          case 0x01: // Forward
-            return ethers.AbiCoder.defaultAbiCoder().encode(
-              ["address"],
-              [data.receiver || ethers.ZeroAddress]
-            );
-          case 0x12: // Aave
-            return ethers.AbiCoder.defaultAbiCoder().encode(
-              ["address"],
-              [data.aToken || ethers.ZeroAddress]
-            );
-          case 0x11: // Compound
-            return ethers.AbiCoder.defaultAbiCoder().encode(
-              ["address"],
-              [data.cToken || ethers.ZeroAddress]
-            );
-          default:
-            return "0x";
-        }
+        const strategyData = await dcaAccount.getStrategyData(strategyId);
+        return strategyData.reinvest;
       } catch (error) {
-        console.error("Error encoding module data:", error);
-        return "0x";
+        console.error("Error getting reinvest data:", error);
+        throw error;
       }
     },
-    []
+    [dcaAccount]
   );
 
+  // Check if reinvest is active for a strategy
+  const isReinvestActive = useCallback(
+    async (strategyId: number) => {
+      try {
+        const reinvestData = await getReinvestData(strategyId);
+        return reinvestData.active;
+      } catch (error) {
+        console.error("Error checking reinvest status:", error);
+        return false;
+      }
+    },
+    [getReinvestData]
+  );
+
+  // Get total value locked in reinvest
+  const getTotalValueLocked = useCallback(async () => {
+    if (!dcaAccount) {
+      return 0;
+    }
+
+    try {
+      // This would need to be implemented based on the contract's functionality
+      // For now, return a placeholder
+      return 0;
+    } catch (error) {
+      console.error("Error getting TVL:", error);
+      return 0;
+    }
+  }, [dcaAccount]);
+
   return {
-    availableModules,
     loading,
-    fetchAvailableModules,
-    enableReinvest,
+    setupReinvest,
     disableReinvest,
-    encodeModuleData,
+    getReinvestData,
+    isReinvestActive,
+    getReinvestContractInfo,
+    getAvailableModules,
+    getTotalValueLocked,
   };
 }

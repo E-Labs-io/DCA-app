@@ -7,14 +7,14 @@ import { useEffect, useState } from "react";
 import { useDCAProvider } from "@/providers/DCAStatsProvider";
 
 export function UserStatsOverview() {
-  const { walletStats } = useDCAProvider();
+  const { walletStats, isLoading, firstLoad } = useDCAProvider();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (walletStats) setMounted(true);
-  }, [walletStats]);
+    if (walletStats || firstLoad) setMounted(true);
+  }, [walletStats, firstLoad]);
 
-  if (!mounted) {
+  if (!mounted || isLoading) {
     return (
       <Card className="mb-8">
         <CardBody>
@@ -50,25 +50,25 @@ export function UserStatsOverview() {
           <div className="flex gap-8">
             <div>
               <p className="text-sm text-gray-400">Total Accounts</p>
-              <p className="text-2xl font-bold">
+              <p className="text-2xl font-bold text-blue-600">
                 {walletStats?.totalAccounts || 0}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-400">Total Strategies</p>
-              <p className="text-2xl font-bold">
+              <p className="text-2xl font-bold text-purple-600">
                 {walletStats?.totalStrategies || 0}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-400">Active Strategies</p>
-              <p className="text-2xl font-bold">
+              <p className="text-2xl font-bold text-green-600">
                 {walletStats?.totalActiveStrategies || 0}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-400">Total Executions</p>
-              <p className="text-2xl font-bold">
+              <p className="text-2xl font-bold text-orange-600">
                 {walletStats?.totalExecutions || 0}
               </p>
             </div>

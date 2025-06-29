@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
   useEffect,
+  useCallback,
 } from "react";
 import { useDCAFactory } from "@/hooks/useDCAFactory";
 import { EthereumAddress } from "@/types/generic";
@@ -26,6 +27,13 @@ import {
   listenForStrategyExecution,
   listenForSubscription,
 } from "./listeners";
+import {
+  HealthCheckResponse,
+  SupportedChain,
+  GlobalDCAStats,
+  ChainDCAStats,
+} from "@/types";
+import { DCAStatsAPIClient } from "@/utils/dcaApiClient";
 
 export interface AccountStorage {
   account: EthereumAddress;
@@ -75,7 +83,11 @@ export interface DCAProviderContextInterface {
   isLoading: boolean;
   firstLoad: boolean;
   walletStats: WalletStats | undefined;
+  globalStats: GlobalDCAStats | null;
+  chainStats: ChainDCAStats | null;
   loadingMessage: string | null;
+
+  // Core Functions
   initiateUserAccounts: () => void;
   setSelectedAccount: (account: EthereumAddress) => void;
   addAccount: (account: AccountStorage) => void;
@@ -103,6 +115,14 @@ export interface DCAProviderContextInterface {
     account: EthereumAddress,
     strategyId: number
   ) => StrategyStats | null;
+
+  // API Client Functions
+  apiHealthCheck: () => Promise<HealthCheckResponse>;
+
+  // Aggregate Functions
+  loadGlobalStats: () => Promise<void>;
+  loadChainStats: (chain: SupportedChain) => Promise<void>;
+  refreshAllStats: () => Promise<void>;
 }
 
 export const DCAProviderContext = createContext(
@@ -129,17 +149,117 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
   const { getUsersAccountAddresses, DCAFactory } = useDCAFactory();
 
   /** STATE */
-
   const [isLoading, setIsLoading] = useState(false);
   const [firstLoad, setFirstLoad] = useState(false);
   const [accounts, setAccounts] = useState<AccountStorage[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<EthereumAddress>("");
   const [walletStats, setWalletStats] = useState<WalletStats>();
-
+  const [globalStats, setGlobalStats] = useState<GlobalDCAStats | null>(null);
+  const [chainStats, setChainStats] = useState<ChainDCAStats | null>(null);
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
 
-  /** EFFECTS */
+  /** API CLIENT FUNCTIONS */
 
+  // Health Check
+  const apiHealthCheck = useCallback(async (): Promise<HealthCheckResponse> => {
+    return await DCAStatsAPIClient.healthCheck();
+  }, []);
+
+  // Aggregate Functions
+  const loadGlobalStats = useCallback(async (): Promise<void> => {
+    try {
+      const [
+        totalAccounts,
+        totalExecutions,
+        totalActiveSubscribers,
+        totalLifetimeSubscribers,
+        totalVolume,
+        totalLockedAmount,
+        averageSubscriptionDuration,
+      ] = await Promise.all([
+        DCAStatsAPIClient.getTotalAccounts(),
+        DCAStatsAPIClient.getTotalExecutions(),
+        DCAStatsAPIClient.getTotalActiveSubscribers(),
+        DCAStatsAPIClient.getTotalLifetimeSubscribers(),
+        DCAStatsAPIClient.getTotalVolume(),
+        DCAStatsAPIClient.getTotalLockedAmount(),
+        DCAStatsAPIClient.getAverageSubscriptionDuration(),
+      ]);
+
+      const globalStats: GlobalDCAStats = {
+        totalAccounts,
+        totalExecutions,
+        totalActiveSubscribers,
+        totalLifetimeSubscribers,
+        totalVolume,
+        totalLockedAmount,
+        averageSubscriptionDuration,
+      };
+
+      setGlobalStats(globalStats);
+      console.log("[DCAStatsProvider] Global stats loaded:", globalStats);
+    } catch (error) {
+      console.error("[DCAStatsProvider] Error loading global stats:", error);
+    }
+  }, []);
+
+  const loadChainStats = useCallback(
+    async (chain: SupportedChain): Promise<void> => {
+      try {
+        const [
+          accountsData,
+          executionsData,
+          activeSubscribersData,
+          lifetimeSubscribersData,
+          activeStrategiesData,
+          volumeData,
+          lockedAmountData,
+          averageSubscriptionDuration,
+        ] = await Promise.all([
+          DCAStatsAPIClient.getAccountsByChain(chain),
+          DCAStatsAPIClient.getExecutionsByChain(chain),
+          DCAStatsAPIClient.getActiveSubscribersByChain(chain),
+          DCAStatsAPIClient.getLifetimeSubscribersByChain(chain),
+          DCAStatsAPIClient.getActiveStrategiesByChain(chain),
+          DCAStatsAPIClient.getVolumeByChain(chain),
+          DCAStatsAPIClient.getLockedAmountByChain(chain),
+          DCAStatsAPIClient.getAverageSubscriptionDurationByChain(chain),
+        ]);
+
+        const chainStats: ChainDCAStats = {
+          chain,
+          accounts: accountsData.total,
+          executions: executionsData.total,
+          activeSubscribers: activeSubscribersData.total,
+          lifetimeSubscribers: lifetimeSubscribersData.total,
+          activeStrategies: activeStrategiesData.total,
+          volume: volumeData.total,
+          lockedAmount: lockedAmountData.total,
+          averageSubscriptionDuration,
+        };
+
+        setChainStats(chainStats);
+        console.log(`[DCAStatsProvider] ${chain} stats loaded:`, chainStats);
+      } catch (error) {
+        console.error(
+          `[DCAStatsProvider] Error loading ${chain} stats:`,
+          error
+        );
+      }
+    },
+    []
+  );
+
+  const refreshAllStats = useCallback(async (): Promise<void> => {
+    await Promise.all([
+      loadGlobalStats(),
+      ACTIVE_NETWORK === "BASE_MAINNET"
+        ? loadChainStats("BASE_MAINNET")
+        : Promise.resolve(),
+    ]);
+  }, [loadGlobalStats, loadChainStats, ACTIVE_NETWORK]);
+
+  /** EFFECTS */
   useEffect(() => {
     const handleStrategyCreated = async (e: CustomEvent) => {
       const { accountAddress, strategyId } = e.detail;
@@ -170,6 +290,9 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
 
         // Rebuild wallet stats
         buildWalletStats(accounts);
+
+        // Refresh API stats
+        refreshAllStats();
       }
     };
 
@@ -184,10 +307,16 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
         handleStrategyCreated as unknown as EventListener
       );
     };
-  });
+  }, [accounts, refreshAllStats]);
+
+  // Load global stats on mount and network change
+  useEffect(() => {
+    if (ACTIVE_NETWORK) {
+      refreshAllStats();
+    }
+  }, [ACTIVE_NETWORK, refreshAllStats]);
 
   /** LOGIC */
-
   const initiateUserAccounts = async () => {
     if (!Signer || firstLoad || isLoading || !DCAFactory) return;
     setIsLoading(true);
@@ -282,6 +411,9 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
       buildWalletStats(completedAccounts);
       startListeners(completedAccounts);
 
+      // 7. Load API stats after accounts are loaded
+      await refreshAllStats();
+
       // Ensure firstLoad is true after everything is loaded
       setFirstLoad(true);
     } catch (error) {
@@ -315,7 +447,6 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
   };
 
   /** GETTERS */
-
   const getAccount = (account: EthereumAddress) => {
     return accounts.find((a) => a.account === account);
   };
@@ -358,7 +489,6 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
   };
 
   /** UPDATERS */
-
   const updateAccount = (
     account: EthereumAddress,
     key: keyof AccountStorage,
@@ -420,7 +550,6 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
     );
 
   /** SETTERS */
-
   const addAccount = (account: AccountStorage): void => {
     console.log("[DCAStatsProvider] adding account", account.account);
     setAccounts([...accounts, account]);
@@ -437,6 +566,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
           : a
       )
     );
+
   /** FETCHERS */
   const fetchAccountStrategies = async (
     accountAddress: string,
@@ -543,7 +673,6 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
   };
 
   /** BUILDERS */
-
   const buildAccountStats = async (
     accountInstance: DCAAccount,
     strategies: IDCADataStructures.StrategyStruct[]
@@ -661,7 +790,6 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
   };
 
   /** LISTENERS */
-
   const onNewAccount = async (account: string) => {
     console.log("[DCAStatsProvider] onNewAccount", account);
     let accountStates: AccountStorage;
@@ -703,6 +831,8 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
     }
 
     addAccount(accountStates);
+    // Refresh API stats when new account is added
+    refreshAllStats();
   };
 
   const onNewStrategy = async (strategyId: number, account: string) => {
@@ -734,6 +864,8 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
       };
       updateAccount(account, "statistics", statistics);
     }
+    // Refresh API stats when new strategy is added
+    refreshAllStats();
   };
 
   const onSubscription = (
@@ -747,6 +879,8 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
     const stratStats: StrategyStats = getStrategyStats(dcaAccount, strategyId)!;
     updateStrategy(dcaAccount, strategy);
     updateStrategyStats(dcaAccount, strategyId, stratStats);
+    // Refresh API stats when subscription changes
+    refreshAllStats();
   };
 
   return (
@@ -759,6 +893,8 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
         isLoading,
         firstLoad,
         walletStats,
+        globalStats,
+        chainStats,
         loadingMessage,
         setSelectedAccount,
         addAccount,
@@ -772,6 +908,12 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
         getStrategyStats,
         getStrategy,
         initiateUserAccounts,
+
+        // API Client Functions
+        apiHealthCheck,
+        loadGlobalStats,
+        loadChainStats,
+        refreshAllStats,
       }}
     >
       {children}
