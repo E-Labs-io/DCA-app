@@ -54,19 +54,21 @@ export function useExecutorAdmin() {
       throw new Error("Network not detected - please switch to Base network");
     }
 
-    if (!DCA_EXECUTOR_ADDRESS) {
-      console.error("No DCA_EXECUTOR_ADDRESS for network:", ACTIVE_NETWORK);
+    // Get the executor address directly from constants instead of relying on state
+    const executorAddress = DCAExecutorAddress[ACTIVE_NETWORK];
+    if (!executorAddress) {
+      console.error("No executor address found for network:", ACTIVE_NETWORK);
       throw new Error(`Executor contract not deployed on ${ACTIVE_NETWORK}`);
     }
 
     console.log(
       "Connecting to executor at:",
-      DCA_EXECUTOR_ADDRESS,
+      executorAddress,
       "on network:",
       ACTIVE_NETWORK
     );
-    return await connectToDCAExecutor(DCA_EXECUTOR_ADDRESS, Signer);
-  }, [Signer, DCA_EXECUTOR_ADDRESS, ACTIVE_NETWORK, isInitializing]);
+    return await connectToDCAExecutor(executorAddress, Signer);
+  }, [Signer, ACTIVE_NETWORK, isInitializing]);
 
   // Check if address is the contract owner
   const checkIfOwner = useCallback(

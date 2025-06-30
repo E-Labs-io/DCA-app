@@ -25,7 +25,7 @@ import { useExecutorAdmin } from "@/hooks/useExecutorAdmin";
 import { intervalOptions } from "@/constants/intervals";
 import { tokenList } from "@/constants/tokens";
 import useSigner from "@/hooks/useSigner";
-import { RefreshCw, AlertTriangle } from "lucide-react";
+import { RefreshCw, AlertTriangle, User } from "lucide-react";
 
 interface IntervalStatus {
   interval: number;
@@ -41,6 +41,7 @@ export function ExecutorControls() {
     setActiveState,
     setIntervalActive,
     setBaseTokenAllowance,
+    changeExecutor,
     getSystemState,
     getIntervalStatus,
     isTokenAllowedAsBase,
@@ -52,6 +53,7 @@ export function ExecutorControls() {
   );
   const [selectedInterval, setSelectedInterval] = useState<string>("");
   const [selectedToken, setSelectedToken] = useState<string>("");
+  const [newExecutorAddress, setNewExecutorAddress] = useState<string>("");
   const [tokenAllowanceStatus, setTokenAllowanceStatus] = useState<{
     [key: string]: boolean;
   }>({});
@@ -74,6 +76,12 @@ export function ExecutorControls() {
     isOpen: isPauseModalOpen,
     onOpen: onPauseModalOpen,
     onClose: onPauseModalClose,
+  } = useDisclosure();
+
+  const {
+    isOpen: isExecutorModalOpen,
+    onOpen: onExecutorModalOpen,
+    onClose: onExecutorModalClose,
   } = useDisclosure();
 
   // Load initial data
@@ -259,6 +267,34 @@ export function ExecutorControls() {
     }
   };
 
+  const handleExecutorAddressUpdate = async () => {
+    if (!newExecutorAddress.trim()) {
+      toast.error("Please enter a valid executor address");
+      return;
+    }
+
+    // Basic address validation
+    if (!/^0x[a-fA-F0-9]{40}$/.test(newExecutorAddress.trim())) {
+      toast.error("Please enter a valid Ethereum address");
+      return;
+    }
+
+    try {
+      const result = await changeExecutor(newExecutorAddress.trim());
+      if (result.success) {
+        toast.success("Executor address updated successfully");
+        await loadSystemData();
+        setNewExecutorAddress("");
+        onExecutorModalClose();
+      } else {
+        toast.error("Failed to update executor address");
+      }
+    } catch (error) {
+      console.error("Error updating executor address:", error);
+      toast.error("Error updating executor address");
+    }
+  };
+
   if (!address) {
     return (
       <Card>
@@ -321,18 +357,6 @@ export function ExecutorControls() {
         </Button>
       </CardHeader>
       <CardBody className="space-y-6">
-        {/* Network Status */}
-        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-          <div className="flex justify-between items-center">
-            <span className="font-medium text-blue-800 dark:text-blue-300">
-              Network: {ACTIVE_NETWORK || "Unknown"}
-            </span>
-            <Chip color="success" size="sm" variant="flat">
-              Connected
-            </Chip>
-          </div>
-        </div>
-
         {/* System Status */}
         {systemState && (
           <div className="space-y-4">
@@ -454,6 +478,38 @@ export function ExecutorControls() {
             ))}
           </div>
         </div>
+
+        {/* Executor Address Management */}
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h4 className="font-semibold">Executor Address Management</h4>
+            <Button
+              color="primary"
+              variant="solid"
+              size="sm"
+              onPress={onExecutorModalOpen}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-medium"
+            >
+              Update Executor
+            </Button>
+          </div>
+
+          {systemState?.executorAddress && (
+            <div className="p-3 border rounded-lg bg-gray-50 dark:bg-gray-800">
+              <div className="flex items-center gap-2 mb-2">
+                <User size={16} className="text-gray-500" />
+                <span className="font-medium text-sm">
+                  Current Executor EOA
+                </span>
+              </div>
+              <p className="text-xs font-mono bg-white dark:bg-gray-900 p-2 rounded border break-all">
+                {systemState.executorAddress}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <Divider />
 
         {/* Emergency Pause Confirmation Modal */}
         <Modal isOpen={isPauseModalOpen} onClose={onPauseModalClose}>
@@ -592,6 +648,73 @@ export function ExecutorControls() {
                 isDisabled={!selectedToken}
               >
                 Toggle Allowance
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+
+        {/* Executor Address Update Modal */}
+        <Modal isOpen={isExecutorModalOpen} onClose={onExecutorModalClose}>
+          <ModalContent>
+            <ModalHeader className="text-orange-600">
+              <User className="mr-2" size={20} />
+              Update Executor Address
+            </ModalHeader>
+            <ModalBody>
+              <p className="text-sm text-gray-600 mb-4">
+                <strong>WARNING:</strong> Changing the executor address will
+                update which EOA account is authorized to execute DCA
+                strategies. This is a critical system parameter that affects all
+                strategy executions.
+              </p>
+
+              {systemState?.executorAddress && (
+                <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-2">
+                    Current Executor:
+                  </p>
+                  <p className="text-xs font-mono break-all bg-white dark:bg-gray-900 p-2 rounded border">
+                    {systemState.executorAddress}
+                  </p>
+                </div>
+              )}
+
+              <Input
+                label="New Executor Address"
+                placeholder="0x..."
+                value={newExecutorAddress}
+                onChange={(e) => setNewExecutorAddress(e.target.value)}
+                description="Enter the new EOA address that will be authorized to execute DCA strategies"
+                classNames={{
+                  input: "font-mono",
+                  inputWrapper: "bg-default-100 dark:bg-default-50",
+                }}
+              />
+
+              <p className="text-xs text-gray-500 mt-2">
+                Make sure the new address is controlled by your execution
+                infrastructure and has sufficient gas funds for strategy
+                executions.
+              </p>
+            </ModalBody>
+            <ModalFooter>
+              <Button
+                color="default"
+                variant="light"
+                onPress={() => {
+                  setNewExecutorAddress("");
+                  onExecutorModalClose();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                color="warning"
+                onPress={handleExecutorAddressUpdate}
+                isLoading={loading}
+                isDisabled={!newExecutorAddress.trim()}
+              >
+                Update Executor
               </Button>
             </ModalFooter>
           </ModalContent>

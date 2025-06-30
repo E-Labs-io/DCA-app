@@ -28,6 +28,7 @@ export const tokenList: TokenList = {
     ticker: "WETH",
     contractAddress: {
       ETH_SEPOLIA: "0xC558DBdd856501FCd9aaF1E62eae57A9F0629a3c",
+      BASE_MAINNET: "0x4200000000000000000000000000000000000006",
     },
     decimals: 18,
     label: "Wrapped Ether",
@@ -38,6 +39,7 @@ export const tokenList: TokenList = {
     ticker: "USDC",
     contractAddress: {
       ETH_SEPOLIA: "0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8",
+      BASE_MAINNET: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     },
     decimals: 6,
     label: "USDC",
@@ -58,6 +60,7 @@ export const tokenList: TokenList = {
     ticker: "DAI",
     contractAddress: {
       ETH_SEPOLIA: "0xFF34B3d4Aee8ddCd6F9AFFFB6Fe49bD371b8a357",
+      BASE_MAINNET: "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb",
     },
     decimals: 18,
     label: "DAI",
@@ -68,6 +71,7 @@ export const tokenList: TokenList = {
     ticker: "WBTC",
     contractAddress: {
       ETH_SEPOLIA: "0x29f2D40B0605204364af54EC677bD022dA425d03",
+      BASE_MAINNET: "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
     },
     decimals: 8,
     label: "Wrapped Bitcoin",
