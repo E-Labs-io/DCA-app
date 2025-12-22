@@ -20,6 +20,7 @@ import { buildStrategyStruct } from "@/hooks/helpers/buildDataTypes";
 import {
   getAccountStrategyCreationEvents,
   getStrategyExecutionEvents,
+  clearAccountCache,
 } from "@/hooks/helpers/getAccountEvents";
 import {
   listenForNewAccount,
@@ -264,35 +265,177 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
     const handleStrategyCreated = async (e: CustomEvent) => {
       const { accountAddress, strategyId } = e.detail;
 
+      console.log("[DCAStatsProvider] ===== STRATEGY CREATED EVENT =====");
+      console.log("[DCAStatsProvider] Event Details:", {
+        accountAddress,
+        strategyId,
+      });
+      console.log("[DCAStatsProvider] Current Accounts State:", {
+        accountsCount: accounts.length,
+        accounts: accounts.map((a) => ({
+          address: a.account,
+          strategiesCount: a.strategies.length,
+          strategiesIds: a.strategies.map((s) => s.strategyId),
+        })),
+      });
+
+      // Clear cache to ensure we get fresh data
+      console.log("[DCAStatsProvider] Clearing cache for:", accountAddress);
+      clearAccountCache(accountAddress);
+
+      // Check if account exists in our state
+      const existingAccount = accounts.find(
+        (a) => a.account === accountAddress
+      );
+      console.log("[DCAStatsProvider] Account lookup debug:", {
+        targetAccountAddress: accountAddress,
+        targetAccountType: typeof accountAddress,
+        existingAccountFound: !!existingAccount,
+        availableAccounts: accounts.map((a) => ({
+          address: a.account,
+          type: typeof a.account,
+          matches: a.account === accountAddress,
+          lowercaseMatches:
+            a.account.toLowerCase() === accountAddress.toLowerCase(),
+        })),
+      });
+
       // Refresh the specific account data
       const instance = getAccountInstance(accountAddress);
       if (instance) {
-        // Fetch fresh data
-        const strategies = await fetchAccountStrategies(
-          accountAddress,
-          instance
-        );
-        const balances = await fetchTokenBalances(
-          accountAddress,
-          strategies,
-          instance
-        );
-        const statistics = await buildAccountStats(instance, strategies);
-
-        // Update account in state
-        setAccounts((prev) =>
-          prev.map((account) =>
-            account.account === accountAddress
-              ? { ...account, strategies, balances, statistics }
-              : account
-          )
+        console.log(
+          "[DCAStatsProvider] Account instance found:",
+          instance.target
         );
 
-        // Rebuild wallet stats
-        buildWalletStats(accounts);
+        try {
+          // Fetch fresh data
+          console.log("[DCAStatsProvider] Fetching fresh strategies...");
+          const strategies = await fetchAccountStrategies(
+            accountAddress,
+            instance
+          );
 
-        // Refresh API stats
-        refreshAllStats();
+          console.log("[DCAStatsProvider] Fetched strategies:", {
+            count: strategies.length,
+            ids: strategies.map((s) => s.strategyId),
+            details: strategies.map((s) => ({
+              id: s.strategyId,
+              active: s.active,
+              baseToken: s.baseToken.ticker,
+              targetToken: s.targetToken.ticker,
+              accountAddress: s.accountAddress,
+            })),
+          });
+
+          console.log("[DCAStatsProvider] Fetching balances...");
+          const balances = await fetchTokenBalances(
+            accountAddress,
+            strategies,
+            instance
+          );
+
+          console.log("[DCAStatsProvider] Fetching statistics...");
+          const statistics = await buildAccountStats(instance, strategies);
+
+          console.log("[DCAStatsProvider] All data fetched successfully");
+
+          // Update account in state
+          console.log("[DCAStatsProvider] Updating accounts state...");
+          setAccounts((prev) => {
+            console.log(
+              "[DCAStatsProvider] Previous accounts state:",
+              prev.map((a) => ({
+                address: a.account,
+                strategiesCount: a.strategies.length,
+              }))
+            );
+
+            const updated = prev.map((account) => {
+              const isMatch = account.account === accountAddress;
+              const isLowercaseMatch =
+                account.account.toLowerCase() === accountAddress.toLowerCase();
+
+              console.log(
+                `[DCAStatsProvider] Checking account ${account.account}:`,
+                {
+                  exactMatch: isMatch,
+                  lowercaseMatch: isLowercaseMatch,
+                  willUpdate: isMatch || isLowercaseMatch,
+                }
+              );
+
+              if (isMatch || isLowercaseMatch) {
+                console.log(
+                  "[DCAStatsProvider] Updating account:",
+                  account.account
+                );
+                console.log(
+                  "[DCAStatsProvider] Old strategies:",
+                  account.strategies.map((s) => s.strategyId)
+                );
+                console.log(
+                  "[DCAStatsProvider] New strategies:",
+                  strategies.map((s) => s.strategyId)
+                );
+                return { ...account, strategies, balances, statistics };
+              }
+              return account;
+            });
+
+            console.log("[DCAStatsProvider] Updated accounts state:", {
+              totalAccounts: updated.length,
+              accountsWithStrategies: updated.filter(
+                (a) => a.strategies.length > 0
+              ).length,
+              totalStrategies: updated.reduce(
+                (sum, a) => sum + a.strategies.length,
+                0
+              ),
+              updatedAccountDetails: updated.map((a) => ({
+                address: a.account,
+                strategiesCount: a.strategies.length,
+                strategiesIds: a.strategies.map((s) => s.strategyId),
+              })),
+            });
+
+            return updated;
+          });
+
+          console.log("[DCAStatsProvider] State update complete");
+
+          // Rebuild API stats
+          console.log("[DCAStatsProvider] Refreshing API stats...");
+          refreshAllStats();
+
+          // Add a small delay and force a component re-render check
+          setTimeout(() => {
+            console.log(
+              "[DCAStatsProvider] ===== POST-UPDATE VERIFICATION ====="
+            );
+            console.log(
+              "[DCAStatsProvider] Checking if UI should have updated..."
+            );
+          }, 100);
+
+          console.log(
+            "[DCAStatsProvider] ===== STRATEGY CREATED HANDLING COMPLETE ====="
+          );
+        } catch (error) {
+          console.error(
+            "[DCAStatsProvider] Error during strategy refresh:",
+            error
+          );
+        }
+      } else {
+        console.error(
+          "[DCAStatsProvider] No account instance found for:",
+          accountAddress
+        );
+        console.log(
+          "[DCAStatsProvider] Available accounts:",
+          accounts.map((a) => a.account)
+        );
       }
     };
 
@@ -435,15 +578,47 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
   };
 
   const startListeners = (accountsInput: AccountStorage[]) => {
-    if (DCAFactory) listenForNewAccount(DCAFactory!, address!, onNewAccount);
+    console.log(
+      "[DCAStatsProvider] startListeners - Setting up event listeners"
+    );
+
+    try {
+      if (DCAFactory && address) {
+        console.log("[DCAStatsProvider] Setting up factory event listener");
+        listenForNewAccount(DCAFactory, address, onNewAccount);
+      }
+    } catch (error) {
+      console.warn(
+        "[DCAStatsProvider] Failed to set up factory listener:",
+        error
+      );
+    }
+
     if (accountsInput.length > 0) {
-      console.log("[DCAStatsProvider] startListeners", accountsInput);
+      console.log(
+        "[DCAStatsProvider] Setting up account listeners for",
+        accountsInput.length,
+        "accounts"
+      );
       for (const account of accountsInput) {
-        console.log("[DCAStatsProvider] startListeners", account.account);
-        listenForNewStrategy(account.instance, onNewStrategy);
-        listenForSubscription(account.instance, onSubscription);
+        try {
+          console.log(
+            "[DCAStatsProvider] Setting up listeners for account:",
+            account.account
+          );
+          // These are now async functions
+          listenForNewStrategy(account.instance, onNewStrategy);
+          listenForSubscription(account.instance, onSubscription);
+        } catch (error) {
+          console.warn(
+            `[DCAStatsProvider] Failed to set up listeners for account ${account.account}:`,
+            error
+          );
+        }
       }
     }
+
+    console.log("[DCAStatsProvider] Event listener setup completed");
   };
 
   /** GETTERS */
@@ -572,13 +747,53 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
     accountAddress: string,
     dcaAccount: DCAAccount
   ): Promise<IDCADataStructures.StrategyStruct[]> => {
-    if (!Signer) return [];
-    if (!dcaAccount) return [];
+    console.log(
+      "[DCAStatsProvider] fetchAccountStrategies called for:",
+      accountAddress
+    );
 
-    const strategyEvents = await getAccountStrategyCreationEvents(dcaAccount);
+    if (!Signer) {
+      console.log("[DCAStatsProvider] No signer available");
+      return [];
+    }
+    if (!dcaAccount) {
+      console.log("[DCAStatsProvider] No DCA account available");
+      return [];
+    }
+
+    console.log("[DCAStatsProvider] Getting strategy creation events...");
+    const strategyEvents = await getAccountStrategyCreationEvents(
+      dcaAccount,
+      true
+    ); // Force refresh
+
+    console.log("[DCAStatsProvider] Strategy events found:", {
+      count: strategyEvents.length,
+      events: strategyEvents.map((e) => ({
+        id: e.id,
+        blockNumber: e.blockNumber,
+        transactionHash: e.transactionHash,
+      })),
+    });
+
+    console.log("[DCAStatsProvider] Processing strategy events...");
     const strategies = await Promise.all(
-      strategyEvents.map(async (event) => {
+      strategyEvents.map(async (event, index) => {
+        console.log(
+          `[DCAStatsProvider] Processing event ${index + 1}/${
+            strategyEvents.length
+          }: strategy ID ${event.id}`
+        );
+
         const rawStrategyData = await dcaAccount.getStrategyData(event.id);
+        console.log(`[DCAStatsProvider] Raw strategy data for ${event.id}:`, {
+          strategyId: rawStrategyData.strategyId.toString(),
+          active: rawStrategyData.active,
+          baseToken: rawStrategyData.baseToken.ticker,
+          targetToken: rawStrategyData.targetToken.ticker,
+          accountAddress: rawStrategyData.accountAddress,
+        });
+
         const formattedStrategy = buildStrategyStruct(rawStrategyData);
 
         return {
@@ -590,6 +805,17 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
         };
       })
     );
+
+    console.log("[DCAStatsProvider] Final processed strategies:", {
+      count: strategies.length,
+      strategies: strategies.map((s) => ({
+        id: s.strategyId,
+        active: s.active,
+        baseToken: s.baseToken.ticker,
+        targetToken: s.targetToken.ticker,
+      })),
+    });
+
     return strategies;
   };
 

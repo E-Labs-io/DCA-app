@@ -71,11 +71,15 @@ export function CreateStrategyModal({
     : 18;
 
   const { address } = useAppKitAccount();
-  const { createStrategy } = useDCAAccount(accountAddress, Signer!);
+  const { createStrategy } = useDCAAccount(
+    accountAddress as DCAAccount,
+    Signer!
+  );
   const { getAllowance, approveToken, checkAllowance } = useToken(
     formData.baseToken
-      ? (tokenList[formData.baseToken as TokenTickers]?.contractAddress
-          .ETH_SEPOLIA as string) || ""
+      ? ((
+          tokenList[formData.baseToken as TokenTickers]?.contractAddress as any
+        )?.[ACTIVE_NETWORK] as string) || ""
       : "",
     selectedTokenDecimals
   );
@@ -85,8 +89,10 @@ export function CreateStrategyModal({
   ): IDCADataStructures.TokenDataStruct => {
     const token = tokenList[ticker];
     return {
-      tokenAddress: token?.contractAddress.ETH_SEPOLIA as `0x${string}`,
-      decimals: BigInt(token!.decimals) ?? 0,
+      tokenAddress:
+        ((token?.contractAddress as any)?.[ACTIVE_NETWORK] as `0x${string}`) ||
+        "0x",
+      decimals: BigInt(token?.decimals ?? 18),
       ticker: token?.ticker ?? "",
     };
   };
@@ -138,7 +144,7 @@ export function CreateStrategyModal({
         try {
           hasAllowance = await checkAllowance(
             address,
-            accountAddress.target as string,
+            (accountAddress as DCAAccount).target as string,
             formData.fundAmount
           ).catch(() => false);
         } catch (error) {
@@ -152,7 +158,7 @@ export function CreateStrategyModal({
 
           try {
             const transaction = await approveToken(
-              accountAddress.target as string,
+              (accountAddress as DCAAccount).target as string,
               formData.fundAmount
             ).catch((error: any) => {
               console.warn("Approval warning:", error);
@@ -177,7 +183,7 @@ export function CreateStrategyModal({
       toast.loading("Creating strategy...");
 
       const strategyData: IDCADataStructures.StrategyStruct = {
-        accountAddress: accountAddress.target as `0x${string}`,
+        accountAddress: (accountAddress as DCAAccount).target as `0x${string}`,
         baseToken: createTokenData(formData.baseToken as TokenTickers),
         targetToken: createTokenData(formData.targetToken as TokenTickers),
         interval: BigInt(formData.interval),
@@ -191,12 +197,45 @@ export function CreateStrategyModal({
         ? parseUnits(formData.fundAmount, selectedTokenDecimals!)
         : 0;
 
+      console.log("[CreateStrategyModal] About to create strategy with:", {
+        strategyData: {
+          baseToken: strategyData.baseToken.ticker,
+          targetToken: strategyData.targetToken.ticker,
+          amount: strategyData.amount.toString(),
+          interval: strategyData.interval.toString(),
+          accountAddress: strategyData.accountAddress,
+        },
+        fundAmount: fundAmountBigInt.toString(),
+        subscribe: formData.subscribeToExecutor,
+      });
+
       const transaction = await createStrategy({
         strategy: strategyData,
         fundAmount: BigInt(fundAmountBigInt),
         subscribe: formData.subscribeToExecutor,
       }).catch((error: any) => {
-        console.warn("Strategy creation warning:", error);
+        console.error("Strategy creation error:", error);
+
+        // If we get an "already subscribed" error, try without subscription
+        if (
+          error.message?.toLowerCase().includes("already") ||
+          error.message?.toLowerCase().includes("subscribed")
+        ) {
+          console.log(
+            "[CreateStrategyModal] Retrying without subscription due to 'already subscribed' error"
+          );
+          toast.loading("Retrying strategy creation without subscription...");
+
+          return createStrategy({
+            strategy: strategyData,
+            fundAmount: BigInt(fundAmountBigInt),
+            subscribe: false, // Force to false to avoid subscription errors
+          }).catch((retryError: any) => {
+            console.error("Strategy creation retry failed:", retryError);
+            return null;
+          });
+        }
+
         return null;
       });
 

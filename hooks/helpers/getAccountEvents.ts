@@ -58,12 +58,43 @@ const setInCache = (key: string, data: any) => {
   eventCache.set(key, { data, timestamp: Date.now() });
 };
 
+const clearAccountCache = (accountAddress: string) => {
+  const creationKey = getCacheKey(accountAddress, "creation");
+  const executionKey = getCacheKey(accountAddress, "execution");
+  eventCache.delete(creationKey);
+  // Clear all execution caches for this account
+  for (const [key] of eventCache) {
+    if (key.startsWith(`${accountAddress}_execution_`)) {
+      eventCache.delete(key);
+    }
+  }
+  console.log("[getAccountEvents] Cleared cache for account:", accountAddress);
+};
+
 const getAccountStrategyCreationEvents = async (
-  accountProvider: DCAAccount
+  accountProvider: DCAAccount,
+  forceRefresh: boolean = false
 ): Promise<StrategyCreationEvent[]> => {
   const cacheKey = getCacheKey(accountProvider.target, "creation");
-  const cached = getFromCache(cacheKey);
-  if (cached) return cached;
+
+  console.log("[getAccountEvents] getAccountStrategyCreationEvents called:", {
+    account: accountProvider.target,
+    forceRefresh,
+    hasCachedData: eventCache.has(cacheKey),
+  });
+
+  if (!forceRefresh) {
+    const cached = getFromCache(cacheKey);
+    if (cached) {
+      console.log("[getAccountEvents] Returning cached data:", {
+        eventCount: cached.length,
+        events: cached.map((e) => ({ id: e.id, blockNumber: e.blockNumber })),
+      });
+      return cached;
+    }
+  } else {
+    console.log("[getAccountEvents] Force refresh - skipping cache");
+  }
 
   try {
     console.log(
@@ -81,14 +112,35 @@ const getAccountStrategyCreationEvents = async (
     const filter = contractForLogs.filters["StrategyCreated"];
     console.log("[getAccountEvents] Using filter:", filter);
 
-    const events = await contractForLogs.queryFilter(filter);
-    console.log("[getAccountEvents] Found events:", events.length);
+    // Get latest block to ensure we're querying up to the most recent data
+    const latestBlock = await logProvider.getBlockNumber();
+    console.log("[getAccountEvents] Latest block number:", latestBlock);
+
+    const events = await contractForLogs.queryFilter(filter, 0, latestBlock);
+    console.log("[getAccountEvents] Found events:", {
+      eventCount: events.length,
+      latestBlock,
+      events: events.map((e) => ({
+        blockNumber: e.blockNumber,
+        transactionHash: e.transactionHash,
+        strategyId: e.args[0]?.toString(),
+      })),
+    });
 
     const results = await Promise.all(
       events.map((event: StrategyCreatedEvent.Log) =>
         buildStrategyCreationEvent(event, accountProvider)
       )
     );
+
+    console.log("[getAccountEvents] Processed results:", {
+      resultCount: results.length,
+      results: results.map((r) => ({
+        id: r.id,
+        blockNumber: r.blockNumber,
+        transactionHash: r.transactionHash,
+      })),
+    });
 
     setInCache(cacheKey, results);
     return results;
@@ -100,6 +152,8 @@ const getAccountStrategyCreationEvents = async (
     try {
       const filter = accountProvider.filters["StrategyCreated"];
       const events = await accountProvider.queryFilter(filter);
+
+      console.log("[getAccountEvents] Fallback events found:", events.length);
 
       const results = await Promise.all(
         events.map((event: StrategyCreatedEvent.Log) =>
@@ -231,4 +285,5 @@ export {
   getAccountStrategyCreationEvents,
   getAccountStrategyExecutionEvents,
   getStrategyExecutionEvents,
+  clearAccountCache,
 };

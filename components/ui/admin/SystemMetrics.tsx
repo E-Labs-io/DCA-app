@@ -16,6 +16,9 @@ import { useReinvest } from "@/hooks/useReinvest";
 import { useDCAProvider } from "@/providers/DCAStatsProvider";
 import useSigner from "@/hooks/useSigner";
 import { RefreshCw } from "lucide-react";
+import { AddressLink } from "@/components/common/AddressLink";
+import { NetworkKeys } from "@/types/Chains";
+import { DCAExecutorAddress } from "@/constants/contracts";
 
 export function SystemMetrics() {
   const { address } = useAppKitAccount();
@@ -149,40 +152,56 @@ export function SystemMetrics() {
             <span className="font-medium text-blue-800 dark:text-blue-300">
               Network: {ACTIVE_NETWORK || "Unknown"}
             </span>
-            <Chip color="success" size="sm" variant="flat">
-              Connected
-            </Chip>
+            <div className="flex gap-2">
+              <Chip 
+                color={executorState && factoryState ? "success" : "warning"} 
+                size="sm" 
+                variant="flat"
+              >
+                {executorState && factoryState ? "Contracts OK" : "Loading..."}
+              </Chip>
+              <Chip color="success" size="sm" variant="flat">
+                Connected
+              </Chip>
+            </div>
+          </div>
+          <div className="mt-2">
+            <p className="text-xs text-blue-600 dark:text-blue-400">
+              💡 If you see "eth_newFilter not supported" errors, real-time notifications are disabled but core functionality works normally.
+            </p>
           </div>
         </div>
 
-        {/* System Status - Using real data from provider */}
+        {/* System Status - Using real contract data */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center">
             <p className="text-2xl font-bold text-blue-600">
-              {walletStats?.totalAccounts || 0}
+              {loading ? "..." : factoryState?.totalAccounts || 0}
             </p>
-            <p className="text-sm text-gray-500">User Accounts</p>
+            <p className="text-sm text-gray-500">Total Accounts (Factory)</p>
           </div>
 
           <div className="text-center">
             <p className="text-2xl font-bold text-green-600">
-              {walletStats?.totalActiveStrategies || 0}
+              {loading ? "..." : executorState?.totalActiveStrategies || 0}
             </p>
-            <p className="text-sm text-gray-500">Active Strategies</p>
+            <p className="text-sm text-gray-500">
+              Active Strategies (Executor)
+            </p>
           </div>
 
           <div className="text-center">
             <p className="text-2xl font-bold text-orange-600">
-              {walletStats?.totalExecutions || 0}
+              {loading ? "..." : executorState?.totalExecutions || 0}
             </p>
-            <p className="text-sm text-gray-500">Total Executions</p>
+            <p className="text-sm text-gray-500">Total Executions (Executor)</p>
           </div>
 
           <div className="text-center">
             <p className="text-2xl font-bold text-purple-600">
-              {loading ? "..." : factoryState?.totalAccounts || 0}
+              {walletStats?.totalAccounts || 0}
             </p>
-            <p className="text-sm text-gray-500">Global Accounts</p>
+            <p className="text-sm text-gray-500">Your Accounts</p>
           </div>
         </div>
 
@@ -218,11 +237,24 @@ export function SystemMetrics() {
                   Total Executions:{" "}
                   {loading ? "..." : executorState?.totalExecutions || 0}
                 </p>
-                {executorState?.executorAddress && (
-                  <p className="font-mono text-xs truncate">
-                    Address: {executorState.executorAddress.slice(0, 10)}...
-                  </p>
-                )}
+                <div className="mt-2 space-y-1">
+                  <AddressLink
+                    address={
+                      DCAExecutorAddress[ACTIVE_NETWORK as NetworkKeys] || ""
+                    }
+                    network={ACTIVE_NETWORK as NetworkKeys}
+                    label="Contract"
+                    className="text-xs"
+                  />
+                  {executorState?.executorAddress && (
+                    <AddressLink
+                      address={executorState.executorAddress}
+                      network={ACTIVE_NETWORK as NetworkKeys}
+                      label="Executor EOA"
+                      className="text-xs"
+                    />
+                  )}
+                </div>
               </div>
             </div>
 
@@ -252,9 +284,14 @@ export function SystemMetrics() {
                   {loading ? "..." : factoryState?.reinvestVersion || "Unknown"}
                 </p>
                 {factoryState?.executorAddress && (
-                  <p className="font-mono text-xs truncate">
-                    Executor: {factoryState.executorAddress.slice(0, 10)}...
-                  </p>
+                  <div className="mt-2">
+                    <AddressLink
+                      address={factoryState.executorAddress}
+                      network={ACTIVE_NETWORK as NetworkKeys}
+                      label="Executor"
+                      className="text-xs"
+                    />
+                  </div>
                 )}
               </div>
             </div>

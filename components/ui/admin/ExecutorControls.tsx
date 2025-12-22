@@ -26,6 +26,8 @@ import { intervalOptions } from "@/constants/intervals";
 import { tokenList } from "@/constants/tokens";
 import useSigner from "@/hooks/useSigner";
 import { RefreshCw, AlertTriangle, User } from "lucide-react";
+import { FullAddressLink } from "@/components/common/AddressLink";
+import { NetworkKeys } from "@/types/Chains";
 
 interface IntervalStatus {
   interval: number;
@@ -152,9 +154,11 @@ export function ExecutorControls() {
     try {
       const allowances: { [key: string]: boolean } = {};
       for (const [ticker, token] of Object.entries(tokenList)) {
-        if (token?.contractAddress.BASE_MAINNET) {
+        const contractAddress =
+          token?.contractAddress[ACTIVE_NETWORK as NetworkKeys];
+        if (contractAddress) {
           const isAllowed = await isTokenAllowedAsBase(
-            token.contractAddress.BASE_MAINNET as string
+            contractAddress as string
           );
           allowances[ticker] = isAllowed;
         }
@@ -242,14 +246,16 @@ export function ExecutorControls() {
     if (!selectedToken) return;
 
     const token = tokenList[selectedToken as keyof typeof tokenList];
-    if (!token?.contractAddress.BASE_MAINNET) return;
+    const contractAddress =
+      token?.contractAddress[ACTIVE_NETWORK as NetworkKeys];
+    if (!contractAddress) return;
 
     const currentStatus = tokenAllowanceStatus[selectedToken];
     const newStatus = !currentStatus;
 
     try {
       const result = await setBaseTokenAllowance(
-        token.contractAddress.BASE_MAINNET as string,
+        contractAddress as string,
         newStatus
       );
       if (result.success) {
@@ -409,31 +415,31 @@ export function ExecutorControls() {
           </div>
 
           <div className="grid grid-cols-1 gap-2">
-            {intervalStatuses.map((status) => {
-              const intervalOption = intervalOptions.find(
-                (opt) => opt.value === status.interval
-              );
-              return (
-                <div
-                  key={status.interval}
-                  className="flex justify-between items-center p-3 border rounded-lg bg-gray-50 dark:bg-gray-800"
-                >
-                  <div>
-                    <span className="font-medium">{intervalOption?.label}</span>
-                    <span className="text-sm text-gray-500 ml-2">
-                      ({status.totalStrategies} strategies)
-                    </span>
-                  </div>
-                  <Chip
-                    size="sm"
-                    color={status.isActive ? "success" : "default"}
-                    variant="flat"
+            {intervalStatuses
+              .filter((status) => status.isActive) // Only show active intervals
+              .map((status) => {
+                const intervalOption = intervalOptions.find(
+                  (opt) => opt.value === status.interval
+                );
+                return (
+                  <div
+                    key={status.interval}
+                    className="flex justify-between items-center p-3 border rounded-lg bg-gray-50 dark:bg-gray-800"
                   >
-                    {status.isActive ? "Active" : "Disabled"}
-                  </Chip>
-                </div>
-              );
-            })}
+                    <div>
+                      <span className="font-medium">
+                        {intervalOption?.label}
+                      </span>
+                      <span className="text-sm text-gray-500 ml-2">
+                        ({status.totalStrategies} strategies)
+                      </span>
+                    </div>
+                    <Chip size="sm" color="success" variant="flat">
+                      Active
+                    </Chip>
+                  </div>
+                );
+              })}
           </div>
         </div>
 
@@ -455,27 +461,25 @@ export function ExecutorControls() {
           </div>
 
           <div className="grid grid-cols-1 gap-2">
-            {Object.entries(tokenAllowanceStatus).map(([ticker, isAllowed]) => (
-              <div
-                key={ticker}
-                className="flex justify-between items-center p-3 border rounded-lg bg-gray-50 dark:bg-gray-800"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{ticker}</span>
-                  <span className="text-xs text-gray-500">
-                    {tokenList[ticker as keyof typeof tokenList]?.name ||
-                      "Unknown"}
-                  </span>
-                </div>
-                <Chip
-                  size="sm"
-                  color={isAllowed ? "success" : "default"}
-                  variant="flat"
+            {Object.entries(tokenAllowanceStatus)
+              .filter(([, isAllowed]) => isAllowed) // Only show allowed tokens
+              .map(([ticker, isAllowed]) => (
+                <div
+                  key={ticker}
+                  className="flex justify-between items-center p-3 border rounded-lg bg-gray-50 dark:bg-gray-800"
                 >
-                  {isAllowed ? "Allowed" : "Not Allowed"}
-                </Chip>
-              </div>
-            ))}
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{ticker}</span>
+                    <span className="text-xs text-gray-500">
+                      {tokenList[ticker as keyof typeof tokenList]?.name ||
+                        "Unknown"}
+                    </span>
+                  </div>
+                  <Chip size="sm" color="success" variant="flat">
+                    Allowed
+                  </Chip>
+                </div>
+              ))}
           </div>
         </div>
 
@@ -502,9 +506,13 @@ export function ExecutorControls() {
                   Current Executor EOA
                 </span>
               </div>
-              <p className="text-xs font-mono bg-white dark:bg-gray-900 p-2 rounded border break-all">
-                {systemState.executorAddress}
-              </p>
+              <div className="bg-white dark:bg-gray-900 p-2 rounded border">
+                <FullAddressLink
+                  address={systemState.executorAddress}
+                  network={ACTIVE_NETWORK as NetworkKeys}
+                  className="text-xs"
+                />
+              </div>
             </div>
           )}
         </div>
@@ -622,15 +630,20 @@ export function ExecutorControls() {
                   trigger: "bg-default-100 dark:bg-default-50",
                 }}
               >
-                {Object.entries(tokenList).map(([ticker, token]) => {
-                  const isAllowed = tokenAllowanceStatus[ticker];
-                  return (
-                    <SelectItem key={ticker} value={ticker}>
-                      {ticker} ({token.name}) -{" "}
-                      {isAllowed ? "Allowed" : "Not Allowed"}
-                    </SelectItem>
-                  );
-                })}
+                {Object.entries(tokenList)
+                  .filter(
+                    ([, token]) =>
+                      token?.contractAddress[ACTIVE_NETWORK as NetworkKeys]
+                  ) // Only show tokens available on current network
+                  .map(([ticker, token]) => {
+                    const isAllowed = tokenAllowanceStatus[ticker];
+                    return (
+                      <SelectItem key={ticker} value={ticker}>
+                        {ticker} ({token.name}) -{" "}
+                        {isAllowed ? "Allowed" : "Not Allowed"}
+                      </SelectItem>
+                    );
+                  })}
               </Select>
             </ModalBody>
             <ModalFooter>

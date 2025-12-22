@@ -22,6 +22,9 @@ import { useFactoryAdmin } from "@/hooks/useFactoryAdmin";
 import { toast } from "sonner";
 import useSigner from "@/hooks/useSigner";
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import { FullAddressLink } from "@/components/common/AddressLink";
+import { NetworkKeys } from "@/types/Chains";
+import { DCAFactoryAddress } from "@/constants/contracts";
 
 interface FactoryState {
   isActive: boolean;
@@ -325,28 +328,40 @@ export function FactoryControls() {
           <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
             <div className="space-y-3">
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide">
-                  Executor Address
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">
+                  Factory Contract
                 </p>
-                <p className="font-mono text-sm text-gray-700 dark:text-gray-300 break-all">
-                  {factoryState.executorAddress}
-                </p>
+                <FullAddressLink 
+                  address={DCAFactoryAddress[ACTIVE_NETWORK as NetworkKeys] || ""}
+                  network={ACTIVE_NETWORK as NetworkKeys}
+                />
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">
+                  Executor Contract (from Factory)
+                </p>
+                <FullAddressLink 
+                  address={factoryState.executorAddress}
+                  network={ACTIVE_NETWORK as NetworkKeys}
+                />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">
                   Reinvest Library
                 </p>
-                <p className="font-mono text-sm text-gray-700 dark:text-gray-300 break-all">
-                  {factoryState.reinvestLibraryAddress}
-                </p>
+                <FullAddressLink 
+                  address={factoryState.reinvestLibraryAddress}
+                  network={ACTIVE_NETWORK as NetworkKeys}
+                />
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">
                   Swap Router
                 </p>
-                <p className="font-mono text-sm text-gray-700 dark:text-gray-300 break-all">
-                  {factoryState.swapRouter}
-                </p>
+                <FullAddressLink 
+                  address={factoryState.swapRouter}
+                  network={ACTIVE_NETWORK as NetworkKeys}
+                />
               </div>
             </div>
           </div>

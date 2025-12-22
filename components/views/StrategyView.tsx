@@ -21,6 +21,8 @@ export interface StrategyViewProps {
 }
 
 export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
+  console.log("[StrategyView] Component rendered/re-rendered");
+
   const {
     accounts,
     walletStats,
@@ -28,6 +30,12 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
     setSelectedAccount,
     getAccountBalances,
   } = useDCAProvider();
+
+  console.log("[StrategyView] useDCAProvider returned:", {
+    accountsCount: accounts?.length || 0,
+    walletStats,
+    selectedAccount,
+  });
 
   const [allStrategies, setAllStrategies] = useState<
     IDCADataStructures.StrategyStruct[]
@@ -46,21 +54,67 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
   const hasLoadedRef = useRef(false);
 
   useEffect(() => {
-    console.log("[StrategyView] accounts", accounts);
+    console.log("[StrategyView] ===== ACCOUNTS CHANGED =====");
+    console.log("[StrategyView] Accounts received:", {
+      accountsCount: accounts?.length || 0,
+      accountsDetails:
+        accounts?.map((a) => ({
+          address: a.account,
+          strategiesCount: a.strategies?.length || 0,
+          strategiesIds: a.strategies?.map((s) => s.strategyId) || [],
+        })) || [],
+    });
+
     if (accounts && accounts.length > 0) {
       const strategies: IDCADataStructures.StrategyStruct[] = [];
       accounts.forEach((account) => {
+        console.log(`[StrategyView] Processing account ${account.account}:`, {
+          strategiesCount: account.strategies?.length || 0,
+          strategies:
+            account.strategies?.map((s) => ({
+              id: s.strategyId,
+              active: s.active,
+              baseToken: s.baseToken.ticker,
+              targetToken: s.targetToken.ticker,
+            })) || [],
+        });
+
         if (account.strategies && account.strategies.length > 0) {
           strategies.push(...account.strategies);
         }
       });
+
+      console.log("[StrategyView] Final strategies to display:", {
+        totalCount: strategies.length,
+        strategies: strategies.map((s) => ({
+          id: s.strategyId,
+          active: s.active,
+          baseToken: s.baseToken.ticker,
+          targetToken: s.targetToken.ticker,
+          accountAddress: s.accountAddress,
+        })),
+      });
+
       setAllStrategies(strategies);
       setIsLoading(false);
+      console.log(
+        "[StrategyView] Updated allStrategies state and set loading to false"
+      );
+    } else {
+      console.log(
+        "[StrategyView] No accounts available or accounts array is empty"
+      );
     }
-  }, [accounts, accounts.map(a => 
-    // This will cause re-render when any strategy's active state changes
-    a.strategies?.map(s => s.active).join(',')
-  ).join(',')]);
+    console.log("[StrategyView] ===== ACCOUNTS PROCESSING COMPLETE =====");
+  }, [
+    accounts,
+    accounts
+      ?.map((a) =>
+        // This will cause re-render when any strategy's active state changes
+        a.strategies?.map((s) => s.active).join(",")
+      )
+      .join(","),
+  ]);
 
   const handleFundingModal = (
     type: "fund" | "unfund" | "withdraw",

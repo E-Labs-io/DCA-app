@@ -11,6 +11,7 @@ import {
 import { ContractTransactionReport } from "@/types/contractReturns";
 import { BigNumberish, Signer, keccak256, toUtf8Bytes } from "ethers";
 import { EthereumAddress } from "@/types/generic";
+import { clearAccountCache } from "@/hooks/helpers/getAccountEvents";
 
 export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
   const createStrategy = useCallback(
@@ -31,51 +32,187 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
       try {
         if (!dcaAccount) throw new Error("Error connecting to account");
 
+        console.log("[useDCAAccount] Creating strategy:", {
+          accountAddress: dcaAccount.target,
+          strategy: {
+            baseToken: strategy.baseToken.ticker,
+            targetToken: strategy.targetToken.ticker,
+            amount: strategy.amount.toString(),
+            interval: strategy.interval.toString(),
+          },
+          fundAmount: fundAmount.toString(),
+          subscribe,
+        });
+
         const loadingToastId = toast.loading("Creating strategy...");
-        const tx = await dcaAccount.SetupStrategy(
-          strategy,
-          fundAmount,
-          subscribe
-        );
 
-        // Wait for transaction to be mined to get strategyId from events
-        const receipt = await tx.wait();
-        toast.dismiss(loadingToastId);
+        try {
+          const tx = await dcaAccount.SetupStrategy(
+            strategy,
+            fundAmount,
+            subscribe
+          );
 
-        // Find the StrategyCreated event in the transaction receipt
-        const strategyCreatedEvent = receipt?.logs.find(
-          (log: any) =>
-            log.topics[0] ===
-            dcaAccount.interface.getEvent("StrategyCreated").topicHash
-        );
+          console.log("[useDCAAccount] Transaction sent:", tx.hash);
 
-        if (strategyCreatedEvent) {
-          // Parse the event to get the strategyId
-          const parsedEvent =
-            dcaAccount.interface.parseLog(strategyCreatedEvent);
-          const newStrategyId = parsedEvent?.args[0]; // First arg is strategyId
+          // Wait for transaction to be mined to get strategyId from events
+          const receipt = await tx.wait();
+          toast.dismiss(loadingToastId);
 
-          // If we got a strategyId, update the UI manually
-          if (newStrategyId) {
-            // Fetch the complete strategy data with the right ID
-            const strategyData = await dcaAccount.getStrategyData(
-              newStrategyId
+          console.log("[useDCAAccount] Transaction confirmed, receipt:", {
+            transactionHash: receipt.hash,
+            blockNumber: receipt.blockNumber,
+            logsCount: receipt.logs.length,
+          });
+
+          // Find the StrategyCreated event in the transaction receipt
+          const strategyCreatedEvent = receipt?.logs.find(
+            (log: any) =>
+              log.topics[0] ===
+              dcaAccount.interface.getEvent("StrategyCreated").topicHash
+          );
+
+          console.log(
+            "[useDCAAccount] Strategy created event found:",
+            !!strategyCreatedEvent
+          );
+
+          if (strategyCreatedEvent) {
+            // Parse the event to get the strategyId
+            const parsedEvent =
+              dcaAccount.interface.parseLog(strategyCreatedEvent);
+            const newStrategyId = parsedEvent?.args[0]; // First arg is strategyId
+
+            console.log(
+              "[useDCAAccount] Parsed strategy ID:",
+              newStrategyId?.toString()
             );
 
-            // Force a refresh by dispatching a custom event
-            window.dispatchEvent(
-              new CustomEvent("strategy-created", {
-                detail: {
-                  accountAddress: dcaAccount.target,
-                  strategyId: Number(newStrategyId),
-                },
-              })
+            // If we got a strategyId, update the UI manually
+            if (newStrategyId) {
+              // Clear the cache to ensure fresh data
+              clearAccountCache(dcaAccount.target as string);
+
+              // Fetch the complete strategy data with the right ID
+              const strategyData = await dcaAccount.getStrategyData(
+                newStrategyId
+              );
+
+              console.log("[useDCAAccount] Fetched strategy data:", {
+                strategyId: strategyData.strategyId.toString(),
+                active: strategyData.active,
+                baseToken: strategyData.baseToken.ticker,
+                targetToken: strategyData.targetToken.ticker,
+              });
+
+              // Force a refresh by dispatching a custom event
+              const eventDetail = {
+                accountAddress: dcaAccount.target,
+                strategyId: Number(newStrategyId),
+              };
+
+              console.log(
+                "[useDCAAccount] About to dispatch strategy-created event:",
+                eventDetail
+              );
+
+              window.dispatchEvent(
+                new CustomEvent("strategy-created", {
+                  detail: eventDetail,
+                })
+              );
+
+              console.log(
+                "[useDCAAccount] Dispatched strategy-created event successfully"
+              );
+            } else {
+              console.warn("[useDCAAccount] No strategy ID found in event");
+            }
+          } else {
+            console.warn(
+              "[useDCAAccount] No StrategyCreated event found in transaction logs"
             );
           }
-        }
 
-        toast.success("Strategy created successfully!");
-        return { tx, hash: tx.hash };
+          toast.success("Strategy created successfully!");
+          return { tx, hash: tx.hash };
+        } catch (setupError: any) {
+          console.error("[useDCAAccount] SetupStrategy failed:", setupError);
+
+          // Check if it's an "already subscribed" error and retry without subscription
+          if (
+            subscribe &&
+            (setupError.message?.toLowerCase().includes("already") ||
+              setupError.message?.toLowerCase().includes("subscribed") ||
+              setupError.message?.toLowerCase().includes("subscription"))
+          ) {
+            console.warn(
+              "[useDCAAccount] Retrying strategy creation without subscription"
+            );
+            toast.dismiss(loadingToastId);
+            const retryToastId = toast.loading(
+              "Retrying without subscription..."
+            );
+
+            try {
+              const retryTx = await dcaAccount.SetupStrategy(
+                strategy,
+                fundAmount,
+                false // Force subscribe to false
+              );
+
+              console.log(
+                "[useDCAAccount] Retry transaction sent:",
+                retryTx.hash
+              );
+
+              // Handle retry transaction
+              const retryReceipt = await retryTx.wait();
+              toast.dismiss(retryToastId);
+
+              // Process retry receipt the same way
+              const retryStrategyCreatedEvent = retryReceipt?.logs.find(
+                (log: any) =>
+                  log.topics[0] ===
+                  dcaAccount.interface.getEvent("StrategyCreated").topicHash
+              );
+
+              if (retryStrategyCreatedEvent) {
+                const retryParsedEvent = dcaAccount.interface.parseLog(
+                  retryStrategyCreatedEvent
+                );
+                const retryNewStrategyId = retryParsedEvent?.args[0];
+
+                if (retryNewStrategyId) {
+                  clearAccountCache(dcaAccount.target as string);
+                  const retryStrategyData = await dcaAccount.getStrategyData(
+                    retryNewStrategyId
+                  );
+
+                  window.dispatchEvent(
+                    new CustomEvent("strategy-created", {
+                      detail: {
+                        accountAddress: dcaAccount.target,
+                        strategyId: Number(retryNewStrategyId),
+                      },
+                    })
+                  );
+                }
+              }
+
+              toast.success(
+                "Strategy created successfully (without subscription)!"
+              );
+              return { tx: retryTx, hash: retryTx.hash };
+            } catch (retryError: any) {
+              toast.dismiss(retryToastId);
+              throw retryError;
+            }
+          } else {
+            toast.dismiss(loadingToastId);
+            throw setupError;
+          }
+        }
       } catch (error: any) {
         if (error.code === 4001 || error.message?.includes("rejected")) {
           toast.error("Transaction was rejected");

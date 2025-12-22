@@ -20,7 +20,7 @@ export const DCAExecutorAddress: { [key in NetworkKeys]?: `0x${string}` } = {
   ARB_GOERLI: "" as `0x${string}`,
   OPT_GOERLI: "" as `0x${string}`,
   MATIC_MUMBAI: "" as `0x${string}`,
-  BASE_MAINNET: "0x3Ad71b2b1438dAFA4279c923CB92b9bEaBb9d200" as `0x${string}`,
+  BASE_MAINNET: "0x48783E9c817eC2eBBCbdEFBf74FAA5aC552556Ba" as `0x${string}`,
 } as const;
 
 export const DCAReinvestAddress: { [key in NetworkKeys]?: `0x${string}` } = {
@@ -31,4 +31,4 @@ export const DCAReinvestAddress: { [key in NetworkKeys]?: `0x${string}` } = {
   BASE_MAINNET: "0x43EF37d64178E7d8DB72843E4d13608e4E5E18bf" as `0x${string}`,
 } as const;
 
-export const SUPPORTED_NETWORKS = ["ETH_SEPOLIA"] as const;
+export const SUPPORTED_NETWORKS = ["BASE_MAINNET"] as const;

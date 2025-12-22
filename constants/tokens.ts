@@ -82,6 +82,4 @@ export const tokenList: TokenList = {
 
 export const stableCoins: TokenList = {
   USDC: tokenList.USDC,
-  USDT: tokenList.USDT,
-  DAI: tokenList.DAI,
 };
