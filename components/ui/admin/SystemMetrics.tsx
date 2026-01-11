@@ -150,7 +150,7 @@ export function SystemMetrics() {
         <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
           <div className="flex justify-between items-center">
             <span className="font-medium text-blue-800 dark:text-blue-300">
-              Network: {ACTIVE_NETWORK || "Unknown"}
+              Network: {typeof ACTIVE_NETWORK === 'string' ? ACTIVE_NETWORK : "Unknown"}
             </span>
             <div className="flex gap-2">
               <Chip 

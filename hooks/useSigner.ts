@@ -39,7 +39,8 @@ export default function useSigner() {
       );
 
       setSigner(newSigner);
-      setActiveNetwork(networkKey);
+      // Ensure networkKey is always a string (NetworkKeys type) or undefined
+      setActiveNetwork(networkKey && typeof networkKey === 'string' ? networkKey : undefined);
       previousChainId.current = currentChainId;
 
       return newSigner;
@@ -92,6 +93,9 @@ export default function useSigner() {
       networkKey
     );
 
+    // Ensure networkKey is always a string (NetworkKeys type) or undefined
+    const safeNetworkKey = networkKey && typeof networkKey === 'string' ? networkKey : undefined;
+
     // Only reset signer if this is an actual network change (not initial setup)
     if (previousChainId.current && previousChainId.current !== currentChainId) {
       console.log(
@@ -102,14 +106,14 @@ export default function useSigner() {
         "- reinitializing signer"
       );
       setSigner(null);
-      setActiveNetwork(networkKey);
+      setActiveNetwork(safeNetworkKey);
       // Re-initialize signer after network change
       if (walletProvider && address) {
         setTimeout(() => initializeSigner(), 100);
       }
     } else if (!previousChainId.current) {
       // Initial network setup
-      setActiveNetwork(networkKey);
+      setActiveNetwork(safeNetworkKey);
       previousChainId.current = currentChainId;
     }
   }, [chainId, walletProvider, address, initializeSigner]);
