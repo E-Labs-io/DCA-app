@@ -17,7 +17,8 @@ import {
   useAppKitNetwork,
   useDisconnect,
 } from "@reown/appkit/react";
-import { base } from "@reown/appkit/networks";
+import { base, sepolia } from "@reown/appkit/networks";
+import { ACTIVE_CHAIN } from "@/constants/contracts";
 
 export default function WalletButton() {
   const { isConnected, address } = useAppKitAccount();
@@ -43,7 +44,16 @@ export default function WalletButton() {
         color="primary"
         variant="bordered"
         startContent={<Wallet size={18} />}
-        onPress={() => open({ view: "Connect" })}
+        onPress={async () => {
+          console.log("[WalletButton] Connect button clicked");
+          console.log("[WalletButton] open function:", typeof open, open);
+          try {
+            const result = open({ view: "Connect" });
+            console.log("[WalletButton] open() result:", result);
+          } catch (error) {
+            console.error("[WalletButton] Error calling open():", error);
+          }
+        }}
       >
         Connect Wallet
       </Button>
@@ -65,19 +75,48 @@ export default function WalletButton() {
         </Button>
       </DropdownTrigger>
       <DropdownMenu aria-label="Wallet Actions">
+        {/* Network switching options */}
+        {ACTIVE_CHAIN.map(chainKey => {
+          const network = chainKey === "BASE_MAINNET" ? base : sepolia;
+          const isCurrentNetwork = chainId === network.id;
+          const networkName = chainKey === "BASE_MAINNET" ? "Base" : "Sepolia";
+
+          return (
+            <DropdownItem
+              key={chainKey}
+              description={`Switch to ${networkName}`}
+              startContent={
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    isCurrentNetwork ? "bg-success" : "bg-gray-400"
+                  }`}
+                />
+              }
+              onPress={() => switchNetwork(network)}
+            >
+              {networkName} {isCurrentNetwork ? "(Current)" : ""}
+            </DropdownItem>
+          );
+        })}
         <DropdownItem
-          key="network"
-          description="Switch to Base Mainnet"
+          key="network-status"
           startContent={
             <div
               className={`w-2 h-2 rounded-full ${
-                chainId === base.id ? "bg-success" : "bg-danger"
+                ACTIVE_CHAIN.some(chain =>
+                  chain === "BASE_MAINNET" ? chainId === base.id :
+                  chain === "ETH_SEPOLIA" ? chainId === sepolia.id : false
+                ) ? "bg-success" : "bg-danger"
               }`}
             />
           }
-          onPress={() => switchNetwork(base)}
         >
-          Network: {chainId === base.id ? "Base" : "Wrong Network"}
+          Status: {
+            ACTIVE_CHAIN.some(chain =>
+              chain === "BASE_MAINNET" ? chainId === base.id :
+              chain === "ETH_SEPOLIA" ? chainId === sepolia.id : false
+            ) ? "Supported Network" : "Unsupported Network"
+          }
         </DropdownItem>
         <DropdownItem
           key="explorer"

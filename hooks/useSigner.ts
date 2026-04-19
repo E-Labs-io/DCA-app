@@ -50,7 +50,7 @@ export default function useSigner() {
     } finally {
       setIsInitializing(false);
     }
-  }, [walletProvider, address, chainId, isInitializing]);
+  }, [walletProvider, address, chainId]);
 
   const getProvider = useCallback(async () => {
     if (Signer && !isInitializing) {
@@ -81,7 +81,7 @@ export default function useSigner() {
 
   // Handle network changes
   useEffect(() => {
-    if (!chainId) return;
+    if (!chainId || !address || !walletProvider) return;
 
     const currentChainId = Number(chainId);
     const networkKey = getNetworkKeyByChainId(currentChainId);
@@ -108,9 +108,7 @@ export default function useSigner() {
       setSigner(null);
       setActiveNetwork(safeNetworkKey);
       // Re-initialize signer after network change
-      if (walletProvider && address) {
-        setTimeout(() => initializeSigner(), 100);
-      }
+      setTimeout(() => initializeSigner(), 100);
     } else if (!previousChainId.current) {
       // Initial network setup
       setActiveNetwork(safeNetworkKey);
@@ -118,15 +116,17 @@ export default function useSigner() {
     }
   }, [chainId, walletProvider, address, initializeSigner]);
 
-  // Clear signer when wallet disconnects
+  // Clear signer when wallet disconnects (only if we had a connection before)
   useEffect(() => {
-    if (!address || !walletProvider) {
+    // Only clear if we had a signer before and now we don't have address/provider
+    // This prevents clearing during the initial connection phase
+    if ((!address || !walletProvider) && Signer && !isInitializing) {
       console.log("Wallet disconnected, clearing signer");
       setSigner(null);
       setActiveNetwork(undefined);
       previousChainId.current = undefined;
     }
-  }, [address, walletProvider]);
+  }, [address, walletProvider, Signer, isInitializing]);
 
   return {
     Signer,

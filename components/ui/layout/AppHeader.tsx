@@ -3,22 +3,25 @@
 "use client";
 
 import { Button } from "@nextui-org/react";
-import { PlusCircle, Settings, Shield } from "lucide-react";
+import { PlusCircle, Settings, Shield, History } from "lucide-react";
 import { useAppKitAccount } from "@reown/appkit/react";
 import { useExecutorAdmin } from "@/hooks/useExecutorAdmin";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { TransactionStatusModal } from "../modals/TransactionStatusModal";
 
 interface AppHeaderProps {
   onCreateAccount: () => void;
   onCreateStrategy: () => void;
   canCreateStrategy: boolean;
+  onShowTransactionHistory?: () => void;
 }
 
 export function AppHeader({
   onCreateAccount,
   onCreateStrategy,
   canCreateStrategy,
+  onShowTransactionHistory,
 }: AppHeaderProps) {
   const { address, isConnected } = useAppKitAccount();
   const { checkIfAdminOrOwner } = useExecutorAdmin();
@@ -47,6 +50,16 @@ export function AppHeader({
     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
       <h1 className="text-3xl font-bold">ATION CONTROL</h1>
       <div className="flex gap-4">
+        {onShowTransactionHistory && (
+          <Button
+            color="default"
+            variant="bordered"
+            startContent={<History size={20} />}
+            onPress={onShowTransactionHistory}
+          >
+            Transactions
+          </Button>
+        )}
         <appkit-account-button />
         {hasAdminAccess && (
           <Button

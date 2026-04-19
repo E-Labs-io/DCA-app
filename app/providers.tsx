@@ -10,6 +10,7 @@ import { type ReactNode } from "react";
 import { Toaster } from "sonner";
 import AppKit from "@/context/AppKit";
 import { DCAStatsProvider } from "@/providers/DCAStatsProvider";
+import { TransactionProvider } from "@/context/TransactionContext";
 
 const queryClient = new QueryClient();
 
@@ -18,18 +19,20 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <AppKit>
         <NextUIProvider>
-          <DCAStatsProvider>
-            <NextThemesProvider
-              attribute="class"
-              defaultTheme="dark"
-              enableSystem={false}
-              forcedTheme="dark"
-              disableTransitionOnChange
-            >
-              <Toaster richColors position="top-right" />
-              {children}
-            </NextThemesProvider>
-          </DCAStatsProvider>
+          <TransactionProvider>
+            <DCAStatsProvider>
+              <NextThemesProvider
+                attribute="class"
+                defaultTheme="dark"
+                enableSystem={false}
+                forcedTheme="dark"
+                disableTransitionOnChange
+              >
+                <Toaster richColors position="top-right" />
+                {children}
+              </NextThemesProvider>
+            </DCAStatsProvider>
+          </TransactionProvider>
         </NextUIProvider>
       </AppKit>
     </QueryClientProvider>

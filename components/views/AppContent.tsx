@@ -3,7 +3,8 @@
 "use client";
 
 import { Tabs, Tab } from "@nextui-org/react";
-import { base } from "viem/chains";
+import { base, sepolia } from "viem/chains";
+import { ACTIVE_CHAIN } from "@/constants/contracts";
 import { LineChart, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
@@ -15,6 +16,7 @@ import { useDCAFactory } from "@/hooks/useDCAFactory";
 import ConnectionCard from "../common/ConnectionCard";
 import { useDCAProvider } from "@/providers/DCAStatsProvider";
 import LoadingPage from "../common/LoadingPage";
+import { TransactionStatusIndicator } from "../ui/TransactionStatusIndicator";
 
 // Dynamically import components with proper default exports
 const CreateAccountModal = dynamic(
@@ -94,9 +96,19 @@ export default function AppContent() {
 
   const [isCreateAccountOpen, setIsCreateAccountOpen] = useState(false);
   const [isCreateStrategyOpen, setIsCreateStrategyOpen] = useState(false);
+  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [selectedView, setSelectedView] = useState("accounts");
 
-  const isWrongNetwork = chainId !== base.id;
+  // Check if current network is supported by DCA contracts
+  const supportedChainIds = ACTIVE_CHAIN.map(chain => {
+    switch (chain) {
+      case "BASE_MAINNET": return base.id;
+      case "ETH_SEPOLIA": return sepolia.id;
+      default: return -1;
+    }
+  }).filter(id => id !== -1);
+
+  const isWrongNetwork = chainId && !supportedChainIds.includes(chainId);
 
   useEffect(() => {
     if (isConnected || (!isLoading && DCAFactory)) initiateUserAccounts();
@@ -109,6 +121,7 @@ export default function AppContent() {
         <ConnectionCard
           isConnected={isConnected}
           isWrongNetwork={isWrongNetwork}
+          supportedNetworks={["Base", "Ethereum Sepolia"]}
         />
       </div>
     );
@@ -123,6 +136,7 @@ export default function AppContent() {
           onCreateAccount={() => setIsCreateAccountOpen(true)}
           onCreateStrategy={() => setIsCreateStrategyOpen(true)}
           canCreateStrategy={!!selectedAccount}
+          onShowTransactionHistory={() => setIsTransactionModalOpen(true)}
         />
 
         <UserStatsOverview />
@@ -192,7 +206,15 @@ export default function AppContent() {
             Signer={Signer}
           />
         )}
+
+        <TransactionStatusModal
+          isOpen={isTransactionModalOpen}
+          onClose={() => setIsTransactionModalOpen(false)}
+        />
       </div>
+
+      {/* Transaction status indicator */}
+      <TransactionStatusIndicator />
     </div>
   );
 }

@@ -5,11 +5,13 @@ import { Card, CardBody, CardHeader } from "@nextui-org/react";
 interface ConnectionCardProps {
   isConnected: boolean;
   isWrongNetwork: boolean;
+  supportedNetworks?: string[];
 }
 
 export default function ConnectionCard({
   isConnected,
   isWrongNetwork,
+  supportedNetworks = ["Base", "Ethereum Sepolia"],
 }: ConnectionCardProps) {
   return (
     <div className="flex justify-center items-center h-screen">
@@ -27,8 +29,8 @@ export default function ConnectionCard({
           <CardBody className="flex flex-col items-center gap-4 p-8">
             <h1 className="text-2xl font-bold mb-4">Wrong Network</h1>
             <p className="text-center text-gray-400 mb-6">
-              Ation Control is only available on the Base network. Please switch
-              to the Base network to continue.
+              Ation Control is available on: {supportedNetworks.join(", ")}.
+              Please switch to one of these networks to continue.
             </p>
             <appkit-network-button />
           </CardBody>
