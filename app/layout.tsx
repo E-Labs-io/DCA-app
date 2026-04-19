@@ -1,6 +1,7 @@
 /** @format */
 
 import { Providers } from "./providers";
+import { BetaBanner } from "@/components/common/BetaBanner";
 import { Inter } from "next/font/google";
 import "@/styles/globals.css";
 import "@/styles/loadingAnimation.css";
@@ -16,6 +17,7 @@ export default function RootLayout({
     <html lang="en" className={inter.className} suppressHydrationWarning>
       <body suppressHydrationWarning>
         <Providers>
+          <BetaBanner />
           <main className="min-h-screen pt-16">{children}</main>
         </Providers>
       </body>
