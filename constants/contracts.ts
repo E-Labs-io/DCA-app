@@ -24,7 +24,7 @@ const DCAReinvestAddress: { [key in NetworkKeys]?: string } = {
   BASE_MAINNET: "0x8D712F7C47bA36A18119822eFAF108E1F9F6cBAD", // Correct address
 };
 
-const ACTIVE_CHAIN: NetworkKeys[] = ["BASE_MAINNET"];
+const ACTIVE_CHAIN: NetworkKeys[] = ["BASE_MAINNET", "ETH_SEPOLIA"];
 
 export {
   DCAExecutorAddress,

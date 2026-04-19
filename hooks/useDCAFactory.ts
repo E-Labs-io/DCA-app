@@ -40,6 +40,45 @@ export function useDCAFactory() {
     }
   }, [ACTIVE_NETWORK]);
 
+  const createAccountWithSalt = useCallback(
+    async (salt: string) => {
+      if (!Signer) {
+        toast.error("Please connect your wallet first");
+        throw new Error("No signer available");
+      }
+
+      try {
+        if (!DCAFactory) throw new Error("Error connecting to factory");
+        toast.info("Creating account with deterministic address...");
+        const tx = await DCAFactory.CreateAccountWithSalt(salt);
+        toast.loading("Account creation transaction is confirming...");
+        await tx.wait();
+        toast.success("Account created successfully");
+        return { tx, hash: tx.hash };
+      } catch (error: any) {
+        const errorMessage = error.message?.includes("rejected") ? "Transaction was rejected" : "Failed to create account";
+        toast.error(errorMessage);
+        console.error("Error creating account:", error);
+        return false;
+      }
+    },
+    [Signer, DCAFactory]
+  );
+
+  const predictAccountAddress = useCallback(
+    async (salt: string, owner: string) => {
+      if (!DCAFactory) return null;
+
+      try {
+        return await DCAFactory.predictAccountAddress(salt, owner);
+      } catch (error) {
+        console.error("Error predicting account address:", error);
+        return null;
+      }
+    },
+    [DCAFactory]
+  );
+
   const debugContractInterface = useCallback(async () => {
     if (!Signer || !DCA_FACTORY_ADDRESS) {
       console.log("[useDCAFactory] Missing signer or factory address");
@@ -216,6 +255,8 @@ export function useDCAFactory() {
     DCAFactory,
     DCA_FACTORY_ADDRESS,
     createAccount,
+    createAccountWithSalt,
+    predictAccountAddress,
     getUsersAccountAddresses,
     debugContractInterface, // Expose for debugging
   };
