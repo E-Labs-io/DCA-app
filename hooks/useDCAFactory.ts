@@ -12,6 +12,7 @@ import { ContractTransactionReport } from "@/types/contractReturns";
 import { DCAFactory } from "@/types/contracts";
 
 import useSigner from "./useSigner";
+import { dbg } from '@/helpers/debug';
 
 export function useDCAFactory() {
   const { Signer, ACTIVE_NETWORK } = useSigner();
@@ -81,18 +82,18 @@ export function useDCAFactory() {
 
   const debugContractInterface = useCallback(async () => {
     if (!Signer || !DCA_FACTORY_ADDRESS) {
-      console.log("[useDCAFactory] Missing signer or factory address");
+      dbg("[useDCAFactory] Missing signer or factory address");
       return;
     }
 
     try {
       const factory = await connectToDCAFactory(DCA_FACTORY_ADDRESS, Signer);
-      console.log("[useDCAFactory] Factory instance:", factory);
-      console.log("[useDCAFactory] Factory address:", DCA_FACTORY_ADDRESS);
-      console.log("[useDCAFactory] Factory interface:", factory.interface);
+      dbg("[useDCAFactory] Factory instance:", factory);
+      dbg("[useDCAFactory] Factory address:", DCA_FACTORY_ADDRESS);
+      dbg("[useDCAFactory] Factory interface:", factory.interface);
 
       // List all available functions
-      console.log(
+      dbg(
         "[useDCAFactory] Available functions:",
         factory.interface.fragments
           .filter((f) => f.type === "function")
@@ -101,7 +102,7 @@ export function useDCAFactory() {
 
       // Check if getAccountsOfUser exists
       const hasFunction = factory.interface.hasFunction("getAccountsOfUser");
-      console.log(
+      dbg(
         "[useDCAFactory] Has getAccountsOfUser function:",
         hasFunction
       );
@@ -109,8 +110,8 @@ export function useDCAFactory() {
       if (hasFunction) {
         const functionFragment =
           factory.interface.getFunction("getAccountsOfUser");
-        console.log("[useDCAFactory] Function fragment:", functionFragment);
-        console.log(
+        dbg("[useDCAFactory] Function fragment:", functionFragment);
+        dbg(
           "[useDCAFactory] Function selector:",
           factory.interface.getFunction("getAccountsOfUser").selector
         );
@@ -118,7 +119,7 @@ export function useDCAFactory() {
 
       // Try to get the contract code to verify it's deployed
       const code = await Signer.provider?.getCode(DCA_FACTORY_ADDRESS);
-      console.log("[useDCAFactory] Contract code length:", code?.length);
+      dbg("[useDCAFactory] Contract code length:", code?.length);
 
       return factory;
     } catch (error) {
@@ -141,25 +142,25 @@ export function useDCAFactory() {
     }
 
     try {
-      console.log("[useDCAFactory] Debugging contract interface...");
+      dbg("[useDCAFactory] Debugging contract interface...");
       const factory = await debugContractInterface();
 
       if (!factory) {
         throw new Error("[useDCAFactory] Failed to connect to factory");
       }
 
-      console.log(
+      dbg(
         "[useDCAFactory] Attempting to call getAccountsOfUser with address:",
         address
       );
-      console.log("[useDCAFactory] Factory address:", DCA_FACTORY_ADDRESS);
+      dbg("[useDCAFactory] Factory address:", DCA_FACTORY_ADDRESS);
 
       // Try different approaches to call the function
       try {
         // Method 1: Direct call
-        console.log("[useDCAFactory] Trying direct call...");
+        dbg("[useDCAFactory] Trying direct call...");
         const accounts: string[] = await factory.getAccountsOfUser(address);
-        console.log(
+        dbg(
           "[useDCAFactory] Direct call successful, accounts:",
           accounts
         );
@@ -177,10 +178,10 @@ export function useDCAFactory() {
         console.error("[useDCAFactory] Direct call failed:", directCallError);
 
         // Method 2: Try using staticCall
-        console.log("[useDCAFactory] Trying static call...");
+        dbg("[useDCAFactory] Trying static call...");
         try {
           const result = await factory.getAccountsOfUser.staticCall(address);
-          console.log("[useDCAFactory] Static call result:", result);
+          dbg("[useDCAFactory] Static call result:", result);
           return Array.isArray(result) ? result : [];
         } catch (staticCallError) {
           console.error(
@@ -189,25 +190,25 @@ export function useDCAFactory() {
           );
 
           // Method 3: Try encoding and calling manually
-          console.log("[useDCAFactory] Trying manual encoding...");
+          dbg("[useDCAFactory] Trying manual encoding...");
           const data = factory.interface.encodeFunctionData(
             "getAccountsOfUser",
             [address]
           );
-          console.log("[useDCAFactory] Encoded data:", data);
+          dbg("[useDCAFactory] Encoded data:", data);
 
           const result = await Signer.provider?.call({
             to: DCA_FACTORY_ADDRESS,
             data: data,
           });
-          console.log("[useDCAFactory] Manual call result:", result);
+          dbg("[useDCAFactory] Manual call result:", result);
 
           if (result && result !== "0x") {
             const decoded = factory.interface.decodeFunctionResult(
               "getAccountsOfUser",
               result
             );
-            console.log("[useDCAFactory] Decoded result:", decoded);
+            dbg("[useDCAFactory] Decoded result:", decoded);
             return decoded[0] || [];
           }
 

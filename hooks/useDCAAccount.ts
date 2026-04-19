@@ -14,6 +14,7 @@ import { EthereumAddress } from "@/types/generic";
 import { clearAccountCache } from "@/hooks/helpers/getAccountEvents";
 import { useTransaction } from "./useTransaction";
 import { useGasEstimation } from "./useGasEstimation";
+import { dbg, dbgWarn } from '@/helpers/debug';
 
 /**
  * Decode custom contract errors into user-friendly messages
@@ -89,7 +90,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
       try {
         if (!dcaAccount) throw new Error("Error connecting to account");
 
-        console.log("[useDCAAccount] Creating strategy:", {
+        dbg("[useDCAAccount] Creating strategy:", {
           accountAddress: dcaAccount.target,
           strategy: {
             baseToken: strategy.baseToken.ticker,
@@ -115,7 +116,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
           {
             description: "Create DCA strategy",
             onSuccess: async (receipt) => {
-              console.log("[useDCAAccount] Transaction confirmed, receipt:", {
+              dbg("[useDCAAccount] Transaction confirmed, receipt:", {
                 transactionHash: receipt.hash,
                 blockNumber: receipt.blockNumber,
                 logsCount: receipt.logs.length,
@@ -128,7 +129,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
                   dcaAccount.interface.getEvent("StrategyCreated").topicHash
               );
 
-              console.log(
+              dbg(
                 "[useDCAAccount] Strategy created event found:",
                 !!strategyCreatedEvent
               );
@@ -139,7 +140,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
                   dcaAccount.interface.parseLog(strategyCreatedEvent);
                 const newStrategyId = parsedEvent?.args[0]; // First arg is strategyId
 
-                console.log(
+                dbg(
                   "[useDCAAccount] Parsed strategy ID:",
                   newStrategyId?.toString()
                 );
@@ -154,7 +155,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
                     newStrategyId
                   );
 
-                  console.log("[useDCAAccount] Fetched strategy data:", {
+                  dbg("[useDCAAccount] Fetched strategy data:", {
                     strategyId: strategyData.strategyId.toString(),
                     active: strategyData.active,
                     baseToken: strategyData.baseToken.ticker,
@@ -167,7 +168,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
                     strategyId: Number(newStrategyId),
                   };
 
-                  console.log(
+                  dbg(
                     "[useDCAAccount] About to dispatch strategy-created event:",
                     eventDetail
                   );
@@ -178,14 +179,14 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
                     })
                   );
 
-                  console.log(
+                  dbg(
                     "[useDCAAccount] Dispatched strategy-created event successfully"
                   );
                 } else {
-                  console.warn("[useDCAAccount] No strategy ID found in event");
+                  dbgWarn("[useDCAAccount] No strategy ID found in event");
                 }
               } else {
-                console.warn(
+                dbgWarn(
                   "[useDCAAccount] No StrategyCreated event found in transaction logs"
                 );
               }
@@ -206,7 +207,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
               setupError.message?.toLowerCase().includes("subscribed") ||
               setupError.message?.toLowerCase().includes("subscription"))
           ) {
-            console.warn(
+            dbgWarn(
               "[useDCAAccount] Retrying strategy creation without subscription"
             );
             toast.dismiss(loadingToastId);
@@ -221,7 +222,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
                 false // Force subscribe to false
               );
 
-              console.log(
+              dbg(
                 "[useDCAAccount] Retry transaction sent:",
                 retryTx.hash
               );

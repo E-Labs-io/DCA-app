@@ -15,6 +15,7 @@ import {
 } from "@/hooks/helpers/buildDataTypes";
 import { ethers } from "ethers";
 import { DCAAccount__factory } from "@/types/contracts";
+import { dbg, dbgWarn } from '@/helpers/debug';
 
 // Cache for events
 const eventCache = new Map<string, any>();
@@ -27,10 +28,10 @@ const getLogProvider = () => {
     process.env.NEXT_PUBLIC_ALCHEMY_KEY ||
     process.env.NEXT_PUBLIC_ALCHEMY_API_KEY;
   if (!alchemyKey) {
-    console.warn("No Alchemy key found, falling back to public Base RPC");
+    dbgWarn("No Alchemy key found, falling back to public Base RPC");
     return new ethers.JsonRpcProvider("https://mainnet.base.org");
   }
-  console.log("[getAccountEvents] Using Alchemy provider for Base Mainnet");
+  dbg("[getAccountEvents] Using Alchemy provider for Base Mainnet");
   return new ethers.JsonRpcProvider(
     `https://base-mainnet.g.alchemy.com/v2/${alchemyKey}`
   );
@@ -68,7 +69,7 @@ const clearAccountCache = (accountAddress: string) => {
       eventCache.delete(key);
     }
   }
-  console.log("[getAccountEvents] Cleared cache for account:", accountAddress);
+  dbg("[getAccountEvents] Cleared cache for account:", accountAddress);
 };
 
 const getAccountStrategyCreationEvents = async (
@@ -77,7 +78,7 @@ const getAccountStrategyCreationEvents = async (
 ): Promise<StrategyCreationEvent[]> => {
   const cacheKey = getCacheKey(accountProvider.target, "creation");
 
-  console.log("[getAccountEvents] getAccountStrategyCreationEvents called:", {
+  dbg("[getAccountEvents] getAccountStrategyCreationEvents called:", {
     account: accountProvider.target,
     forceRefresh,
     hasCachedData: eventCache.has(cacheKey),
@@ -86,18 +87,18 @@ const getAccountStrategyCreationEvents = async (
   if (!forceRefresh) {
     const cached = getFromCache(cacheKey);
     if (cached) {
-      console.log("[getAccountEvents] Returning cached data:", {
+      dbg("[getAccountEvents] Returning cached data:", {
         eventCount: cached.length,
         events: cached.map((e) => ({ id: e.id, blockNumber: e.blockNumber })),
       });
       return cached;
     }
   } else {
-    console.log("[getAccountEvents] Force refresh - skipping cache");
+    dbg("[getAccountEvents] Force refresh - skipping cache");
   }
 
   try {
-    console.log(
+    dbg(
       "[getAccountEvents] Fetching strategy creation events for:",
       accountProvider.target
     );
@@ -110,14 +111,14 @@ const getAccountStrategyCreationEvents = async (
     );
 
     const filter = contractForLogs.filters["StrategyCreated"];
-    console.log("[getAccountEvents] Using filter:", filter);
+    dbg("[getAccountEvents] Using filter:", filter);
 
     // Get latest block to ensure we're querying up to the most recent data
     const latestBlock = await logProvider.getBlockNumber();
-    console.log("[getAccountEvents] Latest block number:", latestBlock);
+    dbg("[getAccountEvents] Latest block number:", latestBlock);
 
     const events = await contractForLogs.queryFilter(filter, 0, latestBlock);
-    console.log("[getAccountEvents] Found events:", {
+    dbg("[getAccountEvents] Found events:", {
       eventCount: events.length,
       latestBlock,
       events: events.map((e) => ({
@@ -133,7 +134,7 @@ const getAccountStrategyCreationEvents = async (
       )
     );
 
-    console.log("[getAccountEvents] Processed results:", {
+    dbg("[getAccountEvents] Processed results:", {
       resultCount: results.length,
       results: results.map((r) => ({
         id: r.id,
@@ -148,12 +149,12 @@ const getAccountStrategyCreationEvents = async (
     console.error("Error fetching strategy creation events:", error);
 
     // Fallback: try with the original provider if Alchemy fails
-    console.log("[getAccountEvents] Trying fallback with original provider...");
+    dbg("[getAccountEvents] Trying fallback with original provider...");
     try {
       const filter = accountProvider.filters["StrategyCreated"];
       const events = await accountProvider.queryFilter(filter);
 
-      console.log("[getAccountEvents] Fallback events found:", events.length);
+      dbg("[getAccountEvents] Fallback events found:", events.length);
 
       const results = await Promise.all(
         events.map((event: StrategyCreatedEvent.Log) =>
@@ -180,7 +181,7 @@ const getStrategyExecutionEvents = async (
   if (cached) return cached;
 
   try {
-    console.log(
+    dbg(
       "[getAccountEvents] Fetching execution events for strategy:",
       strategyId
     );
@@ -241,7 +242,7 @@ const getAccountStrategyExecutionEvents = async (
   accountProvider: DCAAccount
 ): Promise<AccountStrategyExecutionEvent[]> => {
   try {
-    console.log(
+    dbg(
       "[getAccountEvents] Fetching all execution events for account:",
       accountProvider.target
     );

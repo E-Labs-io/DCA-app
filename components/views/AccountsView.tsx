@@ -13,6 +13,7 @@ import { Signer } from "ethers";
 import { NetworkKeys } from "@/types";
 import { LoadingCard } from "../common/LoadingCard";
 import { useDCAProvider } from "@/providers/DCAStatsProvider";
+import { dbg } from '@/helpers/debug';
 
 interface AccountsViewProps {
   onAccountSelect: (address: string) => void;
@@ -40,16 +41,16 @@ export function AccountsView({
   );
 
   useEffect(() => {
-    console.log("[AccountsView] accounts", accounts);
+    dbg("[AccountsView] accounts", accounts);
   }, [accounts]);
 
   const handleAccountClick = (address: EthereumAddress) => {
-    console.log("Account clicked:", address);
+    dbg("Account clicked:", address);
     if (expandedAccount === address) {
-      console.log("Collapsing account:", address);
+      dbg("Collapsing account:", address);
       setExpandedAccount(null);
     } else {
-      console.log("Expanding account:", address);
+      dbg("Expanding account:", address);
       setExpandedAccount(address as string);
       setSelectedAccount(address as string);
       onAccountSelect(address as string);

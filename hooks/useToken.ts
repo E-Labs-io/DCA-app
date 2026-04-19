@@ -11,6 +11,7 @@ import { ContractTransactionReport } from "@/types/contractReturns";
 import { useEffect, useState } from "react";
 import { erc20 } from "@/types/contracts/@openzeppelin/contracts/token";
 import { EthereumAddress } from "@/types";
+import { dbg, dbgWarn } from '@/helpers/debug';
 
 export function useToken(tokenAddress: EthereumAddress, decimals: number = 18) {
   const { Signer } = useSigner();
@@ -18,7 +19,7 @@ export function useToken(tokenAddress: EthereumAddress, decimals: number = 18) {
 
   useEffect(() => {
     if (!Signer) {
-      console.warn("Signer is not available yet");
+      dbgWarn("Signer is not available yet");
       return;
     }
 
@@ -74,7 +75,7 @@ export function useToken(tokenAddress: EthereumAddress, decimals: number = 18) {
     try {
       const allowance = await getAllowance(owner, spender);
       if (!allowance) {
-        console.warn("No allowance data returned");
+        dbgWarn("No allowance data returned");
         return false;
       }
 
@@ -113,7 +114,7 @@ export function useToken(tokenAddress: EthereumAddress, decimals: number = 18) {
     await tx.wait();
     toast.success("Transaction confirmed, the token has been approved");
     try {
-      console.log("Approving token:", {
+      dbg("Approving token:", {
         tokenAddress,
         spender,
         amount,

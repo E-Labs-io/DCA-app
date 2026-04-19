@@ -14,6 +14,7 @@ import { useDCAFactory } from "@/hooks/useDCAFactory";
 import { useAppKitAccount, useAppKitProvider } from "@reown/appkit/react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { dbgWarn } from '@/helpers/debug';
 
 
 interface CreateAccountModalProps {
@@ -41,7 +42,7 @@ export function CreateAccountModal({
 
     try {
       const transaction = await createAccount().catch((error) => {
-        console.warn("Account creation warning:", error);
+        dbgWarn("Account creation warning:", error);
         if (error?.code === 4001) throw error;
         return false;
       });
@@ -55,7 +56,7 @@ export function CreateAccountModal({
           toast.success("DCA account created successfully!");
           onClose();
         } catch (error) {
-          console.warn("Transaction confirmation warning:", error);
+          dbgWarn("Transaction confirmation warning:", error);
           toast.success("Account likely created successfully");
           onClose();
         }
@@ -67,7 +68,7 @@ export function CreateAccountModal({
       if (error?.code === 4001 || error?.message?.includes("rejected")) {
         toast.error("Transaction cancelled by user");
       } else {
-        console.warn("Non-critical error:", error);
+        dbgWarn("Non-critical error:", error);
         if (txHash) {
           toast.success("Account likely created successfully");
           onClose();

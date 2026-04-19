@@ -7,6 +7,7 @@ import { DCAExecutorAddress } from "@/constants/contracts";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAExecutor";
 import { DCAExecutor } from "@/types/contracts";
 import useSigner from "./useSigner";
+import { dbg, dbgWarn } from '@/helpers/debug';
 
 export function useExecutorAdmin() {
   const [loading, setLoading] = useState(false);
@@ -20,18 +21,18 @@ export function useExecutorAdmin() {
     if (Signer && ACTIVE_NETWORK && address) {
       const executorAddress = DCAExecutorAddress[ACTIVE_NETWORK];
       if (executorAddress) {
-        console.log("Connecting to executor contract:", executorAddress);
+        dbg("Connecting to executor contract:", executorAddress);
         connectToDCAExecutor(executorAddress, Signer)
           .then((executor) => {
             setDCAExecutorContract(executor);
             setDCA_EXECUTOR_ADDRESS(executorAddress);
-            console.log("Executor contract connected successfully");
+            dbg("Executor contract connected successfully");
           })
           .catch((error) => {
             console.error("Failed to connect to executor contract:", error);
           });
       } else {
-        console.warn("No executor address found for network:", ACTIVE_NETWORK);
+        dbgWarn("No executor address found for network:", ACTIVE_NETWORK);
       }
     }
   }, [Signer, ACTIVE_NETWORK, address]);
@@ -40,7 +41,7 @@ export function useExecutorAdmin() {
   const getExecutorContractReadOnly = useCallback(async () => {
     // Wait for signer initialization if it's in progress
     if (isInitializing) {
-      console.log("Waiting for signer initialization...");
+      dbg("Waiting for signer initialization...");
       throw new Error("Signer is initializing - please wait");
     }
 
@@ -61,7 +62,7 @@ export function useExecutorAdmin() {
       throw new Error(`Executor contract not deployed on ${ACTIVE_NETWORK}`);
     }
 
-    console.log(
+    dbg(
       "Connecting to executor at:",
       executorAddress,
       "on network:",

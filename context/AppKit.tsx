@@ -3,12 +3,13 @@
 import { createAppKit } from "@reown/appkit/react";
 import { EthersAdapter } from "@reown/appkit-adapter-ethers";
 import { sepolia, base } from "@reown/appkit/networks";
+import { dbg, dbgWarn } from '@/helpers/debug';
 
 const projectId = process.env.NEXT_PUBLIC_APPKIT_PROJECT_ID;
 const alchemyKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY;
 
 if (!projectId) {
-  console.warn(
+  dbgWarn(
     "NEXT_PUBLIC_APPKIT_PROJECT_ID not found in environment variables"
   );
   throw new Error(
@@ -17,13 +18,13 @@ if (!projectId) {
 }
 
 if (!alchemyKey) {
-  console.warn(
+  dbgWarn(
     "NEXT_PUBLIC_ALCHEMY_API_KEY not found in environment variables"
   );
   throw new Error("Please set your NEXT_PUBLIC_ALCHEMY_API_KEY in .env.local");
 }
 
-console.log(
+dbg(
   "AppKit initializing with project ID:",
   projectId.substring(0, 8) + "..."
 );
@@ -63,7 +64,7 @@ try {
       "4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0", // Trust Wallet
     ],
   });
-  console.log("AppKit initialized successfully");
+  dbg("AppKit initialized successfully");
 } catch (error) {
   console.error("Failed to initialize AppKit:", error);
   throw error;

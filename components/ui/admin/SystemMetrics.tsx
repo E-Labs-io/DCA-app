@@ -19,6 +19,7 @@ import { RefreshCw } from "lucide-react";
 import { AddressLink } from "@/components/common/AddressLink";
 import { NetworkKeys } from "@/types/Chains";
 import { DCAExecutorAddress } from "@/constants/contracts";
+import { dbg, dbgWarn } from '@/helpers/debug';
 
 export function SystemMetrics() {
   const { address } = useAppKitAccount();
@@ -47,7 +48,7 @@ export function SystemMetrics() {
 
   const loadSystemData = async () => {
     if (!address || !Signer || isInitializing) {
-      console.log("Signer not ready, skipping system data load");
+      dbg("Signer not ready, skipping system data load");
       return;
     }
 
@@ -57,11 +58,11 @@ export function SystemMetrics() {
       // Load executor and factory states from contracts
       const [executorData, factoryData] = await Promise.all([
         getSystemState().catch((error) => {
-          console.warn("Failed to load executor state:", error);
+          dbgWarn("Failed to load executor state:", error);
           return null;
         }),
         getFactoryState().catch((error) => {
-          console.warn("Failed to load factory state:", error);
+          dbgWarn("Failed to load factory state:", error);
           return null;
         }),
       ]);

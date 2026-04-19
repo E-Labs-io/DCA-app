@@ -14,6 +14,7 @@ import { StrategyCard } from "../ui/strategy/StrategyCard";
 import { NetworkKeys } from "@/types";
 import { Signer } from "ethers";
 import { useDCAProvider } from "@/providers/DCAStatsProvider";
+import { dbg } from '@/helpers/debug';
 
 export interface StrategyViewProps {
   ACTIVE_NETWORK: NetworkKeys;
@@ -21,7 +22,7 @@ export interface StrategyViewProps {
 }
 
 export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
-  console.log("[StrategyView] Component rendered/re-rendered");
+  dbg("[StrategyView] Component rendered/re-rendered");
 
   const {
     accounts,
@@ -31,7 +32,7 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
     getAccountBalances,
   } = useDCAProvider();
 
-  console.log("[StrategyView] useDCAProvider returned:", {
+  dbg("[StrategyView] useDCAProvider returned:", {
     accountsCount: accounts?.length || 0,
     walletStats,
     selectedAccount,
@@ -54,8 +55,8 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
   const hasLoadedRef = useRef(false);
 
   useEffect(() => {
-    console.log("[StrategyView] ===== ACCOUNTS CHANGED =====");
-    console.log("[StrategyView] Accounts received:", {
+    dbg("[StrategyView] ===== ACCOUNTS CHANGED =====");
+    dbg("[StrategyView] Accounts received:", {
       accountsCount: accounts?.length || 0,
       accountsDetails:
         accounts?.map((a) => ({
@@ -68,7 +69,7 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
     if (accounts && accounts.length > 0) {
       const strategies: IDCADataStructures.StrategyStruct[] = [];
       accounts.forEach((account) => {
-        console.log(`[StrategyView] Processing account ${account.account}:`, {
+        dbg(`[StrategyView] Processing account ${account.account}:`, {
           strategiesCount: account.strategies?.length || 0,
           strategies:
             account.strategies?.map((s) => ({
@@ -84,7 +85,7 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
         }
       });
 
-      console.log("[StrategyView] Final strategies to display:", {
+      dbg("[StrategyView] Final strategies to display:", {
         totalCount: strategies.length,
         strategies: strategies.map((s) => ({
           id: s.strategyId,
@@ -97,15 +98,15 @@ export function StrategyView({ ACTIVE_NETWORK, Signer }: StrategyViewProps) {
 
       setAllStrategies(strategies);
       setIsLoading(false);
-      console.log(
+      dbg(
         "[StrategyView] Updated allStrategies state and set loading to false"
       );
     } else {
-      console.log(
+      dbg(
         "[StrategyView] No accounts available or accounts array is empty"
       );
     }
-    console.log("[StrategyView] ===== ACCOUNTS PROCESSING COMPLETE =====");
+    dbg("[StrategyView] ===== ACCOUNTS PROCESSING COMPLETE =====");
   }, [
     accounts,
     accounts

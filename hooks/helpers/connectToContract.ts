@@ -14,6 +14,7 @@ import { erc20 } from "@/types/contracts/@openzeppelin/contracts/token";
 import { EthereumAddress } from "@/types/generic";
 import { AddressLike } from "ethers";
 import { ethers, Contract } from "ethers";
+import { dbgWarn } from '@/helpers/debug';
 
 const connectToContract = async ({
   ContractAddress,
@@ -21,7 +22,7 @@ const connectToContract = async ({
   providerOrSigner,
 }: connectToContractInterface): Promise<Contract | false> => {
   if (!providerOrSigner || !ContractAddress) {
-    console.warn("Missing components");
+    dbgWarn("Missing components");
     return false;
   }
   const activeContract = await newContract({

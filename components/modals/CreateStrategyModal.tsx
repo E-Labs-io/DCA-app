@@ -31,6 +31,7 @@ import {
 } from "@/constants/intervals";
 import { NetworkKeys } from "@/types";
 import { Signer } from "ethers";
+import { dbg, dbgWarn } from '@/helpers/debug';
 
 interface FormData {
   baseToken: string;
@@ -148,7 +149,7 @@ export function CreateStrategyModal({
             formData.fundAmount
           ).catch(() => false);
         } catch (error) {
-          console.warn("Allowance check failed, proceeding anyway:", error);
+          dbgWarn("Allowance check failed, proceeding anyway:", error);
         }
 
         if (!hasAllowance) {
@@ -161,7 +162,7 @@ export function CreateStrategyModal({
               (accountAddress as DCAAccount).target as string,
               formData.fundAmount
             ).catch((error: any) => {
-              console.warn("Approval warning:", error);
+              dbgWarn("Approval warning:", error);
               return null;
             });
 
@@ -171,7 +172,7 @@ export function CreateStrategyModal({
               toast.success("Token approval confirmed");
             }
           } catch (error) {
-            console.warn("Non-critical approval error:", error);
+            dbgWarn("Non-critical approval error:", error);
           }
         } else {
           toast.dismiss(approvalToast);
@@ -197,7 +198,7 @@ export function CreateStrategyModal({
         ? parseUnits(formData.fundAmount, selectedTokenDecimals!)
         : 0;
 
-      console.log("[CreateStrategyModal] About to create strategy with:", {
+      dbg("[CreateStrategyModal] About to create strategy with:", {
         strategyData: {
           baseToken: strategyData.baseToken.ticker,
           targetToken: strategyData.targetToken.ticker,
@@ -221,7 +222,7 @@ export function CreateStrategyModal({
           error.message?.toLowerCase().includes("already") ||
           error.message?.toLowerCase().includes("subscribed")
         ) {
-          console.log(
+          dbg(
             "[CreateStrategyModal] Retrying without subscription due to 'already subscribed' error"
           );
           toast.loading("Retrying strategy creation without subscription...");
@@ -245,7 +246,7 @@ export function CreateStrategyModal({
           await transaction?.tx.wait();
           toast.success("Strategy creation completed");
         } catch (error) {
-          console.warn("Transaction confirmation error:", error);
+          dbgWarn("Transaction confirmation error:", error);
           toast.error("Failed to confirm transaction");
         }
       }

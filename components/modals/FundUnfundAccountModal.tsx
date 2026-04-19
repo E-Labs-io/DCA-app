@@ -23,6 +23,7 @@ import { EthereumAddress } from "@/types/generic";
 import { toast } from "sonner";
 import Image from "next/image";
 import { useDCAProvider } from "@/providers/DCAStatsProvider";
+import { dbg } from '@/helpers/debug';
 
 interface FundUnfundAccountModalProps {
   isOpen: boolean;
@@ -61,10 +62,10 @@ export function FundUnfundAccountModal({
       // Fetch the contract's balance for the selected token
       const fetchBalance = async () => {
         // Replace with actual logic to fetch balance
-        console.log("Selceted Token Check : ", selectedToken);
+        dbg("Selceted Token Check : ", selectedToken);
         if (actionType === "fund") {
           const balance = await getBalance(address as string);
-          console.log(
+          dbg(
             "Balacne of wallet for token",
             selectedToken?.ticker,
             balance
@@ -74,7 +75,7 @@ export function FundUnfundAccountModal({
           );
         } else {
           const balance = await getBalance(accountAddress as string);
-          console.log(
+          dbg(
             "Balacne of Account for token",
             selectedToken?.ticker,
             balance

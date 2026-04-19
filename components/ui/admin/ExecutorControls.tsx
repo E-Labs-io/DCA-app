@@ -28,6 +28,7 @@ import useSigner from "@/hooks/useSigner";
 import { RefreshCw, AlertTriangle, User } from "lucide-react";
 import { FullAddressLink } from "@/components/common/AddressLink";
 import { NetworkKeys } from "@/types/Chains";
+import { dbg } from '@/helpers/debug';
 
 interface IntervalStatus {
   interval: number;
@@ -97,7 +98,7 @@ export function ExecutorControls() {
 
   const loadSystemData = async () => {
     if (!address || !Signer || isInitializing) {
-      console.log("Signer not ready, skipping system data load");
+      dbg("Signer not ready, skipping system data load");
       return;
     }
 
@@ -105,7 +106,7 @@ export function ExecutorControls() {
       const state = await getSystemState();
       setSystemState(state);
       setLastUpdated(new Date());
-      console.log("System state loaded:", state);
+      dbg("System state loaded:", state);
     } catch (error) {
       console.error("Error loading system state:", error);
       toast.error(
@@ -124,7 +125,7 @@ export function ExecutorControls() {
 
   const loadIntervalData = async () => {
     if (!address || !Signer || isInitializing) {
-      console.log("Signer not ready, skipping interval data load");
+      dbg("Signer not ready, skipping interval data load");
       return;
     }
 
@@ -139,7 +140,7 @@ export function ExecutorControls() {
         });
       }
       setIntervalStatuses(statuses);
-      console.log("Interval data loaded:", statuses);
+      dbg("Interval data loaded:", statuses);
     } catch (error) {
       console.error("Error loading interval data:", error);
     }
@@ -147,7 +148,7 @@ export function ExecutorControls() {
 
   const loadTokenAllowances = async () => {
     if (!address || !Signer || isInitializing) {
-      console.log("Signer not ready, skipping token allowances load");
+      dbg("Signer not ready, skipping token allowances load");
       return;
     }
 
@@ -164,7 +165,7 @@ export function ExecutorControls() {
         }
       }
       setTokenAllowanceStatus(allowances);
-      console.log("Token allowances loaded:", allowances);
+      dbg("Token allowances loaded:", allowances);
     } catch (error) {
       console.error("Error loading token allowances:", error);
     }

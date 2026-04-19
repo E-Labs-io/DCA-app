@@ -7,6 +7,7 @@ import { DCAFactoryAddress } from "@/constants/contracts";
 import { DCAFactory } from "@/types/contracts";
 import useSigner from "./useSigner";
 import { ethers } from "ethers";
+import { dbg, dbgWarn } from '@/helpers/debug';
 
 export function useFactoryAdmin() {
   const [loading, setLoading] = useState(false);
@@ -20,18 +21,18 @@ export function useFactoryAdmin() {
     if (Signer && ACTIVE_NETWORK && address) {
       const factoryAddress = DCAFactoryAddress[ACTIVE_NETWORK];
       if (factoryAddress) {
-        console.log("Connecting to factory contract:", factoryAddress);
+        dbg("Connecting to factory contract:", factoryAddress);
         connectToDCAFactory(factoryAddress, Signer)
           .then((factory) => {
             setDCAFactoryContract(factory);
             setDCA_FACTORY_ADDRESS(factoryAddress);
-            console.log("Factory contract connected successfully");
+            dbg("Factory contract connected successfully");
           })
           .catch((error) => {
             console.error("Failed to connect to factory contract:", error);
           });
       } else {
-        console.warn("No factory address found for network:", ACTIVE_NETWORK);
+        dbgWarn("No factory address found for network:", ACTIVE_NETWORK);
       }
     }
   }, [Signer, ACTIVE_NETWORK, address]);
@@ -40,7 +41,7 @@ export function useFactoryAdmin() {
   const getFactoryContractReadOnly = useCallback(async () => {
     // Wait for signer initialization if it's in progress
     if (isInitializing) {
-      console.log("Waiting for signer initialization...");
+      dbg("Waiting for signer initialization...");
       throw new Error("Signer is initializing - please wait");
     }
 
@@ -59,7 +60,7 @@ export function useFactoryAdmin() {
       throw new Error(`Factory contract not deployed on ${ACTIVE_NETWORK}`);
     }
 
-    console.log(
+    dbg(
       "Connecting to factory at:",
       DCA_FACTORY_ADDRESS,
       "on network:",
@@ -184,7 +185,7 @@ export function useFactoryAdmin() {
           reinvestVersion = await reinvestContract.REINVEST_VERSION();
         }
       } catch (error) {
-        console.warn("Could not fetch reinvest version:", error);
+        dbgWarn("Could not fetch reinvest version:", error);
       }
 
       return {

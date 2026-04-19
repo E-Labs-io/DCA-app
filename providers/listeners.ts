@@ -3,6 +3,7 @@
 import { DCAAccount, DCAFactory } from "@/types/contracts";
 import { EthereumAddress } from "@/types/generic";
 import { AccountCreatedEvent } from "@/types/contracts/contracts/base/DCAFactory";
+import { dbg, dbgWarn } from '@/helpers/debug';
 
 const listenForNewAccount = (
   factoryContract: DCAFactory,
@@ -12,13 +13,13 @@ const listenForNewAccount = (
   try {
     // Create filter for AccountCreated events where owner is the userAddress
     const filter = factoryContract.filters.AccountCreated(userAddress);
-    console.log("[listeners] listenForNewAccount - Setting up event filter");
+    dbg("[listeners] listenForNewAccount - Setting up event filter");
 
     // Listen for the filtered events - this will persist and listen for ALL matching events
     factoryContract.on(
       filter,
       (owner: string, dcaAccount: string, event: AccountCreatedEvent.Log) => {
-        console.log(
+        dbg(
           "[listeners] listenForNewAccount Triggered",
           owner,
           dcaAccount
@@ -30,7 +31,7 @@ const listenForNewAccount = (
       }
     );
 
-    console.log(
+    dbg(
       "[listeners] listenForNewAccount - Event listener setup successful"
     );
 
@@ -39,18 +40,18 @@ const listenForNewAccount = (
       try {
         factoryContract.off(filter, () => {});
       } catch (error) {
-        console.warn(
+        dbgWarn(
           "[listeners] Error cleaning up new account listener:",
           error
         );
       }
     };
   } catch (error) {
-    console.warn(
+    dbgWarn(
       "[listeners] listenForNewAccount - Event filters not supported by this provider:",
       error
     );
-    console.warn(
+    dbgWarn(
       "[listeners] Real-time account creation notifications will be disabled. You may need to refresh to see new accounts."
     );
 
@@ -82,7 +83,7 @@ const listenForNewStrategy = async (
   accountContract: DCAAccount,
   callBack: (strategyId: number, account: string) => void
 ) => {
-  console.log(
+  dbg(
     "[listeners] listenForNewStrategy on account",
     accountContract.target
   );
@@ -99,7 +100,7 @@ const listenForNewStrategy = async (
 
       // Listen for the filtered events - this will persist and listen for ALL matching events
       accountContract.on(filter, (strategyId_: bigint, event: any) => {
-        console.log(
+        dbg(
           "[listeners] listenForNewStrategy Triggered",
           strategyId_,
           accountContract.target
@@ -107,7 +108,7 @@ const listenForNewStrategy = async (
         callBack(Number(strategyId_), accountContract.target as string);
       });
 
-      console.log(
+      dbg(
         "[listeners] listenForNewStrategy - Event listener setup successful"
       );
 
@@ -116,14 +117,14 @@ const listenForNewStrategy = async (
         try {
           accountContract.off(filter, () => {});
         } catch (error) {
-          console.warn(
+          dbgWarn(
             "[listeners] Error cleaning up new strategy listener:",
             error
           );
         }
       };
     } catch (error) {
-      console.warn(
+      dbgWarn(
         "[listeners] listenForNewStrategy - Unexpected error setting up events:",
         error
       );
@@ -132,7 +133,7 @@ const listenForNewStrategy = async (
   }
 
   // Use polling fallback for providers that don't support eth_newFilter
-  console.warn(
+  dbgWarn(
     "[listeners] eth_newFilter not supported, using polling fallback for account:",
     accountContract.target
   );
@@ -144,7 +145,7 @@ const listenForNewStrategy = async (
   try {
     lastBlockNumber = await accountContract.provider.getBlockNumber();
   } catch (error) {
-    console.warn("[listeners] Error getting initial block number:", error);
+    dbgWarn("[listeners] Error getting initial block number:", error);
   }
 
   const filter = accountContract.filters.StrategyCreated();
@@ -162,7 +163,7 @@ const listenForNewStrategy = async (
         events.forEach((event: any) => {
           if (event.args && event.args.length > 0) {
             const strategyId = event.args[0];
-            console.log(
+            dbg(
               "[listeners] Polling detected new strategy:",
               Number(strategyId),
               accountContract.target
@@ -174,21 +175,21 @@ const listenForNewStrategy = async (
         lastBlockNumber = currentBlock;
       }
     } catch (pollError) {
-      console.warn("[listeners] Polling error:", pollError);
+      dbgWarn("[listeners] Polling error:", pollError);
     }
   };
 
   // Start polling
   const intervalId = setInterval(pollForEvents, pollInterval);
 
-  console.log(
+  dbg(
     "[listeners] Polling fallback activated for new strategies (10s interval)"
   );
 
   // Return cleanup function
   return () => {
     clearInterval(intervalId);
-    console.log("[listeners] Polling cleanup completed");
+    dbg("[listeners] Polling cleanup completed");
   };
 };
 
@@ -197,7 +198,7 @@ const listenForStrategyExecution = (
   callBack: (strategyId: number, amountIn: number) => void
 ) => {
   try {
-    console.log(
+    dbg(
       "[listeners] listenForStrategyExecution on account",
       accountContract.target
     );
@@ -206,7 +207,7 @@ const listenForStrategyExecution = (
     accountContract.on(
       filter,
       (strategyId_: bigint, amountIn_: bigint, reInvested_: boolean) => {
-        console.log(
+        dbg(
           "[listeners] listenForStrategyExecution Triggered",
           strategyId_,
           amountIn_,
@@ -216,7 +217,7 @@ const listenForStrategyExecution = (
       }
     );
 
-    console.log(
+    dbg(
       "[listeners] listenForStrategyExecution - Event listener setup successful"
     );
 
@@ -224,18 +225,18 @@ const listenForStrategyExecution = (
       try {
         accountContract.off(filter, () => {});
       } catch (error) {
-        console.warn(
+        dbgWarn(
           "[listeners] Error cleaning up strategy execution listener:",
           error
         );
       }
     };
   } catch (error) {
-    console.warn(
+    dbgWarn(
       "[listeners] listenForStrategyExecution - Event filters not supported:",
       error
     );
-    console.warn(
+    dbgWarn(
       "[listeners] Real-time execution notifications will be disabled for account:",
       accountContract.target
     );
@@ -248,7 +249,7 @@ const listenForSubscription = async (
   accountContract: DCAAccount,
   callBack: (strategyId: number, active: boolean, dcaAccount: string) => void
 ) => {
-  console.log(
+  dbg(
     "[listeners] listenForSubscription on account",
     accountContract.target
   );
@@ -263,21 +264,21 @@ const listenForSubscription = async (
       const filterA = accountContract.filters.StrategySubscription();
       accountContract.on(filterA, (event: any) => {
         const [strategyId_, executor_] = event.args;
-        console.log("[listeners] listenForSubscription Triggered", strategyId_);
+        dbg("[listeners] listenForSubscription Triggered", strategyId_);
         callBack(Number(strategyId_), true, accountContract.target as string);
       });
 
       const filterB = accountContract.filters.StrategyUnsubscription();
       accountContract.on(filterB, (event: any) => {
         const [strategyId_] = event.args;
-        console.log(
+        dbg(
           "[listeners] listenForSubscription UnSubscribed",
           strategyId_
         );
         callBack(Number(strategyId_), false, accountContract.target as string);
       });
 
-      console.log(
+      dbg(
         "[listeners] listenForSubscription - Event listeners setup successful"
       );
 
@@ -287,14 +288,14 @@ const listenForSubscription = async (
           accountContract.off(filterA, () => {});
           accountContract.off(filterB, () => {});
         } catch (error) {
-          console.warn(
+          dbgWarn(
             "[listeners] Error cleaning up subscription listeners:",
             error
           );
         }
       };
     } catch (error) {
-      console.warn(
+      dbgWarn(
         "[listeners] listenForSubscription - Unexpected error setting up events:",
         error
       );
@@ -303,7 +304,7 @@ const listenForSubscription = async (
   }
 
   // Use polling fallback
-  console.warn(
+  dbgWarn(
     "[listeners] eth_newFilter not supported, using polling fallback for subscriptions on account:",
     accountContract.target
   );
@@ -315,7 +316,7 @@ const listenForSubscription = async (
   try {
     lastBlockNumber = await accountContract.provider.getBlockNumber();
   } catch (error) {
-    console.warn("[listeners] Error getting initial block number:", error);
+    dbgWarn("[listeners] Error getting initial block number:", error);
   }
 
   const pollForEvents = async () => {
@@ -338,7 +339,7 @@ const listenForSubscription = async (
         subscriptionEvents.forEach((event: any) => {
           if (event.args && event.args.length > 0) {
             const strategyId = event.args[0];
-            console.log(
+            dbg(
               "[listeners] Polling detected subscription:",
               Number(strategyId)
             );
@@ -353,7 +354,7 @@ const listenForSubscription = async (
         unsubscriptionEvents.forEach((event: any) => {
           if (event.args && event.args.length > 0) {
             const strategyId = event.args[0];
-            console.log(
+            dbg(
               "[listeners] Polling detected unsubscription:",
               Number(strategyId)
             );
@@ -368,20 +369,20 @@ const listenForSubscription = async (
         lastBlockNumber = currentBlock;
       }
     } catch (pollError) {
-      console.warn("[listeners] Subscription polling error:", pollError);
+      dbgWarn("[listeners] Subscription polling error:", pollError);
     }
   };
 
   // Start polling
   const intervalId = setInterval(pollForEvents, pollInterval);
 
-  console.log(
+  dbg(
     "[listeners] Polling fallback activated for subscriptions (10s interval)"
   );
 
   return () => {
     clearInterval(intervalId);
-    console.log("[listeners] Subscription polling cleanup completed");
+    dbg("[listeners] Subscription polling cleanup completed");
   };
 };
 

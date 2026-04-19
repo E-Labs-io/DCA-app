@@ -9,6 +9,7 @@ import { Signer } from "ethers";
 import { BrowserProvider } from "ethers";
 
 import { useCallback, useEffect, useState, useRef } from "react";
+import { dbg } from '@/helpers/debug';
 
 export default function useSigner() {
   const { address } = useAppKitAccount();
@@ -29,7 +30,7 @@ export default function useSigner() {
       const currentChainId = Number(chainId);
       const networkKey = getNetworkKeyByChainId(currentChainId);
 
-      console.log(
+      dbg(
         "Signer initialized for address:",
         address,
         "network:",
@@ -71,7 +72,7 @@ export default function useSigner() {
   // Initialize signer when wallet connects
   useEffect(() => {
     if (walletProvider && address && !Signer && !isInitializing) {
-      console.log(
+      dbg(
         "Wallet connected, initializing signer for address:",
         address
       );
@@ -86,7 +87,7 @@ export default function useSigner() {
     const currentChainId = Number(chainId);
     const networkKey = getNetworkKeyByChainId(currentChainId);
 
-    console.log(
+    dbg(
       "Network detected - ChainId:",
       currentChainId,
       "NetworkKey:",
@@ -98,7 +99,7 @@ export default function useSigner() {
 
     // Only reset signer if this is an actual network change (not initial setup)
     if (previousChainId.current && previousChainId.current !== currentChainId) {
-      console.log(
+      dbg(
         "Network changed from",
         previousChainId.current,
         "to",
@@ -121,7 +122,7 @@ export default function useSigner() {
     // Only clear if we had a signer before and now we don't have address/provider
     // This prevents clearing during the initial connection phase
     if ((!address || !walletProvider) && Signer && !isInitializing) {
-      console.log("Wallet disconnected, clearing signer");
+      dbg("Wallet disconnected, clearing signer");
       setSigner(null);
       setActiveNetwork(undefined);
       previousChainId.current = undefined;

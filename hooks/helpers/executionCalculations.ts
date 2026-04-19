@@ -4,6 +4,7 @@ import { Interval, intervalOptions } from "@/constants/intervals";
 import { TokenData } from "@/constants/tokens";
 import { getIntervalSeconds } from "@/helpers/intervals";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
+import { dbg } from '@/helpers/debug';
 
 export interface AccountStrategyIntervalCost {
   strategyId: number; // Strategy ID
@@ -79,4 +80,4 @@ const strategies: AccountStrategyIntervalCost[] = [
 ];
 
 const executionsLeft = calculateExecutionsLeft(baseTokenBalance, strategies);
-console.log(executionsLeft); // Output: [{ strategyId: 1, executionsLeft: 13 }, { strategyId: 2, executionsLeft: 2 }]
+dbg(executionsLeft); // Output: [{ strategyId: 1, executionsLeft: 13 }, { strategyId: 2, executionsLeft: 2 }]

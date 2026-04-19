@@ -19,6 +19,7 @@ import {
 } from "@reown/appkit/react";
 import { base, sepolia } from "@reown/appkit/networks";
 import { ACTIVE_CHAIN } from "@/constants/contracts";
+import { dbg } from '@/helpers/debug';
 
 export default function WalletButton() {
   const { isConnected, address } = useAppKitAccount();
@@ -45,11 +46,11 @@ export default function WalletButton() {
         variant="bordered"
         startContent={<Wallet size={18} />}
         onPress={async () => {
-          console.log("[WalletButton] Connect button clicked");
-          console.log("[WalletButton] open function:", typeof open, open);
+          dbg("[WalletButton] Connect button clicked");
+          dbg("[WalletButton] open function:", typeof open, open);
           try {
             const result = open({ view: "Connect" });
-            console.log("[WalletButton] open() result:", result);
+            dbg("[WalletButton] open() result:", result);
           } catch (error) {
             console.error("[WalletButton] Error calling open():", error);
           }

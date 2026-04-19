@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Card, CardBody, Spinner, Button, Chip } from "@nextui-org/react";
 import { useExecutorAdmin } from "@/hooks/useExecutorAdmin";
 import { Shield, AlertCircle, RefreshCw, Crown } from "lucide-react";
+import { dbg } from '@/helpers/debug';
 
 interface AdminGuardProps {
   userAddress: string | undefined;
@@ -36,9 +37,9 @@ export function AdminGuard({ userAddress, children }: AdminGuardProps) {
       setError(null);
 
       try {
-        console.log("Checking admin/owner status for:", userAddress);
+        dbg("Checking admin/owner status for:", userAddress);
         const status = await checkIfAdminOrOwner(userAddress);
-        console.log("Access status result:", status);
+        dbg("Access status result:", status);
         setAccessStatus(status);
       } catch (error) {
         console.error("Error checking admin/owner status:", error);

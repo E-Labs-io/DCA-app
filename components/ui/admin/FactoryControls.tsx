@@ -25,6 +25,7 @@ import { AlertTriangle, RefreshCw } from "lucide-react";
 import { FullAddressLink } from "@/components/common/AddressLink";
 import { NetworkKeys } from "@/types/Chains";
 import { DCAFactoryAddress } from "@/constants/contracts";
+import { dbg } from '@/helpers/debug';
 
 interface FactoryState {
   isActive: boolean;
@@ -78,7 +79,7 @@ export function FactoryControls() {
 
   const loadFactoryData = async () => {
     if (!address || !Signer || isInitializing) {
-      console.log("Signer not ready, skipping factory data load");
+      dbg("Signer not ready, skipping factory data load");
       return;
     }
 
@@ -86,7 +87,7 @@ export function FactoryControls() {
       const state = await getFactoryState();
       setFactoryState(state);
       setLastUpdated(new Date());
-      console.log("Factory state loaded:", state);
+      dbg("Factory state loaded:", state);
     } catch (error) {
       console.error("Error loading factory state:", error);
       toast.error(
