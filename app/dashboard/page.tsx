@@ -5,7 +5,7 @@
 import React from "react";
 import { Card, CardBody, CardHeader, Divider } from "@nextui-org/react";
 import { useAppKitAccount, useAppKitNetwork } from "@reown/appkit/react";
-import { base, sepolia } from "viem/chains";
+import { base, baseSepolia, optimism, optimismSepolia, sepolia } from "viem/chains";
 import { ACTIVE_CHAIN } from "@/constants/contracts";
 import { AdminGuard } from "@/components/ui/admin/AdminGuard";
 import { ExecutorControls } from "@/components/ui/admin/ExecutorControls";
@@ -17,16 +17,22 @@ export default function AdminDashboard() {
   const { address, isConnected } = useAppKitAccount();
   const { chainId } = useAppKitNetwork();
 
-  // Check if current network is supported by DCA contracts
-  const supportedChainIds = ACTIVE_CHAIN.map(chain => {
+  // Check if current network is supported by DCA contracts.
+  // Keep in sync with ACTIVE_CHAIN in constants/contracts.ts.
+  const supportedChainIds = ACTIVE_CHAIN.map((chain) => {
     switch (chain) {
       case "BASE_MAINNET": return base.id;
+      case "BASE_SEPOLIA": return baseSepolia.id;
+      case "OPT_MAINNET": return optimism.id;
+      case "OPT_SEPOLIA": return optimismSepolia.id;
       case "ETH_SEPOLIA": return sepolia.id;
       default: return -1;
     }
-  }).filter(id => id !== -1);
+  }).filter((id) => id !== -1);
 
-  const isWrongNetwork = chainId && !supportedChainIds.includes(chainId);
+  const chainIdNum = typeof chainId === "string" ? Number(chainId) : chainId;
+  const isWrongNetwork =
+    chainIdNum !== undefined && !supportedChainIds.includes(chainIdNum as never);
 
   // Handle not connected state
   if (!isConnected) {

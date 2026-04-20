@@ -8,7 +8,6 @@ import { useAppKitAccount } from "@reown/appkit/react";
 import { useExecutorAdmin } from "@/hooks/useExecutorAdmin";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { TransactionStatusModal } from "../modals/TransactionStatusModal";
 
 interface AppHeaderProps {
   onCreateAccount: () => void;

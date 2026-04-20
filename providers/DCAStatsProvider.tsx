@@ -297,7 +297,8 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
           type: typeof a.account,
           matches: a.account === accountAddress,
           lowercaseMatches:
-            a.account.toLowerCase() === accountAddress.toLowerCase(),
+            String(a.account).toLowerCase() ===
+            String(accountAddress).toLowerCase(),
         })),
       });
 
@@ -355,7 +356,8 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
             const updated = prev.map((account) => {
               const isMatch = account.account === accountAddress;
               const isLowercaseMatch =
-                account.account.toLowerCase() === accountAddress.toLowerCase();
+                String(account.account).toLowerCase() ===
+                String(accountAddress).toLowerCase();
 
               dbg(
                 `[DCAStatsProvider] Checking account ${account.account}:`,

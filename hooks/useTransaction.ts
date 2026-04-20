@@ -42,8 +42,12 @@ export function useTransaction() {
         toast.loading(`${description}...`, { id: txId });
       }
 
-      // Wait for confirmation
+      // Wait for confirmation. ethers v6 returns null if the tx is
+      // replaced / dropped; treat that as a confirmation failure.
       const receipt = await tx.wait();
+      if (!receipt) {
+        throw new Error("Transaction receipt unavailable (replaced or dropped)");
+      }
 
       // Update transaction status
       updateTransaction(txId, {
@@ -51,7 +55,7 @@ export function useTransaction() {
         blockNumber: receipt.blockNumber,
         gasUsed: receipt.gasUsed,
         gasPrice: receipt.gasPrice,
-        explorerUrl: getExplorerUrl(tx.hash, chainId),
+        explorerUrl: getExplorerUrl(tx.hash, typeof chainId === "string" ? Number(chainId) : chainId),
       });
 
       if (showToast) {

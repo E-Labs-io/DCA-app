@@ -210,7 +210,9 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
             dbgWarn(
               "[useDCAAccount] Retrying strategy creation without subscription"
             );
-            toast.dismiss(loadingToastId);
+            // Previous loading toast owned by executeTransaction — no manual
+            // dismiss needed (loadingToastId was a stale reference from an
+            // earlier refactor).
             const retryToastId = toast.loading(
               "Retrying without subscription..."
             );
@@ -270,7 +272,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
               throw retryError;
             }
           } else {
-            toast.dismiss(loadingToastId);
+            // Loading toast managed by executeTransaction — see comment above
             const errorMessage = decodeContractError(setupError);
             toast.error(errorMessage);
             console.error("Error creating strategy:", setupError);

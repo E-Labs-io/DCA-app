@@ -27,7 +27,11 @@ import { tokenList } from "@/constants/tokens";
 import useSigner from "@/hooks/useSigner";
 import { RefreshCw, AlertTriangle, User } from "lucide-react";
 import { FullAddressLink } from "@/components/common/AddressLink";
-import { NetworkKeys } from "@/types/Chains";
+// NetworkKeys here must match the tokenList.contractAddress map (narrow set:
+// Base + OP mainnets/testnets + ETH_SEPOLIA legacy). Using the broad
+// @/types/Chains NetworkKeys would let through chains that have no token
+// data and surface as undefined-address lookups at runtime.
+import { NetworkKeys } from "@/config/networks";
 import { dbg } from '@/helpers/debug';
 
 interface IntervalStatus {

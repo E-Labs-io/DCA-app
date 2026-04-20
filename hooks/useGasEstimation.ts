@@ -58,8 +58,10 @@ export function useGasEstimation() {
       return {
         gasLimit,
         gasPrice,
-        maxFeePerGas,
-        maxPriorityFeePerGas,
+        // ethers feeData can return null for EIP-1559 fields on chains that
+        // don't support them; normalise to undefined to match our typed shape.
+        maxFeePerGas: maxFeePerGas ?? undefined,
+        maxPriorityFeePerGas: maxPriorityFeePerGas ?? undefined,
         estimatedCostWei,
         estimatedCostEth,
         estimatedCostUsd,

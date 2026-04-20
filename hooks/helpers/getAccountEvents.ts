@@ -89,7 +89,10 @@ const getAccountStrategyCreationEvents = async (
     if (cached) {
       dbg("[getAccountEvents] Returning cached data:", {
         eventCount: cached.length,
-        events: cached.map((e) => ({ id: e.id, blockNumber: e.blockNumber })),
+        events: cached.map((e: { id: string; blockNumber: number }) => ({
+          id: e.id,
+          blockNumber: e.blockNumber,
+        })),
       });
       return cached;
     }

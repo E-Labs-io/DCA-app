@@ -3,7 +3,7 @@
 "use client";
 
 import { Tabs, Tab } from "@nextui-org/react";
-import { base, sepolia } from "viem/chains";
+import { base, baseSepolia, optimism, optimismSepolia, sepolia } from "viem/chains";
 import { ACTIVE_CHAIN } from "@/constants/contracts";
 import { LineChart, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -65,6 +65,16 @@ const StrategyView = dynamic(
   }
 );
 
+const TransactionStatusModal = dynamic(
+  () =>
+    import("@/components/modals/TransactionStatusModal").then(
+      (mod) => mod.TransactionStatusModal
+    ),
+  {
+    ssr: false,
+  }
+);
+
 const UserStatsOverview = dynamic(
   () =>
     import("@/components/ui/layout/UserStats").then(
@@ -99,16 +109,25 @@ export default function AppContent() {
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [selectedView, setSelectedView] = useState("accounts");
 
-  // Check if current network is supported by DCA contracts
-  const supportedChainIds = ACTIVE_CHAIN.map(chain => {
+  // Check if current network is supported by DCA contracts.
+  // Keep this in sync with ACTIVE_CHAIN in constants/contracts.ts.
+  const supportedChainIds = ACTIVE_CHAIN.map((chain) => {
     switch (chain) {
       case "BASE_MAINNET": return base.id;
+      case "BASE_SEPOLIA": return baseSepolia.id;
+      case "OPT_MAINNET": return optimism.id;
+      case "OPT_SEPOLIA": return optimismSepolia.id;
       case "ETH_SEPOLIA": return sepolia.id;
       default: return -1;
     }
-  }).filter(id => id !== -1);
+  }).filter((id) => id !== -1);
 
-  const isWrongNetwork = chainId && !supportedChainIds.includes(chainId);
+  // chainId from AppKit is typed as `string | number | undefined` because
+  // the provider can surface raw IDs. Normalise to number for the includes()
+  // check against supportedChainIds (number[]).
+  const chainIdNum = typeof chainId === "string" ? Number(chainId) : chainId;
+  const isWrongNetwork =
+    chainIdNum !== undefined && !supportedChainIds.includes(chainIdNum as never);
 
   useEffect(() => {
     if (isConnected || (!isLoading && DCAFactory)) initiateUserAccounts();
@@ -120,8 +139,8 @@ export default function AppContent() {
         <h1 className="text-3xl font-bold text-center">ÅTION CONTROL</h1>
         <ConnectionCard
           isConnected={isConnected}
-          isWrongNetwork={isWrongNetwork}
-          supportedNetworks={["Base", "Ethereum Sepolia"]}
+          isWrongNetwork={Boolean(isWrongNetwork)}
+          supportedNetworks={["Base", "Base Sepolia", "Optimism", "Optimism Sepolia"]}
         />
       </div>
     );
