@@ -13,7 +13,17 @@ export interface TransactionOptions {
   onSuccess?: (receipt: TransactionReceipt) => void;
   onError?: (error: any) => void;
   showToast?: boolean;
+  /**
+   * How long to wait for the tx to mine before giving up. Without
+   * this, a stuck/dropped tx leaves the UI spinning indefinitely.
+   * Defaults to 5 minutes — fine for L2s; raise for congested L1.
+   * If the timeout fires, the tx may STILL land on-chain — we only
+   * stop waiting on the client. The user can re-check the explorer.
+   */
+  timeoutMs?: number;
 }
+
+const DEFAULT_WAIT_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 export function useTransaction() {
   const { addTransaction, updateTransaction } = useTransactions();
@@ -23,7 +33,13 @@ export function useTransaction() {
     txPromise: Promise<ContractTransactionResponse>,
     options: TransactionOptions
   ): Promise<{ success: boolean; receipt?: TransactionReceipt; error?: any }> => {
-    const { description, onSuccess, onError, showToast = true } = options;
+    const {
+      description,
+      onSuccess,
+      onError,
+      showToast = true,
+      timeoutMs = DEFAULT_WAIT_TIMEOUT_MS,
+    } = options;
 
     try {
       // Send the transaction
@@ -42,9 +58,31 @@ export function useTransaction() {
         toast.loading(`${description}...`, { id: txId });
       }
 
-      // Wait for confirmation. ethers v6 returns null if the tx is
-      // replaced / dropped; treat that as a confirmation failure.
-      const receipt = await tx.wait();
+      // Wait for confirmation with a timeout. A stuck / replaced /
+      // dropped tx would otherwise leave the UI spinning forever.
+      // Race the real wait() against a timeout promise; whichever
+      // settles first wins. If the timeout fires, we treat the tx as
+      // unknown-state (not necessarily failed — it may still land).
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(
+          () =>
+            reject(
+              new Error(
+                `Transaction confirmation timed out after ${Math.round(
+                  timeoutMs / 1000
+                )}s. The transaction may still be mining — check the explorer with hash ${tx.hash}.`
+              )
+            ),
+          timeoutMs
+        );
+      });
+
+      // ethers v6 returns null if the tx was replaced / dropped — treat
+      // that as a confirmation failure (distinct from the timeout).
+      const receipt = (await Promise.race([
+        tx.wait(),
+        timeoutPromise,
+      ])) as TransactionReceipt | null;
       if (!receipt) {
         throw new Error("Transaction receipt unavailable (replaced or dropped)");
       }

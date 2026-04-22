@@ -12,6 +12,7 @@ import { ExecutorControls } from "@/components/ui/admin/ExecutorControls";
 import { FactoryControls } from "@/components/ui/admin/FactoryControls";
 import { SystemMetrics } from "@/components/ui/admin/SystemMetrics";
 import { AdminPanel } from "@/components/ui/admin/AdminPanel";
+import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 
 export default function AdminDashboard() {
   const { address, isConnected } = useAppKitAccount();
@@ -93,17 +94,24 @@ export default function AdminDashboard() {
 
         {/* Contract Controls */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* DCA Factory Controls */}
-          <FactoryControls />
+          {/* Each admin card is isolated — if one RPC call in
+              FactoryControls throws during render, we don't lose the
+              ExecutorControls pane too. Critical during an incident
+              when the pause button is what you're reaching for. */}
+          <ErrorBoundary label="FactoryControls">
+            <FactoryControls />
+          </ErrorBoundary>
 
-          {/* DCA Executor Controls */}
-          <ExecutorControls />
+          <ErrorBoundary label="ExecutorControls">
+            <ExecutorControls />
+          </ErrorBoundary>
         </div>
 
         <Divider />
 
-        {/* Admin Management */}
-        <AdminPanel />
+        <ErrorBoundary label="AdminPanel">
+          <AdminPanel />
+        </ErrorBoundary>
       </div>
     </AdminGuard>
   );

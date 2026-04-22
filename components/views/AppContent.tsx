@@ -17,6 +17,7 @@ import ConnectionCard from "../common/ConnectionCard";
 import { useDCAProvider } from "@/providers/DCAStatsProvider";
 import LoadingPage from "../common/LoadingPage";
 import { TransactionStatusIndicator } from "../ui/TransactionStatusIndicator";
+import { ErrorBoundary } from "../common/ErrorBoundary";
 
 // Dynamically import components with proper default exports
 const CreateAccountModal = dynamic(
@@ -195,41 +196,58 @@ export default function AppContent() {
           />
         </Tabs>
 
+        {/* Each view is wrapped in its own ErrorBoundary so a render
+            crash in one doesn't take down the others. If AccountsView
+            dies on a malformed strategy, Strategies tab still works. */}
         {selectedView === "accounts" && (
-          <AccountsView
-            onAccountSelect={setSelectedAccount}
-            ACTIVE_NETWORK={ACTIVE_NETWORK!}
-            Signer={Signer!}
-          />
+          <ErrorBoundary label="AccountsView">
+            <AccountsView
+              onAccountSelect={setSelectedAccount}
+              ACTIVE_NETWORK={ACTIVE_NETWORK!}
+              Signer={Signer!}
+            />
+          </ErrorBoundary>
         )}
         {selectedView === "pairs" && (
-          <PairsView ACTIVE_NETWORK={ACTIVE_NETWORK!} Signer={Signer!} />
+          <ErrorBoundary label="PairsView">
+            <PairsView ACTIVE_NETWORK={ACTIVE_NETWORK!} Signer={Signer!} />
+          </ErrorBoundary>
         )}
         {selectedView === "strategies" && (
-          <StrategyView ACTIVE_NETWORK={ACTIVE_NETWORK!} Signer={Signer!} />
+          <ErrorBoundary label="StrategyView">
+            <StrategyView ACTIVE_NETWORK={ACTIVE_NETWORK!} Signer={Signer!} />
+          </ErrorBoundary>
         )}
 
+        {/* Modals also get boundaries — a modal crash shouldn't kill
+            the page underneath. */}
         {isCreateAccountOpen && (
-          <CreateAccountModal
-            isOpen={isCreateAccountOpen}
-            onClose={() => setIsCreateAccountOpen(false)}
-          />
+          <ErrorBoundary label="CreateAccountModal">
+            <CreateAccountModal
+              isOpen={isCreateAccountOpen}
+              onClose={() => setIsCreateAccountOpen(false)}
+            />
+          </ErrorBoundary>
         )}
 
         {isCreateStrategyOpen && selectedAccount && (
-          <CreateStrategyModal
-            isOpen={isCreateStrategyOpen}
-            onClose={() => setIsCreateStrategyOpen(false)}
-            accountAddress={getAccountInstance(selectedAccount as string)!}
-            ACTIVE_NETWORK={ACTIVE_NETWORK!}
-            Signer={Signer}
-          />
+          <ErrorBoundary label="CreateStrategyModal">
+            <CreateStrategyModal
+              isOpen={isCreateStrategyOpen}
+              onClose={() => setIsCreateStrategyOpen(false)}
+              accountAddress={getAccountInstance(selectedAccount as string)!}
+              ACTIVE_NETWORK={ACTIVE_NETWORK!}
+              Signer={Signer}
+            />
+          </ErrorBoundary>
         )}
 
-        <TransactionStatusModal
-          isOpen={isTransactionModalOpen}
-          onClose={() => setIsTransactionModalOpen(false)}
-        />
+        <ErrorBoundary label="TransactionStatusModal">
+          <TransactionStatusModal
+            isOpen={isTransactionModalOpen}
+            onClose={() => setIsTransactionModalOpen(false)}
+          />
+        </ErrorBoundary>
       </div>
 
       {/* Transaction status indicator */}
