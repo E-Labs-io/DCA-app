@@ -56,33 +56,33 @@ export declare namespace IDCADataStructures {
   };
 
   export type StrategyStruct = {
-    accountAddress: AddressLike;
-    baseToken: IDCADataStructures.TokenDataStruct;
-    targetToken: IDCADataStructures.TokenDataStruct;
+    active: boolean;
     interval: BigNumberish;
+    accountAddress: AddressLike;
     amount: BigNumberish;
     strategyId: BigNumberish;
-    active: boolean;
+    baseToken: IDCADataStructures.TokenDataStruct;
+    targetToken: IDCADataStructures.TokenDataStruct;
     reinvest: IDCADataStructures.ReinvestStruct;
   };
 
   export type StrategyStructOutput = [
-    accountAddress: string,
-    baseToken: IDCADataStructures.TokenDataStructOutput,
-    targetToken: IDCADataStructures.TokenDataStructOutput,
+    active: boolean,
     interval: bigint,
+    accountAddress: string,
     amount: bigint,
     strategyId: bigint,
-    active: boolean,
+    baseToken: IDCADataStructures.TokenDataStructOutput,
+    targetToken: IDCADataStructures.TokenDataStructOutput,
     reinvest: IDCADataStructures.ReinvestStructOutput
   ] & {
-    accountAddress: string;
-    baseToken: IDCADataStructures.TokenDataStructOutput;
-    targetToken: IDCADataStructures.TokenDataStructOutput;
+    active: boolean;
     interval: bigint;
+    accountAddress: string;
     amount: bigint;
     strategyId: bigint;
-    active: boolean;
+    baseToken: IDCADataStructures.TokenDataStructOutput;
+    targetToken: IDCADataStructures.TokenDataStructOutput;
     reinvest: IDCADataStructures.ReinvestStructOutput;
   };
 }

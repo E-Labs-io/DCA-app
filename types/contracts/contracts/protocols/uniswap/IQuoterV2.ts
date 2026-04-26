@@ -3,6 +3,7 @@
 /* eslint-disable */
 import type {
   BaseContract,
+  BigNumberish,
   BytesLike,
   FunctionFragment,
   Result,
@@ -19,37 +20,35 @@ import type {
   TypedContractMethod,
 } from "../../../common";
 
-export interface LidoReinvestInterface extends Interface {
+export interface IQuoterV2Interface extends Interface {
   getFunction(
-    nameOrSignature: "LIDO_CONTRACT" | "MODULE_ID" | "MODULE_NAME"
+    nameOrSignature: "quoteExactInput" | "quoteExactOutput"
   ): FunctionFragment;
 
   encodeFunctionData(
-    functionFragment: "LIDO_CONTRACT",
-    values?: undefined
+    functionFragment: "quoteExactInput",
+    values: [BytesLike, BigNumberish]
   ): string;
-  encodeFunctionData(functionFragment: "MODULE_ID", values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "MODULE_NAME",
-    values?: undefined
+    functionFragment: "quoteExactOutput",
+    values: [BytesLike, BigNumberish]
   ): string;
 
   decodeFunctionResult(
-    functionFragment: "LIDO_CONTRACT",
+    functionFragment: "quoteExactInput",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "MODULE_ID", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "MODULE_NAME",
+    functionFragment: "quoteExactOutput",
     data: BytesLike
   ): Result;
 }
 
-export interface LidoReinvest extends BaseContract {
-  connect(runner?: ContractRunner | null): LidoReinvest;
+export interface IQuoterV2 extends BaseContract {
+  connect(runner?: ContractRunner | null): IQuoterV2;
   waitForDeployment(): Promise<this>;
 
-  interface: LidoReinvestInterface;
+  interface: IQuoterV2Interface;
 
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
@@ -88,25 +87,64 @@ export interface LidoReinvest extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
-  LIDO_CONTRACT: TypedContractMethod<[], [string], "view">;
+  quoteExactInput: TypedContractMethod<
+    [path: BytesLike, amountIn: BigNumberish],
+    [
+      [bigint, bigint[], bigint[], bigint] & {
+        amountOut: bigint;
+        sqrtPriceX96AfterList: bigint[];
+        initializedTicksCrossedList: bigint[];
+        gasEstimate: bigint;
+      }
+    ],
+    "nonpayable"
+  >;
 
-  MODULE_ID: TypedContractMethod<[], [bigint], "view">;
-
-  MODULE_NAME: TypedContractMethod<[], [string], "view">;
+  quoteExactOutput: TypedContractMethod<
+    [path: BytesLike, amountOut: BigNumberish],
+    [
+      [bigint, bigint[], bigint[], bigint] & {
+        amountIn: bigint;
+        sqrtPriceX96AfterList: bigint[];
+        initializedTicksCrossedList: bigint[];
+        gasEstimate: bigint;
+      }
+    ],
+    "nonpayable"
+  >;
 
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
   ): T;
 
   getFunction(
-    nameOrSignature: "LIDO_CONTRACT"
-  ): TypedContractMethod<[], [string], "view">;
+    nameOrSignature: "quoteExactInput"
+  ): TypedContractMethod<
+    [path: BytesLike, amountIn: BigNumberish],
+    [
+      [bigint, bigint[], bigint[], bigint] & {
+        amountOut: bigint;
+        sqrtPriceX96AfterList: bigint[];
+        initializedTicksCrossedList: bigint[];
+        gasEstimate: bigint;
+      }
+    ],
+    "nonpayable"
+  >;
   getFunction(
-    nameOrSignature: "MODULE_ID"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "MODULE_NAME"
-  ): TypedContractMethod<[], [string], "view">;
+    nameOrSignature: "quoteExactOutput"
+  ): TypedContractMethod<
+    [path: BytesLike, amountOut: BigNumberish],
+    [
+      [bigint, bigint[], bigint[], bigint] & {
+        amountIn: bigint;
+        sqrtPriceX96AfterList: bigint[];
+        initializedTicksCrossedList: bigint[];
+        gasEstimate: bigint;
+      }
+    ],
+    "nonpayable"
+  >;
 
   filters: {};
 }

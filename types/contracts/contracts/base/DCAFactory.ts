@@ -27,6 +27,8 @@ export interface DCAFactoryInterface extends Interface {
   getFunction(
     nameOrSignature:
       | "CreateAccount"
+      | "CreateAccountWithSalt"
+      | "QUOTER"
       | "SWAP_ROUTER"
       | "accountsCreated"
       | "getAccountsOfUser"
@@ -36,6 +38,7 @@ export interface DCAFactoryInterface extends Interface {
       | "isActive"
       | "owner"
       | "pauseFactory"
+      | "predictAccountAddress"
       | "reInvestLogicContract"
       | "renounceOwnership"
       | "transferOwnership"
@@ -58,6 +61,11 @@ export interface DCAFactoryInterface extends Interface {
     functionFragment: "CreateAccount",
     values?: undefined
   ): string;
+  encodeFunctionData(
+    functionFragment: "CreateAccountWithSalt",
+    values: [BytesLike]
+  ): string;
+  encodeFunctionData(functionFragment: "QUOTER", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "SWAP_ROUTER",
     values?: undefined
@@ -87,6 +95,10 @@ export interface DCAFactoryInterface extends Interface {
   encodeFunctionData(
     functionFragment: "pauseFactory",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "predictAccountAddress",
+    values: [BytesLike, AddressLike]
   ): string;
   encodeFunctionData(
     functionFragment: "reInvestLogicContract",
@@ -122,6 +134,11 @@ export interface DCAFactoryInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "CreateAccountWithSalt",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "QUOTER", data: BytesLike): Result;
+  decodeFunctionResult(
     functionFragment: "SWAP_ROUTER",
     data: BytesLike
   ): Result;
@@ -149,6 +166,10 @@ export interface DCAFactoryInterface extends Interface {
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "pauseFactory",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "predictAccountAddress",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -288,6 +309,14 @@ export interface DCAFactory extends BaseContract {
 
   CreateAccount: TypedContractMethod<[], [void], "nonpayable">;
 
+  CreateAccountWithSalt: TypedContractMethod<
+    [salt_: BytesLike],
+    [void],
+    "nonpayable"
+  >;
+
+  QUOTER: TypedContractMethod<[], [string], "view">;
+
   SWAP_ROUTER: TypedContractMethod<[], [string], "view">;
 
   accountsCreated: TypedContractMethod<[], [bigint], "view">;
@@ -309,6 +338,12 @@ export interface DCAFactory extends BaseContract {
   owner: TypedContractMethod<[], [string], "view">;
 
   pauseFactory: TypedContractMethod<[], [void], "nonpayable">;
+
+  predictAccountAddress: TypedContractMethod<
+    [salt_: BytesLike, owner_: AddressLike],
+    [string],
+    "view"
+  >;
 
   reInvestLogicContract: TypedContractMethod<[], [string], "view">;
 
@@ -348,6 +383,12 @@ export interface DCAFactory extends BaseContract {
     nameOrSignature: "CreateAccount"
   ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "CreateAccountWithSalt"
+  ): TypedContractMethod<[salt_: BytesLike], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "QUOTER"
+  ): TypedContractMethod<[], [string], "view">;
+  getFunction(
     nameOrSignature: "SWAP_ROUTER"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
@@ -374,6 +415,13 @@ export interface DCAFactory extends BaseContract {
   getFunction(
     nameOrSignature: "pauseFactory"
   ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "predictAccountAddress"
+  ): TypedContractMethod<
+    [salt_: BytesLike, owner_: AddressLike],
+    [string],
+    "view"
+  >;
   getFunction(
     nameOrSignature: "reInvestLogicContract"
   ): TypedContractMethod<[], [string], "view">;

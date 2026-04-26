@@ -385,16 +385,18 @@ export function StrategyList({
                 <SelectItem key="active">Active Only</SelectItem>
                 <SelectItem key="inactive">Inactive Only</SelectItem>
               </Select>
+              {/* NextUI's <Select> doesn't accept a static <SelectItem>
+                  alongside an array under strict types. Flatten to a
+                  single dynamic-items list (the "All Tokens" entry +
+                  the unique-token list) and use the items API. */}
               <Select
                 placeholder="Filter by token"
                 selectedKeys={[tokenFilter]}
                 onSelectionChange={(keys) => setTokenFilter(Array.from(keys)[0] as string)}
                 size="sm"
+                items={[{ key: "all", label: "All Tokens" }, ...uniqueTokens.map((t) => ({ key: t, label: t }))]}
               >
-                <SelectItem key="all">All Tokens</SelectItem>
-                {uniqueTokens.map(token => (
-                  <SelectItem key={token}>{token}</SelectItem>
-                ))}
+                {(item) => <SelectItem key={item.key}>{item.label}</SelectItem>}
               </Select>
               <Select
                 placeholder="Sort by"

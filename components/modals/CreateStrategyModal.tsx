@@ -240,15 +240,13 @@ export function CreateStrategyModal({
         return null;
       });
 
-      if (typeof transaction !== "boolean") {
-        toast.loading("Waiting for transaction confirmation...");
-        try {
-          await transaction?.tx.wait();
-          toast.success("Strategy creation completed");
-        } catch (error) {
-          dbgWarn("Transaction confirmation error:", error);
-          toast.error("Failed to confirm transaction");
-        }
+      // executeTransaction inside createStrategy already awaits the
+      // receipt and shows confirmation toasts, so no second wait here.
+      // We only need to surface the final outcome.
+      if (transaction && transaction !== null && (transaction as any).success) {
+        // Success toast already fired by executeTransaction; nothing more.
+      } else if (transaction === false || transaction === null) {
+        // Failure already toasted by createStrategy/executeTransaction.
       }
 
       resetForm();

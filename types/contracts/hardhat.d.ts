@@ -66,6 +66,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Address__factory>;
     getContractFactory(
+      name: "ReentrancyGuard",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ReentrancyGuard__factory>;
+    getContractFactory(
       name: "DCAAccount",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.DCAAccount__factory>;
@@ -122,10 +126,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ForwardReinvest__factory>;
     getContractFactory(
-      name: "LidoReinvest",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.LidoReinvest__factory>;
-    getContractFactory(
       name: "IAToken",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IAToken__factory>;
@@ -162,9 +162,9 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.CometStorage__factory>;
     getContractFactory(
-      name: "ILido",
+      name: "IQuoterV2",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.ILido__factory>;
+    ): Promise<Contracts.IQuoterV2__factory>;
     getContractFactory(
       name: "ISwapRouter",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -193,6 +193,10 @@ declare module "hardhat/types/runtime" {
       name: "OnlyExecutor",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.OnlyExecutor__factory>;
+    getContractFactory(
+      name: "ReentrancyAttacker",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ReentrancyAttacker__factory>;
     getContractFactory(
       name: "SwapTest",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -272,6 +276,11 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.Address>;
     getContractAt(
+      name: "ReentrancyGuard",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ReentrancyGuard>;
+    getContractAt(
       name: "DCAAccount",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -342,11 +351,6 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.ForwardReinvest>;
     getContractAt(
-      name: "LidoReinvest",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.LidoReinvest>;
-    getContractAt(
       name: "IAToken",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -392,10 +396,10 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.CometStorage>;
     getContractAt(
-      name: "ILido",
+      name: "IQuoterV2",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
-    ): Promise<Contracts.ILido>;
+    ): Promise<Contracts.IQuoterV2>;
     getContractAt(
       name: "ISwapRouter",
       address: string | ethers.Addressable,
@@ -431,6 +435,11 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.OnlyExecutor>;
+    getContractAt(
+      name: "ReentrancyAttacker",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ReentrancyAttacker>;
     getContractAt(
       name: "SwapTest",
       address: string | ethers.Addressable,
@@ -500,6 +509,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Address>;
     deployContract(
+      name: "ReentrancyGuard",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ReentrancyGuard>;
+    deployContract(
       name: "DCAAccount",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.DCAAccount>;
@@ -556,10 +569,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ForwardReinvest>;
     deployContract(
-      name: "LidoReinvest",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.LidoReinvest>;
-    deployContract(
       name: "IAToken",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IAToken>;
@@ -596,9 +605,9 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.CometStorage>;
     deployContract(
-      name: "ILido",
+      name: "IQuoterV2",
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.ILido>;
+    ): Promise<Contracts.IQuoterV2>;
     deployContract(
       name: "ISwapRouter",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -627,6 +636,10 @@ declare module "hardhat/types/runtime" {
       name: "OnlyExecutor",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.OnlyExecutor>;
+    deployContract(
+      name: "ReentrancyAttacker",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ReentrancyAttacker>;
     deployContract(
       name: "SwapTest",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -706,6 +719,11 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Address>;
     deployContract(
+      name: "ReentrancyGuard",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ReentrancyGuard>;
+    deployContract(
       name: "DCAAccount",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -776,11 +794,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ForwardReinvest>;
     deployContract(
-      name: "LidoReinvest",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.LidoReinvest>;
-    deployContract(
       name: "IAToken",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -826,10 +839,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.CometStorage>;
     deployContract(
-      name: "ILido",
+      name: "IQuoterV2",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.ILido>;
+    ): Promise<Contracts.IQuoterV2>;
     deployContract(
       name: "ISwapRouter",
       args: any[],
@@ -865,6 +878,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.OnlyExecutor>;
+    deployContract(
+      name: "ReentrancyAttacker",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ReentrancyAttacker>;
     deployContract(
       name: "SwapTest",
       args: any[],

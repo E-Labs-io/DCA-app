@@ -3,11 +3,8 @@
 /* eslint-disable */
 import type {
   BaseContract,
-  BytesLike,
   FunctionFragment,
-  Result,
   Interface,
-  AddressLike,
   ContractRunner,
   ContractMethod,
   Listener,
@@ -17,22 +14,15 @@ import type {
   TypedDeferredTopicFilter,
   TypedEventLog,
   TypedListener,
-  TypedContractMethod,
 } from "../../../common";
 
-export interface ILidoInterface extends Interface {
-  getFunction(nameOrSignature: "submit"): FunctionFragment;
+export interface ReentrancyGuardInterface extends Interface {}
 
-  encodeFunctionData(functionFragment: "submit", values: [AddressLike]): string;
-
-  decodeFunctionResult(functionFragment: "submit", data: BytesLike): Result;
-}
-
-export interface ILido extends BaseContract {
-  connect(runner?: ContractRunner | null): ILido;
+export interface ReentrancyGuard extends BaseContract {
+  connect(runner?: ContractRunner | null): ReentrancyGuard;
   waitForDeployment(): Promise<this>;
 
-  interface: ILidoInterface;
+  interface: ReentrancyGuardInterface;
 
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
@@ -71,15 +61,9 @@ export interface ILido extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
-  submit: TypedContractMethod<[_referral: AddressLike], [bigint], "payable">;
-
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
   ): T;
-
-  getFunction(
-    nameOrSignature: "submit"
-  ): TypedContractMethod<[_referral: AddressLike], [bigint], "payable">;
 
   filters: {};
 }

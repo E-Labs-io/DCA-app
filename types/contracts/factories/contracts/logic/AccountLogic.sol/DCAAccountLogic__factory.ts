@@ -10,6 +10,32 @@ import type {
 
 const _abi = [
   {
+    inputs: [],
+    name: "IntervalWindowNotMet",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "InvalidStrategyData",
+    type: "error",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "caller",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "expected",
+        type: "address",
+      },
+    ],
+    name: "NotTheExecutor",
+    type: "error",
+  },
+  {
     inputs: [
       {
         internalType: "address",
@@ -202,6 +228,19 @@ const _abi = [
     type: "function",
   },
   {
+    inputs: [],
+    name: "DEFAULT_POOL_FEE",
+    outputs: [
+      {
+        internalType: "uint24",
+        name: "",
+        type: "uint24",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [
       {
         internalType: "uint256",
@@ -240,6 +279,19 @@ const _abi = [
   },
   {
     inputs: [],
+    name: "QUOTER",
+    outputs: [
+      {
+        internalType: "contract IQuoterV2",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
     name: "SWAP_ROUTER",
     outputs: [
       {
@@ -256,9 +308,29 @@ const _abi = [
       {
         components: [
           {
+            internalType: "bool",
+            name: "active",
+            type: "bool",
+          },
+          {
+            internalType: "enum IDCADataStructures.Interval",
+            name: "interval",
+            type: "uint8",
+          },
+          {
             internalType: "address",
             name: "accountAddress",
             type: "address",
+          },
+          {
+            internalType: "uint256",
+            name: "amount",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "strategyId",
+            type: "uint256",
           },
           {
             components: [
@@ -303,26 +375,6 @@ const _abi = [
             internalType: "struct IDCADataStructures.TokenData",
             name: "targetToken",
             type: "tuple",
-          },
-          {
-            internalType: "enum IDCADataStructures.Interval",
-            name: "interval",
-            type: "uint8",
-          },
-          {
-            internalType: "uint256",
-            name: "amount",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "strategyId",
-            type: "uint256",
-          },
-          {
-            internalType: "bool",
-            name: "active",
-            type: "bool",
           },
           {
             components: [

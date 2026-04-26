@@ -5,6 +5,24 @@ import { EthereumAddress } from "@/types/generic";
 import { AccountCreatedEvent } from "@/types/contracts/contracts/base/DCAFactory";
 import { dbg, dbgWarn } from '@/helpers/debug';
 
+/**
+ * ethers v6 BaseContract has a `provider` getter that resolves through
+ * `runner`, but TypeChain's typed contract subclasses don't always
+ * expose it on the strict type. Reach in via `runner` (ContractRunner),
+ * which always has a provider when reading state. Returns null if no
+ * runner / no provider — caller decides what to do.
+ *
+ * Centralised here so all the listener call sites share one accessor
+ * rather than each casting to `any` independently.
+ */
+const providerOf = (
+  contract: { runner?: { provider?: unknown } | null }
+): any => {
+  return contract.runner && (contract.runner as any).provider
+    ? (contract.runner as any).provider
+    : (contract.runner as any);
+};
+
 const listenForNewAccount = (
   factoryContract: DCAFactory,
   userAddress: string,
@@ -90,7 +108,7 @@ const listenForNewStrategy = async (
 
   // Check if eth_newFilter is supported
   const supportsEthNewFilter = await checkEthNewFilterSupport(
-    accountContract.provider
+    providerOf(accountContract)
   );
 
   if (supportsEthNewFilter) {
@@ -143,7 +161,7 @@ const listenForNewStrategy = async (
 
   // Get current block to start from
   try {
-    lastBlockNumber = await accountContract.provider.getBlockNumber();
+    lastBlockNumber = await providerOf(accountContract).getBlockNumber();
   } catch (error) {
     dbgWarn("[listeners] Error getting initial block number:", error);
   }
@@ -152,7 +170,7 @@ const listenForNewStrategy = async (
 
   const pollForEvents = async () => {
     try {
-      const currentBlock = await accountContract.provider.getBlockNumber();
+      const currentBlock = await providerOf(accountContract).getBlockNumber();
       if (currentBlock > lastBlockNumber) {
         const events = await accountContract.queryFilter(
           filter,
@@ -256,40 +274,43 @@ const listenForSubscription = async (
 
   // Check if eth_newFilter is supported
   const supportsEthNewFilter = await checkEthNewFilterSupport(
-    accountContract.provider
+    providerOf(accountContract)
   );
 
   if (supportsEthNewFilter) {
     try {
-      const filterA = accountContract.filters.StrategySubscription();
-      accountContract.on(filterA, (event: any) => {
-        const [strategyId_, executor_] = event.args;
-        dbg("[listeners] listenForSubscription Triggered", strategyId_);
-        callBack(Number(strategyId_), true, accountContract.target as string);
-      });
-
-      const filterB = accountContract.filters.StrategyUnsubscription();
-      accountContract.on(filterB, (event: any) => {
-        const [strategyId_] = event.args;
+      // The DCAExecutor emits a single `StrategySubscription` event for
+      // both subscribe and unsubscribe — the `active` boolean field
+      // distinguishes them. There's no separate StrategyUnsubscription
+      // event (despite older listener code referencing one).
+      // We hook the single event and route by `active`.
+      const filter = accountContract.filters.StrategySubscription();
+      accountContract.on(filter, (event: any) => {
+        // Event signature: StrategySubscription(account, strategyId, interval, active)
+        // Older indexed positions varied; pull by name with fallback.
+        const args = event.args;
+        const strategyId =
+          (args && (args.strategyId_ ?? args.strategyId ?? args[1])) ?? args[0];
+        const active =
+          (args && (args.active_ ?? args.active ?? args[3])) ?? false;
         dbg(
-          "[listeners] listenForSubscription UnSubscribed",
-          strategyId_
+          "[listeners] listenForSubscription Triggered",
+          { strategyId: String(strategyId), active }
         );
-        callBack(Number(strategyId_), false, accountContract.target as string);
+        callBack(Number(strategyId), Boolean(active), accountContract.target as string);
       });
 
       dbg(
-        "[listeners] listenForSubscription - Event listeners setup successful"
+        "[listeners] listenForSubscription - Event listener setup successful"
       );
 
       // Add a cleanup function
       return () => {
         try {
-          accountContract.off(filterA, () => {});
-          accountContract.off(filterB, () => {});
+          accountContract.off(filter, () => {});
         } catch (error) {
           dbgWarn(
-            "[listeners] Error cleaning up subscription listeners:",
+            "[listeners] Error cleaning up subscription listener:",
             error
           );
         }
@@ -314,56 +335,39 @@ const listenForSubscription = async (
 
   // Get current block to start from
   try {
-    lastBlockNumber = await accountContract.provider.getBlockNumber();
+    lastBlockNumber = await providerOf(accountContract).getBlockNumber();
   } catch (error) {
     dbgWarn("[listeners] Error getting initial block number:", error);
   }
 
   const pollForEvents = async () => {
     try {
-      const currentBlock = await accountContract.provider.getBlockNumber();
+      const currentBlock = await providerOf(accountContract).getBlockNumber();
       if (currentBlock > lastBlockNumber) {
-        const [subscriptionEvents, unsubscriptionEvents] = await Promise.all([
-          accountContract.queryFilter(
-            accountContract.filters.StrategySubscription(),
-            lastBlockNumber + 1,
-            currentBlock
-          ),
-          accountContract.queryFilter(
-            accountContract.filters.StrategyUnsubscription(),
-            lastBlockNumber + 1,
-            currentBlock
-          ),
-        ]);
+        // Single StrategySubscription event covers both directions
+        // (active=true → subscribe, active=false → unsubscribe).
+        const events = await accountContract.queryFilter(
+          accountContract.filters.StrategySubscription(),
+          lastBlockNumber + 1,
+          currentBlock
+        );
 
-        subscriptionEvents.forEach((event: any) => {
-          if (event.args && event.args.length > 0) {
-            const strategyId = event.args[0];
-            dbg(
-              "[listeners] Polling detected subscription:",
-              Number(strategyId)
-            );
-            callBack(
-              Number(strategyId),
-              true,
-              accountContract.target as string
-            );
-          }
-        });
-
-        unsubscriptionEvents.forEach((event: any) => {
-          if (event.args && event.args.length > 0) {
-            const strategyId = event.args[0];
-            dbg(
-              "[listeners] Polling detected unsubscription:",
-              Number(strategyId)
-            );
-            callBack(
-              Number(strategyId),
-              false,
-              accountContract.target as string
-            );
-          }
+        events.forEach((event: any) => {
+          if (!event.args) return;
+          const args = event.args;
+          const strategyId =
+            (args.strategyId_ ?? args.strategyId ?? args[1]) ?? args[0];
+          const active =
+            (args.active_ ?? args.active ?? args[3]) ?? false;
+          dbg(
+            "[listeners] Polling detected subscription event:",
+            { strategyId: Number(strategyId), active: Boolean(active) }
+          );
+          callBack(
+            Number(strategyId),
+            Boolean(active),
+            accountContract.target as string
+          );
         });
 
         lastBlockNumber = currentBlock;

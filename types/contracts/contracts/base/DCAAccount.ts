@@ -56,33 +56,33 @@ export declare namespace IDCADataStructures {
   };
 
   export type StrategyStruct = {
-    accountAddress: AddressLike;
-    baseToken: IDCADataStructures.TokenDataStruct;
-    targetToken: IDCADataStructures.TokenDataStruct;
+    active: boolean;
     interval: BigNumberish;
+    accountAddress: AddressLike;
     amount: BigNumberish;
     strategyId: BigNumberish;
-    active: boolean;
+    baseToken: IDCADataStructures.TokenDataStruct;
+    targetToken: IDCADataStructures.TokenDataStruct;
     reinvest: IDCADataStructures.ReinvestStruct;
   };
 
   export type StrategyStructOutput = [
-    accountAddress: string,
-    baseToken: IDCADataStructures.TokenDataStructOutput,
-    targetToken: IDCADataStructures.TokenDataStructOutput,
+    active: boolean,
     interval: bigint,
+    accountAddress: string,
     amount: bigint,
     strategyId: bigint,
-    active: boolean,
+    baseToken: IDCADataStructures.TokenDataStructOutput,
+    targetToken: IDCADataStructures.TokenDataStructOutput,
     reinvest: IDCADataStructures.ReinvestStructOutput
   ] & {
-    accountAddress: string;
-    baseToken: IDCADataStructures.TokenDataStructOutput;
-    targetToken: IDCADataStructures.TokenDataStructOutput;
+    active: boolean;
     interval: bigint;
+    accountAddress: string;
     amount: bigint;
     strategyId: bigint;
-    active: boolean;
+    baseToken: IDCADataStructures.TokenDataStructOutput;
+    targetToken: IDCADataStructures.TokenDataStructOutput;
     reinvest: IDCADataStructures.ReinvestStructOutput;
   };
 }
@@ -91,9 +91,11 @@ export interface DCAAccountInterface extends Interface {
   getFunction(
     nameOrSignature:
       | "AddFunds"
+      | "DEFAULT_POOL_FEE"
       | "Execute"
       | "ExecutorDeactivate"
       | "ForceUnwindReinvestPosition"
+      | "QUOTER"
       | "SWAP_ROUTER"
       | "SetupStrategy"
       | "SubscribeStrategy"
@@ -101,6 +103,8 @@ export interface DCAAccountInterface extends Interface {
       | "UnwindReinvest"
       | "WithdrawFunds"
       | "WithdrawSavings"
+      | "batchSubscribeStrategies"
+      | "batchUnsubscribeStrategies"
       | "changeExecutor"
       | "changeReinvestLibrary"
       | "getAttachedReinvestLibraryAddress"
@@ -136,6 +140,10 @@ export interface DCAAccountInterface extends Interface {
     values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "DEFAULT_POOL_FEE",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "Execute",
     values: [BigNumberish, BigNumberish]
   ): string;
@@ -147,6 +155,7 @@ export interface DCAAccountInterface extends Interface {
     functionFragment: "ForceUnwindReinvestPosition",
     values: [BigNumberish, AddressLike]
   ): string;
+  encodeFunctionData(functionFragment: "QUOTER", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "SWAP_ROUTER",
     values?: undefined
@@ -174,6 +183,14 @@ export interface DCAAccountInterface extends Interface {
   encodeFunctionData(
     functionFragment: "WithdrawSavings",
     values: [AddressLike, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "batchSubscribeStrategies",
+    values: [BigNumberish[]]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "batchUnsubscribeStrategies",
+    values: [BigNumberish[]]
   ): string;
   encodeFunctionData(
     functionFragment: "changeExecutor",
@@ -238,6 +255,10 @@ export interface DCAAccountInterface extends Interface {
   ): string;
 
   decodeFunctionResult(functionFragment: "AddFunds", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "DEFAULT_POOL_FEE",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "Execute", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "ExecutorDeactivate",
@@ -247,6 +268,7 @@ export interface DCAAccountInterface extends Interface {
     functionFragment: "ForceUnwindReinvestPosition",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "QUOTER", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "SWAP_ROUTER",
     data: BytesLike
@@ -273,6 +295,14 @@ export interface DCAAccountInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "WithdrawSavings",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "batchSubscribeStrategies",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "batchUnsubscribeStrategies",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -515,6 +545,8 @@ export interface DCAAccount extends BaseContract {
     "nonpayable"
   >;
 
+  DEFAULT_POOL_FEE: TypedContractMethod<[], [bigint], "view">;
+
   Execute: TypedContractMethod<
     [strategyId_: BigNumberish, feeAmount_: BigNumberish],
     [boolean],
@@ -532,6 +564,8 @@ export interface DCAAccount extends BaseContract {
     [bigint],
     "nonpayable"
   >;
+
+  QUOTER: TypedContractMethod<[], [string], "view">;
 
   SWAP_ROUTER: TypedContractMethod<[], [string], "view">;
 
@@ -571,6 +605,18 @@ export interface DCAAccount extends BaseContract {
 
   WithdrawSavings: TypedContractMethod<
     [token_: AddressLike, amount_: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
+  batchSubscribeStrategies: TypedContractMethod<
+    [strategyIds_: BigNumberish[]],
+    [void],
+    "nonpayable"
+  >;
+
+  batchUnsubscribeStrategies: TypedContractMethod<
+    [strategyIds_: BigNumberish[]],
     [void],
     "nonpayable"
   >;
@@ -661,6 +707,9 @@ export interface DCAAccount extends BaseContract {
     "nonpayable"
   >;
   getFunction(
+    nameOrSignature: "DEFAULT_POOL_FEE"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
     nameOrSignature: "Execute"
   ): TypedContractMethod<
     [strategyId_: BigNumberish, feeAmount_: BigNumberish],
@@ -677,6 +726,9 @@ export interface DCAAccount extends BaseContract {
     [bigint],
     "nonpayable"
   >;
+  getFunction(
+    nameOrSignature: "QUOTER"
+  ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "SWAP_ROUTER"
   ): TypedContractMethod<[], [string], "view">;
@@ -714,6 +766,12 @@ export interface DCAAccount extends BaseContract {
     [void],
     "nonpayable"
   >;
+  getFunction(
+    nameOrSignature: "batchSubscribeStrategies"
+  ): TypedContractMethod<[strategyIds_: BigNumberish[]], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "batchUnsubscribeStrategies"
+  ): TypedContractMethod<[strategyIds_: BigNumberish[]], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "changeExecutor"
   ): TypedContractMethod<[executorAddress_: AddressLike], [void], "nonpayable">;

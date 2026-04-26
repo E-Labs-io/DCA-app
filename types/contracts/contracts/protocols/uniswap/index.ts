@@ -3,4 +3,5 @@
 /* eslint-disable */
 import type * as iSwapRouterv3Sol from "./ISwapRouterv3.sol";
 export type { iSwapRouterv3Sol };
+export type { IQuoterV2 } from "./IQuoterV2";
 export type { IUniversalRouter } from "./IUniversalRouter";

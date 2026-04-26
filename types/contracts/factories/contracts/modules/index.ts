@@ -2,7 +2,6 @@
 /* tslint:disable */
 /* eslint-disable */
 export * as dcaReinvestModualTemplateSol from "./DCAReinvestModual.template.sol";
-export * as lidoStakingSol from "./LidoStaking.sol";
 export { AaveV3Reinvest__factory } from "./AaveV3Reinvest__factory";
 export { CompoundV3Reinvest__factory } from "./CompoundV3Reinvest__factory";
 export { ForwardReinvest__factory } from "./ForwardReinvest__factory";

@@ -84,33 +84,33 @@ export declare namespace IDCADataStructures {
   };
 
   export type StrategyStruct = {
-    accountAddress: AddressLike;
-    baseToken: IDCADataStructures.TokenDataStruct;
-    targetToken: IDCADataStructures.TokenDataStruct;
+    active: boolean;
     interval: BigNumberish;
+    accountAddress: AddressLike;
     amount: BigNumberish;
     strategyId: BigNumberish;
-    active: boolean;
+    baseToken: IDCADataStructures.TokenDataStruct;
+    targetToken: IDCADataStructures.TokenDataStruct;
     reinvest: IDCADataStructures.ReinvestStruct;
   };
 
   export type StrategyStructOutput = [
-    accountAddress: string,
-    baseToken: IDCADataStructures.TokenDataStructOutput,
-    targetToken: IDCADataStructures.TokenDataStructOutput,
+    active: boolean,
     interval: bigint,
+    accountAddress: string,
     amount: bigint,
     strategyId: bigint,
-    active: boolean,
+    baseToken: IDCADataStructures.TokenDataStructOutput,
+    targetToken: IDCADataStructures.TokenDataStructOutput,
     reinvest: IDCADataStructures.ReinvestStructOutput
   ] & {
-    accountAddress: string;
-    baseToken: IDCADataStructures.TokenDataStructOutput;
-    targetToken: IDCADataStructures.TokenDataStructOutput;
+    active: boolean;
     interval: bigint;
+    accountAddress: string;
     amount: bigint;
     strategyId: bigint;
-    active: boolean;
+    baseToken: IDCADataStructures.TokenDataStructOutput;
+    targetToken: IDCADataStructures.TokenDataStructOutput;
     reinvest: IDCADataStructures.ReinvestStructOutput;
   };
 }
@@ -118,9 +118,11 @@ export declare namespace IDCADataStructures {
 export interface DCAExecutorInterface extends Interface {
   getFunction(
     nameOrSignature:
+      | "DEFAULT_POOL_FEE"
       | "DistributeFees"
       | "Execute"
       | "ForceUnsubscribe"
+      | "QUOTER"
       | "SWAP_ROUTER"
       | "Subscribe"
       | "Unsubscribe"
@@ -160,6 +162,10 @@ export interface DCAExecutorInterface extends Interface {
   ): EventFragment;
 
   encodeFunctionData(
+    functionFragment: "DEFAULT_POOL_FEE",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "DistributeFees",
     values: [AddressLike]
   ): string;
@@ -171,6 +177,7 @@ export interface DCAExecutorInterface extends Interface {
     functionFragment: "ForceUnsubscribe",
     values: [AddressLike, BigNumberish, BigNumberish]
   ): string;
+  encodeFunctionData(functionFragment: "QUOTER", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "SWAP_ROUTER",
     values?: undefined
@@ -263,6 +270,10 @@ export interface DCAExecutorInterface extends Interface {
   ): string;
 
   decodeFunctionResult(
+    functionFragment: "DEFAULT_POOL_FEE",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "DistributeFees",
     data: BytesLike
   ): Result;
@@ -271,6 +282,7 @@ export interface DCAExecutorInterface extends Interface {
     functionFragment: "ForceUnsubscribe",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "QUOTER", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "SWAP_ROUTER",
     data: BytesLike
@@ -505,6 +517,8 @@ export interface DCAExecutor extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
+  DEFAULT_POOL_FEE: TypedContractMethod<[], [bigint], "view">;
+
   DistributeFees: TypedContractMethod<
     [tokenAddress_: AddressLike],
     [void],
@@ -530,6 +544,8 @@ export interface DCAExecutor extends BaseContract {
     [void],
     "nonpayable"
   >;
+
+  QUOTER: TypedContractMethod<[], [string], "view">;
 
   SWAP_ROUTER: TypedContractMethod<[], [string], "view">;
 
@@ -654,6 +670,9 @@ export interface DCAExecutor extends BaseContract {
   ): T;
 
   getFunction(
+    nameOrSignature: "DEFAULT_POOL_FEE"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
     nameOrSignature: "DistributeFees"
   ): TypedContractMethod<[tokenAddress_: AddressLike], [void], "nonpayable">;
   getFunction(
@@ -678,6 +697,9 @@ export interface DCAExecutor extends BaseContract {
     [void],
     "nonpayable"
   >;
+  getFunction(
+    nameOrSignature: "QUOTER"
+  ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "SWAP_ROUTER"
   ): TypedContractMethod<[], [string], "view">;

@@ -20,13 +20,25 @@ import type {
 } from "../../../common";
 
 export interface SwapInterface extends Interface {
-  getFunction(nameOrSignature: "SWAP_ROUTER"): FunctionFragment;
+  getFunction(
+    nameOrSignature: "DEFAULT_POOL_FEE" | "QUOTER" | "SWAP_ROUTER"
+  ): FunctionFragment;
 
+  encodeFunctionData(
+    functionFragment: "DEFAULT_POOL_FEE",
+    values?: undefined
+  ): string;
+  encodeFunctionData(functionFragment: "QUOTER", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "SWAP_ROUTER",
     values?: undefined
   ): string;
 
+  decodeFunctionResult(
+    functionFragment: "DEFAULT_POOL_FEE",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "QUOTER", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "SWAP_ROUTER",
     data: BytesLike
@@ -76,12 +88,22 @@ export interface Swap extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
+  DEFAULT_POOL_FEE: TypedContractMethod<[], [bigint], "view">;
+
+  QUOTER: TypedContractMethod<[], [string], "view">;
+
   SWAP_ROUTER: TypedContractMethod<[], [string], "view">;
 
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
   ): T;
 
+  getFunction(
+    nameOrSignature: "DEFAULT_POOL_FEE"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "QUOTER"
+  ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "SWAP_ROUTER"
   ): TypedContractMethod<[], [string], "view">;

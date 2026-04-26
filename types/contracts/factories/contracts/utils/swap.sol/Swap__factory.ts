@@ -11,6 +11,32 @@ import type {
 const _abi = [
   {
     inputs: [],
+    name: "DEFAULT_POOL_FEE",
+    outputs: [
+      {
+        internalType: "uint24",
+        name: "",
+        type: "uint24",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "QUOTER",
+    outputs: [
+      {
+        internalType: "contract IQuoterV2",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
     name: "SWAP_ROUTER",
     outputs: [
       {

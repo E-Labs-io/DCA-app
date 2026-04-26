@@ -13,6 +13,22 @@ const _abi = [
     inputs: [
       {
         internalType: "address",
+        name: "caller",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "expected",
+        type: "address",
+      },
+    ],
+    name: "NotTheExecutor",
+    type: "error",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
         name: "owner",
         type: "address",
       },

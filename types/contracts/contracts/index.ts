@@ -15,8 +15,8 @@ import type * as proxys from "./proxys";
 export type { proxys };
 import type * as security from "./security";
 export type { security };
-import type * as tests from "./tests";
-export type { tests };
+// tests/* namespace stripped from app bundled types — hardhat-only
+// test contracts (ReentrancyAttacker, swapTest) never used by the app.
 import type * as tokens from "./tokens";
 export type { tokens };
 import type * as utils from "./utils";

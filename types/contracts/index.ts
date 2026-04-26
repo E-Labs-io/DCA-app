@@ -32,6 +32,8 @@ export type { SafeERC20 } from "./@openzeppelin/contracts/token/ERC20/utils/Safe
 export { SafeERC20__factory } from "./factories/@openzeppelin/contracts/token/ERC20/utils/SafeERC20__factory";
 export type { Address } from "./@openzeppelin/contracts/utils/Address";
 export { Address__factory } from "./factories/@openzeppelin/contracts/utils/Address__factory";
+export type { ReentrancyGuard } from "./@openzeppelin/contracts/utils/ReentrancyGuard";
+export { ReentrancyGuard__factory } from "./factories/@openzeppelin/contracts/utils/ReentrancyGuard__factory";
 export type { DCAAccount } from "./contracts/base/DCAAccount";
 export { DCAAccount__factory } from "./factories/contracts/base/DCAAccount__factory";
 export type { DCAExecutor } from "./contracts/base/DCAExecutor";
@@ -60,8 +62,6 @@ export type { ReinvestTemplate } from "./contracts/modules/DCAReinvestModual.tem
 export { ReinvestTemplate__factory } from "./factories/contracts/modules/DCAReinvestModual.template.sol/ReinvestTemplate__factory";
 export type { ForwardReinvest } from "./contracts/modules/ForwardReinvest";
 export { ForwardReinvest__factory } from "./factories/contracts/modules/ForwardReinvest__factory";
-export type { LidoReinvest } from "./contracts/modules/LidoStaking.sol/LidoReinvest";
-export { LidoReinvest__factory } from "./factories/contracts/modules/LidoStaking.sol/LidoReinvest__factory";
 export type { IAToken } from "./contracts/protocols/aaveV3/IAToken";
 export { IAToken__factory } from "./factories/contracts/protocols/aaveV3/IAToken__factory";
 export type { AaveIPool } from "./contracts/protocols/aaveV3/IPool.sol/AaveIPool";
@@ -80,8 +80,8 @@ export type { CometMath } from "./contracts/protocols/compoundV3/CometMath";
 export { CometMath__factory } from "./factories/contracts/protocols/compoundV3/CometMath__factory";
 export type { CometStorage } from "./contracts/protocols/compoundV3/CometStorage";
 export { CometStorage__factory } from "./factories/contracts/protocols/compoundV3/CometStorage__factory";
-export type { ILido } from "./contracts/protocols/lido/ILido";
-export { ILido__factory } from "./factories/contracts/protocols/lido/ILido__factory";
+export type { IQuoterV2 } from "./contracts/protocols/uniswap/IQuoterV2";
+export { IQuoterV2__factory } from "./factories/contracts/protocols/uniswap/IQuoterV2__factory";
 export type { ISwapRouter } from "./contracts/protocols/uniswap/ISwapRouterv3.sol/ISwapRouter";
 export { ISwapRouter__factory } from "./factories/contracts/protocols/uniswap/ISwapRouterv3.sol/ISwapRouter__factory";
 export type { IWETH9 } from "./contracts/protocols/uniswap/ISwapRouterv3.sol/IWETH9";
@@ -96,7 +96,6 @@ export type { OnlyAdmin } from "./contracts/security/onlyAdmin.sol/OnlyAdmin";
 export { OnlyAdmin__factory } from "./factories/contracts/security/onlyAdmin.sol/OnlyAdmin__factory";
 export type { OnlyExecutor } from "./contracts/security/onlyExecutor.sol/OnlyExecutor";
 export { OnlyExecutor__factory } from "./factories/contracts/security/onlyExecutor.sol/OnlyExecutor__factory";
-export type { SwapTest } from "./contracts/tests/swapTest.sol/SwapTest";
-export { SwapTest__factory } from "./factories/contracts/tests/swapTest.sol/SwapTest__factory";
+// tests/* exports stripped from app bundled types — hardhat-only.
 export type { Swap } from "./contracts/utils/swap.sol/Swap";
 export { Swap__factory } from "./factories/contracts/utils/swap.sol/Swap__factory";

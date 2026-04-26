@@ -13,6 +13,17 @@ const _abi = [
     inputs: [
       {
         internalType: "address",
+        name: "caller",
+        type: "address",
+      },
+    ],
+    name: "NotAnAdmin",
+    type: "error",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
         name: "owner",
         type: "address",
       },

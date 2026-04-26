@@ -2,4 +2,5 @@
 /* tslint:disable */
 /* eslint-disable */
 export * as iSwapRouterv3Sol from "./ISwapRouterv3.sol";
+export { IQuoterV2__factory } from "./IQuoterV2__factory";
 export { IUniversalRouter__factory } from "./IUniversalRouter__factory";

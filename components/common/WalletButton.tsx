@@ -17,9 +17,38 @@ import {
   useAppKitNetwork,
   useDisconnect,
 } from "@reown/appkit/react";
-import { base, sepolia } from "@reown/appkit/networks";
+import {
+  base,
+  baseSepolia,
+  optimism,
+  optimismSepolia,
+  sepolia,
+} from "@reown/appkit/networks";
+import type { AppKitNetwork } from "@reown/appkit/networks";
 import { ACTIVE_CHAIN } from "@/constants/contracts";
 import { dbg } from '@/helpers/debug';
+
+// Map a logical chain key to an AppKit network object + display name.
+// Keep in sync with ACTIVE_CHAIN — anything in there must resolve here
+// or the dropdown silently drops it.
+function chainKeyToNetwork(
+  key: string
+): { network: AppKitNetwork; displayName: string } | null {
+  switch (key) {
+    case "BASE_MAINNET":
+      return { network: base as unknown as AppKitNetwork, displayName: "Base" };
+    case "BASE_SEPOLIA":
+      return { network: baseSepolia as unknown as AppKitNetwork, displayName: "Base Sepolia" };
+    case "OPT_MAINNET":
+      return { network: optimism as unknown as AppKitNetwork, displayName: "Optimism" };
+    case "OPT_SEPOLIA":
+      return { network: optimismSepolia as unknown as AppKitNetwork, displayName: "Optimism Sepolia" };
+    case "ETH_SEPOLIA":
+      return { network: sepolia as unknown as AppKitNetwork, displayName: "Ethereum Sepolia" };
+    default:
+      return null;
+  }
+}
 
 export default function WalletButton() {
   const { isConnected, address } = useAppKitAccount();
@@ -62,7 +91,97 @@ export default function WalletButton() {
   }
 
   const truncatedAddress = `${address?.slice(0, 6)}...${address?.slice(-4)}`;
-  const explorerUrl = `https://basescan.org/address/${address}`;
+
+  // Map current chainId to an explorer base URL. Falls back to Basescan
+  // if we don't recognise the chain (mainnet bias is intentional — the
+  // four V0.9 chains all have working block explorers).
+  const explorerBase = (() => {
+    const id = typeof chainId === "string" ? Number(chainId) : chainId;
+    switch (id) {
+      case base.id:
+        return "https://basescan.org/address/";
+      case baseSepolia.id:
+        return "https://sepolia.basescan.org/address/";
+      case optimism.id:
+        return "https://optimistic.etherscan.io/address/";
+      case optimismSepolia.id:
+        return "https://sepolia-optimism.etherscan.io/address/";
+      case sepolia.id:
+        return "https://sepolia.etherscan.io/address/";
+      default:
+        return "https://basescan.org/address/";
+    }
+  })();
+  const explorerUrl = `${explorerBase}${address}`;
+
+  // Resolve ACTIVE_CHAIN entries to AppKit networks once. Anything that
+  // doesn't map (e.g. a stale legacy key) is dropped silently.
+  const supportedNetworks = ACTIVE_CHAIN
+    .map((key) => chainKeyToNetwork(key as string))
+    .filter((n): n is NonNullable<typeof n> => n !== null);
+
+  const currentChainIdNum =
+    typeof chainId === "string" ? Number(chainId) : chainId;
+  const isOnSupportedChain = supportedNetworks.some(
+    (n) => Number(n.network.id) === currentChainIdNum
+  );
+
+  // NextUI's <DropdownMenu> wants either a single child per slot or
+  // the dynamic `items` API. The previous code mapped to an array
+  // alongside static <DropdownItem>s, which TS rejects under strict
+  // build (Vercel). Flatten everything into one dynamic-items list.
+  type Item = {
+    key: string;
+    label: React.ReactNode;
+    description?: string;
+    startContent?: React.ReactNode;
+    onPress?: () => void;
+    className?: string;
+    color?: "danger";
+  };
+
+  const items: Item[] = [
+    ...supportedNetworks.map((n) => {
+      const isCurrent = Number(n.network.id) === currentChainIdNum;
+      return {
+        key: `chain-${n.network.id}`,
+        label: `${n.displayName}${isCurrent ? " (Current)" : ""}`,
+        description: isCurrent ? "Connected here" : `Switch to ${n.displayName}`,
+        startContent: (
+          <div
+            className={`w-2 h-2 rounded-full ${
+              isCurrent ? "bg-success" : "bg-gray-400"
+            }`}
+          />
+        ),
+        onPress: isCurrent ? undefined : () => switchNetwork(n.network),
+      } as Item;
+    }),
+    {
+      key: "network-status",
+      label: `Status: ${isOnSupportedChain ? "Supported Network" : "Unsupported Network"}`,
+      startContent: (
+        <div
+          className={`w-2 h-2 rounded-full ${
+            isOnSupportedChain ? "bg-success" : "bg-danger"
+          }`}
+        />
+      ),
+    },
+    {
+      key: "explorer",
+      label: "View on Explorer",
+      startContent: <ExternalLink size={18} />,
+      onPress: () => window.open(explorerUrl, "_blank"),
+    },
+    {
+      key: "disconnect",
+      label: "Disconnect",
+      startContent: <Power size={18} />,
+      className: "text-danger",
+      color: "danger",
+    },
+  ];
 
   return (
     <Dropdown>
@@ -75,66 +194,28 @@ export default function WalletButton() {
           {truncatedAddress}
         </Button>
       </DropdownTrigger>
-      <DropdownMenu aria-label="Wallet Actions">
-        {/* Network switching options */}
-        {ACTIVE_CHAIN.map(chainKey => {
-          const network = chainKey === "BASE_MAINNET" ? base : sepolia;
-          const isCurrentNetwork = chainId === network.id;
-          const networkName = chainKey === "BASE_MAINNET" ? "Base" : "Sepolia";
-
+      <DropdownMenu
+        aria-label="Wallet Actions"
+        items={items}
+        onAction={(key) => {
+          if (key === "disconnect") disconnect();
+        }}
+      >
+        {(item) => {
+          const it = item as Item;
           return (
             <DropdownItem
-              key={chainKey}
-              description={`Switch to ${networkName}`}
-              startContent={
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    isCurrentNetwork ? "bg-success" : "bg-gray-400"
-                  }`}
-                />
-              }
-              onPress={() => switchNetwork(network)}
+              key={it.key}
+              description={it.description}
+              startContent={it.startContent}
+              onPress={it.onPress}
+              className={it.className}
+              color={it.color}
             >
-              {networkName} {isCurrentNetwork ? "(Current)" : ""}
+              {it.label}
             </DropdownItem>
           );
-        })}
-        <DropdownItem
-          key="network-status"
-          startContent={
-            <div
-              className={`w-2 h-2 rounded-full ${
-                ACTIVE_CHAIN.some(chain =>
-                  chain === "BASE_MAINNET" ? chainId === base.id :
-                  chain === "ETH_SEPOLIA" ? chainId === sepolia.id : false
-                ) ? "bg-success" : "bg-danger"
-              }`}
-            />
-          }
-        >
-          Status: {
-            ACTIVE_CHAIN.some(chain =>
-              chain === "BASE_MAINNET" ? chainId === base.id :
-              chain === "ETH_SEPOLIA" ? chainId === sepolia.id : false
-            ) ? "Supported Network" : "Unsupported Network"
-          }
-        </DropdownItem>
-        <DropdownItem
-          key="explorer"
-          startContent={<ExternalLink size={18} />}
-          onPress={() => window.open(explorerUrl, "_blank")}
-        >
-          View on Explorer
-        </DropdownItem>
-        <DropdownItem
-          key="disconnect"
-          className="text-danger"
-          color="danger"
-          startContent={<Power size={18} />}
-          onPress={() => disconnect()}
-        >
-          Disconnect
-        </DropdownItem>
+        }}
       </DropdownMenu>
     </Dropdown>
   );

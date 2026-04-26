@@ -9,7 +9,7 @@ import {
   IDCADataStructures,
 } from "@/types/contracts/contracts/base/DCAAccount";
 import { ContractTransactionReport } from "@/types/contractReturns";
-import { BigNumberish, Signer, keccak256, toUtf8Bytes, ethers } from "ethers";
+import { BigNumberish, Signer, keccak256, toUtf8Bytes, ethers, TransactionReceipt } from "ethers";
 import { EthereumAddress } from "@/types/generic";
 import { clearAccountCache } from "@/hooks/helpers/getAccountEvents";
 import { useTransaction } from "./useTransaction";
@@ -81,7 +81,10 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
       strategy: IDCADataStructures.StrategyStruct;
       fundAmount: bigint;
       subscribe: boolean;
-    }): Promise<ContractTransactionReport | false> => {
+    }): Promise<
+      | false
+      | { success: boolean; receipt?: TransactionReceipt; error?: any }
+    > => {
       if (!Signer) {
         toast.error("Please connect your wallet first");
         throw new Error("No signer available");
@@ -266,7 +269,9 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
               toast.success(
                 "Strategy created successfully (without subscription)!"
               );
-              return { tx: retryTx, hash: retryTx.hash };
+              // Match the function's return shape after the executeTransaction
+              // refactor: {success, receipt} rather than the older {tx, hash}.
+              return { success: true, receipt: retryReceipt ?? undefined };
             } catch (retryError: any) {
               toast.dismiss(retryToastId);
               throw retryError;

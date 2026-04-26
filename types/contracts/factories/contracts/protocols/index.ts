@@ -3,5 +3,4 @@
 /* eslint-disable */
 export * as aaveV3 from "./aaveV3";
 export * as compoundV3 from "./compoundV3";
-export * as lido from "./lido";
 export * as uniswap from "./uniswap";

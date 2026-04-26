@@ -10,6 +10,22 @@ import type {
 
 const _abi = [
   {
+    inputs: [
+      {
+        internalType: "address",
+        name: "token",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "spender",
+        type: "address",
+      },
+    ],
+    name: "ApprovalFailed",
+    type: "error",
+  },
+  {
     inputs: [],
     name: "InvalidInitialization",
     type: "error",

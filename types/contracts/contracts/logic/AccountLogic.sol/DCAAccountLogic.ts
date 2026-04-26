@@ -56,33 +56,33 @@ export declare namespace IDCADataStructures {
   };
 
   export type StrategyStruct = {
-    accountAddress: AddressLike;
-    baseToken: IDCADataStructures.TokenDataStruct;
-    targetToken: IDCADataStructures.TokenDataStruct;
+    active: boolean;
     interval: BigNumberish;
+    accountAddress: AddressLike;
     amount: BigNumberish;
     strategyId: BigNumberish;
-    active: boolean;
+    baseToken: IDCADataStructures.TokenDataStruct;
+    targetToken: IDCADataStructures.TokenDataStruct;
     reinvest: IDCADataStructures.ReinvestStruct;
   };
 
   export type StrategyStructOutput = [
-    accountAddress: string,
-    baseToken: IDCADataStructures.TokenDataStructOutput,
-    targetToken: IDCADataStructures.TokenDataStructOutput,
+    active: boolean,
     interval: bigint,
+    accountAddress: string,
     amount: bigint,
     strategyId: bigint,
-    active: boolean,
+    baseToken: IDCADataStructures.TokenDataStructOutput,
+    targetToken: IDCADataStructures.TokenDataStructOutput,
     reinvest: IDCADataStructures.ReinvestStructOutput
   ] & {
-    accountAddress: string;
-    baseToken: IDCADataStructures.TokenDataStructOutput;
-    targetToken: IDCADataStructures.TokenDataStructOutput;
+    active: boolean;
     interval: bigint;
+    accountAddress: string;
     amount: bigint;
     strategyId: bigint;
-    active: boolean;
+    baseToken: IDCADataStructures.TokenDataStructOutput;
+    targetToken: IDCADataStructures.TokenDataStructOutput;
     reinvest: IDCADataStructures.ReinvestStructOutput;
   };
 }
@@ -91,8 +91,10 @@ export interface DCAAccountLogicInterface extends Interface {
   getFunction(
     nameOrSignature:
       | "AddFunds"
+      | "DEFAULT_POOL_FEE"
       | "Execute"
       | "ExecutorDeactivate"
+      | "QUOTER"
       | "SWAP_ROUTER"
       | "SetupStrategy"
       | "SubscribeStrategy"
@@ -129,6 +131,10 @@ export interface DCAAccountLogicInterface extends Interface {
     values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "DEFAULT_POOL_FEE",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "Execute",
     values: [BigNumberish, BigNumberish]
   ): string;
@@ -136,6 +142,7 @@ export interface DCAAccountLogicInterface extends Interface {
     functionFragment: "ExecutorDeactivate",
     values: [BigNumberish]
   ): string;
+  encodeFunctionData(functionFragment: "QUOTER", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "SWAP_ROUTER",
     values?: undefined
@@ -203,11 +210,16 @@ export interface DCAAccountLogicInterface extends Interface {
   ): string;
 
   decodeFunctionResult(functionFragment: "AddFunds", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "DEFAULT_POOL_FEE",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "Execute", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "ExecutorDeactivate",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "QUOTER", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "SWAP_ROUTER",
     data: BytesLike
@@ -452,6 +464,8 @@ export interface DCAAccountLogic extends BaseContract {
     "nonpayable"
   >;
 
+  DEFAULT_POOL_FEE: TypedContractMethod<[], [bigint], "view">;
+
   Execute: TypedContractMethod<
     [strategyId_: BigNumberish, feeAmount_: BigNumberish],
     [boolean],
@@ -463,6 +477,8 @@ export interface DCAAccountLogic extends BaseContract {
     [void],
     "nonpayable"
   >;
+
+  QUOTER: TypedContractMethod<[], [string], "view">;
 
   SWAP_ROUTER: TypedContractMethod<[], [string], "view">;
 
@@ -568,6 +584,9 @@ export interface DCAAccountLogic extends BaseContract {
     "nonpayable"
   >;
   getFunction(
+    nameOrSignature: "DEFAULT_POOL_FEE"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
     nameOrSignature: "Execute"
   ): TypedContractMethod<
     [strategyId_: BigNumberish, feeAmount_: BigNumberish],
@@ -577,6 +596,9 @@ export interface DCAAccountLogic extends BaseContract {
   getFunction(
     nameOrSignature: "ExecutorDeactivate"
   ): TypedContractMethod<[strategyId_: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "QUOTER"
+  ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "SWAP_ROUTER"
   ): TypedContractMethod<[], [string], "view">;

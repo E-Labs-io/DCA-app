@@ -10,17 +10,6 @@ import type {
 
 const _abi = [
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "token_",
-        type: "address",
-      },
-    ],
-    name: "NotAllowedBaseToken",
-    type: "error",
-  },
-  {
     anonymous: false,
     inputs: [
       {
@@ -178,9 +167,29 @@ const _abi = [
       {
         components: [
           {
+            internalType: "bool",
+            name: "active",
+            type: "bool",
+          },
+          {
+            internalType: "enum IDCADataStructures.Interval",
+            name: "interval",
+            type: "uint8",
+          },
+          {
             internalType: "address",
             name: "accountAddress",
             type: "address",
+          },
+          {
+            internalType: "uint256",
+            name: "amount",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "strategyId",
+            type: "uint256",
           },
           {
             components: [
@@ -225,26 +234,6 @@ const _abi = [
             internalType: "struct IDCADataStructures.TokenData",
             name: "targetToken",
             type: "tuple",
-          },
-          {
-            internalType: "enum IDCADataStructures.Interval",
-            name: "interval",
-            type: "uint8",
-          },
-          {
-            internalType: "uint256",
-            name: "amount",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "strategyId",
-            type: "uint256",
-          },
-          {
-            internalType: "bool",
-            name: "active",
-            type: "bool",
           },
           {
             components: [
