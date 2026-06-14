@@ -2,7 +2,7 @@
 
 import { createAppKit } from "@reown/appkit/react";
 import { EthersAdapter } from "@reown/appkit-adapter-ethers";
-import { sepolia, base } from "@reown/appkit/networks";
+import { base, baseSepolia } from "@reown/appkit/networks";
 import { dbg, dbgWarn } from '@/helpers/debug';
 
 const projectId = process.env.NEXT_PUBLIC_APPKIT_PROJECT_ID;
@@ -34,7 +34,11 @@ const ethAdapter = new EthersAdapter();
 try {
   createAppKit({
     adapters: [ethAdapter],
-    networks: [sepolia, base],
+    // V0.9 MVP: Base only (mainnet + sepolia for the dress rehearsal).
+    // Must stay in sync with ACTIVE_CHAIN in constants/contracts.ts.
+    // The old [sepolia, base] let users pick ETH Sepolia — a chain the
+    // app then blocked as "wrong network".
+    networks: [base, baseSepolia],
     defaultNetwork: base,
     projectId,
     enableWalletConnect: true,

@@ -109,7 +109,12 @@ export function useToken(tokenAddress: EthereumAddress, decimals: number = 18) {
     const tokenContract = await connectERC20(tokenAddress, Signer);
     toast.info("Please accept the transaction to approve the token");
 
-    const tx = await tokenContract.approve(spender, spender);
+    // CRITICAL FIX: was approve(spender, spender) — the spender ADDRESS
+    // was passed as the amount, which ethers coerces to a ~1.4e48 uint256,
+    // granting a near-unlimited allowance and ignoring the user's amount.
+    // Approve exactly the requested amount.
+    const approveAmount = parseUnits(amount, decimals);
+    const tx = await tokenContract.approve(spender, approveAmount);
     toast.loading("Transaction is confirming...");
     await tx.wait();
     toast.success("Transaction confirmed, the token has been approved");

@@ -34,12 +34,11 @@ const DCAReinvestAddress: { [key in NetworkKeys]?: string } = {
 // Networks the UI treats as active. V0.9 launch lineup.
 // BASE_MAINNET + OPT_MAINNET for production, BASE_SEPOLIA + OPT_SEPOLIA
 // for testing. ETH_SEPOLIA dropped as of V0.9.
-const ACTIVE_CHAIN: NetworkKeys[] = [
-  "BASE_MAINNET",
-  "BASE_SEPOLIA",
-  "OPT_MAINNET",
-  "OPT_SEPOLIA",
-];
+// V0.9 MVP: Base only. Optimism is fast-follow once Base is proven on
+// mainnet — adding OPT_* back here is the only app-side change needed
+// (plus their deployed addresses). BASE_SEPOLIA stays for the dress
+// rehearsal; remove it from the list if you want a mainnet-only app.
+const ACTIVE_CHAIN: NetworkKeys[] = ["BASE_MAINNET", "BASE_SEPOLIA"];
 
 export {
   DCAExecutorAddress,

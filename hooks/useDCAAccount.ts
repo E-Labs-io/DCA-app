@@ -12,6 +12,7 @@ import { ContractTransactionReport } from "@/types/contractReturns";
 import { BigNumberish, Signer, keccak256, toUtf8Bytes, ethers, TransactionReceipt } from "ethers";
 import { EthereumAddress } from "@/types/generic";
 import { clearAccountCache } from "@/hooks/helpers/getAccountEvents";
+import { connectERC20 } from "./helpers/connectToContract";
 import { useTransaction } from "./useTransaction";
 import { useGasEstimation } from "./useGasEstimation";
 import { dbg, dbgWarn } from '@/helpers/debug';
@@ -300,8 +301,30 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
 
       try {
         if (!dcaAccount) throw new Error("Error connecting to account");
+
+        // AddFunds does safeTransferFrom(msg.sender, account, amount), so
+        // the account must have an allowance first. The standalone fund
+        // flow never approved (only the create-strategy flow did), so
+        // funding reverted for anyone who hadn't previously created a
+        // strategy with that token. Approve up-front if the allowance is
+        // short.
+        const tokenAddress = String(token.tokenAddress);
+        const erc20 = await connectERC20(tokenAddress, Signer);
+        const owner = await Signer.getAddress();
+        const currentAllowance: bigint = await erc20.allowance(
+          owner,
+          dcaAccount.target
+        );
+
+        if (currentAllowance < amount) {
+          toast.info("Please approve the account to spend your token...");
+          const approveTx = await erc20.approve(dcaAccount.target, amount);
+          toast.loading("Approval is confirming...");
+          await approveTx.wait();
+        }
+
         toast.info("Please accept the Funding Transaction...");
-        const tx = await dcaAccount.AddFunds(token.tokenAddress, amount);
+        const tx = await dcaAccount.AddFunds(tokenAddress, amount);
         toast.loading("Funding Transaction is Confirming...");
         await tx.wait();
         toast.success("Funding Transaction Approved.");

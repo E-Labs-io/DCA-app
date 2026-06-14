@@ -13,11 +13,18 @@ import {
   SupportedChain,
 } from "@/types";
 
-// API Configuration
-const API_BASE_URL = "http://localhost:3010";
+// API Configuration. Env-driven; the app is a static export so there's
+// no server side to proxy through — it calls the stats service's PUBLIC
+// read-only aggregate endpoints directly (no key in the browser bundle).
+// If unset, stats calls are disabled (callers already swallow failures),
+// which avoids firing a stream of failed requests at a dead localhost.
+const API_BASE_URL = process.env.NEXT_PUBLIC_STATS_API_URL || "";
 
 // Generic API client helper
 async function apiCall<T>(endpoint: string): Promise<T> {
+  if (!API_BASE_URL) {
+    throw new Error("Stats API disabled (NEXT_PUBLIC_STATS_API_URL unset)");
+  }
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`);
 
