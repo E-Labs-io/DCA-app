@@ -11,11 +11,11 @@ import {
   Button,
 } from "@nextui-org/react";
 import { useDCAFactory } from "@/hooks/useDCAFactory";
-import { useAppKitAccount, useAppKitProvider } from "@reown/appkit/react";
+import { useDCAProvider } from "@/providers/DCAStatsProvider";
+import { useAppKitAccount } from "@reown/appkit/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { dbgWarn } from '@/helpers/debug';
-
+import { isUserRejection } from "@/helpers/walletErrors";
 
 interface CreateAccountModalProps {
   isOpen: boolean;
@@ -27,10 +27,10 @@ export function CreateAccountModal({
   onClose,
 }: CreateAccountModalProps) {
   const { createAccount } = useDCAFactory();
+  const { refreshUserAccounts } = useDCAProvider();
   const { address } = useAppKitAccount();
 
   const [isWaitingForTx, setIsWaitingForTx] = useState(false);
-  const [txHash, setTxHash] = useState("");
 
   const handleCreateAccount = async () => {
     if (!address) {
@@ -41,38 +41,20 @@ export function CreateAccountModal({
     setIsWaitingForTx(true);
 
     try {
-      const transaction = await createAccount().catch((error) => {
-        dbgWarn("Account creation warning:", error);
-        if (error?.code === 4001) throw error;
-        return false;
-      });
+      await createAccount();
+      toast.success("DCA account created");
 
-      if (typeof transaction !== "boolean") {
-        setTxHash(transaction.hash);
-        toast.success("Transaction submitted. Creating your DCA account...");
-
-        try {
-          await transaction.tx.wait();
-          toast.success("DCA account created successfully!");
-          onClose();
-        } catch (error) {
-          dbgWarn("Transaction confirmation warning:", error);
-          toast.success("Account likely created successfully");
-          onClose();
-        }
-      } else {
-        toast.success("Account creation appears to have succeeded");
-        onClose();
-      }
+      // The factory event subscription runs over the wallet's RPC and
+      // fails silently on most wallets, so pull the fresh account list
+      // explicitly instead of waiting for a listener that may never fire.
+      await refreshUserAccounts();
+      onClose();
     } catch (error: any) {
-      if (error?.code === 4001 || error?.message?.includes("rejected")) {
-        toast.error("Transaction cancelled by user");
+      if (isUserRejection(error)) {
+        toast.error("Transaction cancelled");
       } else {
-        dbgWarn("Non-critical error:", error);
-        if (txHash) {
-          toast.success("Account likely created successfully");
-          onClose();
-        }
+        console.error("Account creation failed:", error);
+        toast.error("Account creation failed");
       }
     } finally {
       setIsWaitingForTx(false);

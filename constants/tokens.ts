@@ -29,6 +29,8 @@ export const tokenList: TokenList = {
     contractAddress: {
       ETH_SEPOLIA: "0xC558DBdd856501FCd9aaF1E62eae57A9F0629a3c",
       BASE_MAINNET: "0x4200000000000000000000000000000000000006",
+      // OP-stack predeploy — same address the executor quotes against
+      BASE_SEPOLIA: "0x4200000000000000000000000000000000000006",
     },
     decimals: 18,
     label: "Wrapped Ether",
@@ -40,6 +42,9 @@ export const tokenList: TokenList = {
     contractAddress: {
       ETH_SEPOLIA: "0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8",
       BASE_MAINNET: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      // Circle native Base Sepolia USDC (verified in DCA-contracts
+      // bin/tokenAddress.ts; the V0.9 executor already prices it)
+      BASE_SEPOLIA: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     },
     decimals: 6,
     label: "USDC",

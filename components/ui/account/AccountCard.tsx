@@ -44,12 +44,17 @@ export const AccountCard: React.FC<AccountCardProps> = ({
     getAccountInstance,
   } = useDCAProvider();
 
-  const lastExecutionTime: number =
-    getAccountStats(accountAddress as string)?.lastExecution ?? 0;
+  // 0/undefined lastExecution means the account has never executed — a
+  // formatDistanceToNow from the epoch would render "over 55 years ago".
+  const lastExecutionTime = getAccountStats(
+    accountAddress as string
+  )?.lastExecution;
 
-  const timeAgo = formatDistanceToNow(new Date(lastExecutionTime * 1000), {
-    addSuffix: true,
-  });
+  const timeAgo = lastExecutionTime
+    ? formatDistanceToNow(new Date(lastExecutionTime * 1000), {
+        addSuffix: true,
+      })
+    : "No executions yet";
 
   const getEtherscanUrl = (address: string) =>
     buildNetworkScanLink({ network: ACTIVE_NETWORK!, address });

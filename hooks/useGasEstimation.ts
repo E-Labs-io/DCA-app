@@ -5,6 +5,7 @@
 import { useState, useCallback } from 'react';
 import { BrowserProvider, Contract, ContractTransactionResponse } from 'ethers';
 import { useAppKitProvider } from '@reown/appkit/react';
+import { useEthPrice } from './useEthPrice';
 
 export interface GasEstimate {
   gasLimit: bigint;
@@ -13,16 +14,18 @@ export interface GasEstimate {
   maxPriorityFeePerGas?: bigint;
   estimatedCostWei: bigint;
   estimatedCostEth: number;
-  estimatedCostUsd: number;
+  // null when no live ETH/USD price is available — callers should hide
+  // the USD figure rather than show a made-up number.
+  estimatedCostUsd: number | null;
 }
 
 export function useGasEstimation() {
   const [isEstimating, setIsEstimating] = useState(false);
   const { walletProvider } = useAppKitProvider('eip155');
+  const ethPrice = useEthPrice();
 
   const estimateGas = useCallback(async (
-    tx: () => Promise<ContractTransactionResponse>,
-    ethPrice: number = 2500 // Default ETH price, should be fetched from API
+    tx: () => Promise<ContractTransactionResponse>
   ): Promise<GasEstimate | null> => {
     if (!walletProvider) return null;
 
@@ -53,7 +56,8 @@ export function useGasEstimation() {
       const effectiveGasPrice = maxFeePerGas || gasPrice;
       const estimatedCostWei = gasLimit * effectiveGasPrice;
       const estimatedCostEth = Number(estimatedCostWei) / 1e18;
-      const estimatedCostUsd = estimatedCostEth * ethPrice;
+      const estimatedCostUsd =
+        ethPrice !== null ? estimatedCostEth * ethPrice : null;
 
       return {
         gasLimit,
@@ -73,7 +77,7 @@ export function useGasEstimation() {
     } finally {
       setIsEstimating(false);
     }
-  }, [walletProvider]);
+  }, [walletProvider, ethPrice]);
 
   const getGasPriceOptions = useCallback(async () => {
     if (!walletProvider) return null;

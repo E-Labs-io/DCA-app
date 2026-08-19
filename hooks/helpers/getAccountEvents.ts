@@ -15,32 +15,73 @@ import {
 } from "@/hooks/helpers/buildDataTypes";
 import { ethers } from "ethers";
 import { DCAAccount__factory } from "@/types/contracts";
-import { dbg, dbgWarn } from '@/helpers/debug';
+import { dbg, dbgWarn } from "@/helpers/debug";
 
 // Cache for events
 const eventCache = new Map<string, any>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-// Create a dedicated provider for log queries
-const getLogProvider = () => {
-  // Try both possible environment variable names
-  const alchemyKey =
-    process.env.NEXT_PUBLIC_ALCHEMY_KEY ||
-    process.env.NEXT_PUBLIC_ALCHEMY_API_KEY;
-  if (!alchemyKey) {
-    dbgWarn("No Alchemy key found, falling back to public Base RPC");
-    return new ethers.JsonRpcProvider("https://mainnet.base.org");
+// Historical log scans run on public RPCs, resolved from the chain the
+// account contract actually lives on. The old getLogProvider was
+// hardcoded to Base MAINNET, so on Base Sepolia every scan queried the
+// wrong chain and returned zero events (no executions, epoch-1970
+// "last execution" everywhere). Wallet RPCs can't serve these scans
+// (most reject wide eth_getLogs), and the Alchemy free tier caps the
+// range at 10 blocks — public endpoints allow 10,000.
+const LOG_SCAN_CHAINS: Record<number, { rpc: string; fromBlock: number }> = {
+  // fromBlock = DCAFactory deployment; account contracts can't pre-date it
+  8453: { rpc: "https://mainnet.base.org", fromBlock: 31946776 },
+  84532: { rpc: "https://sepolia.base.org", fromBlock: 45515200 }, // V0.9 #2
+  11155111: {
+    rpc: "https://ethereum-sepolia-rpc.publicnode.com",
+    fromBlock: 7239389, // legacy
+  },
+};
+
+const PUBLIC_RPC_RANGE_LIMIT = 10_000;
+
+const getLogContract = async (accountProvider: DCAAccount) => {
+  const network = await accountProvider.runner?.provider?.getNetwork();
+  const config = network ? LOG_SCAN_CHAINS[Number(network.chainId)] : undefined;
+  if (!config) {
+    dbgWarn(
+      "[getAccountEvents] No public log RPC for chain",
+      network?.chainId?.toString(),
+    );
+    return null;
   }
-  dbg("[getAccountEvents] Using Alchemy provider for Base Mainnet");
-  return new ethers.JsonRpcProvider(
-    `https://base-mainnet.g.alchemy.com/v2/${alchemyKey}`
-  );
+  const logProvider = new ethers.JsonRpcProvider(config.rpc);
+  return {
+    contract: DCAAccount__factory.connect(
+      accountProvider.target.toString(),
+      logProvider,
+    ),
+    provider: logProvider,
+    fromBlock: config.fromBlock,
+  };
+};
+
+const queryFilterChunked = async <T>(
+  query: (fromBlock: number, toBlock: number) => Promise<T[]>,
+  fromBlock: number,
+  toBlock: number,
+): Promise<T[]> => {
+  const events: T[] = [];
+  for (
+    let start = fromBlock;
+    start <= toBlock;
+    start += PUBLIC_RPC_RANGE_LIMIT
+  ) {
+    const end = Math.min(start + PUBLIC_RPC_RANGE_LIMIT - 1, toBlock);
+    events.push(...(await query(start, end)));
+  }
+  return events;
 };
 
 const getCacheKey = (
   accountAddress: string | { toString(): string },
   eventType: string,
-  strategyId?: number
+  strategyId?: number,
 ) =>
   `${accountAddress.toString()}-${eventType}${
     strategyId ? `-${strategyId}` : ""
@@ -61,11 +102,12 @@ const setInCache = (key: string, data: any) => {
 
 const clearAccountCache = (accountAddress: string) => {
   const creationKey = getCacheKey(accountAddress, "creation");
-  const executionKey = getCacheKey(accountAddress, "execution");
   eventCache.delete(creationKey);
-  // Clear all execution caches for this account
+  // Clear all execution caches for this account. Keys are built with
+  // "-" separators (see getCacheKey) — the old check used "_" and never
+  // matched, so stale execution data survived every refresh.
   for (const [key] of eventCache) {
-    if (key.startsWith(`${accountAddress}_execution_`)) {
+    if (key.startsWith(`${accountAddress}-execution`)) {
       eventCache.delete(key);
     }
   }
@@ -74,7 +116,7 @@ const clearAccountCache = (accountAddress: string) => {
 
 const getAccountStrategyCreationEvents = async (
   accountProvider: DCAAccount,
-  forceRefresh: boolean = false
+  forceRefresh: boolean = false,
 ): Promise<StrategyCreationEvent[]> => {
   const cacheKey = getCacheKey(accountProvider.target, "creation");
 
@@ -103,15 +145,13 @@ const getAccountStrategyCreationEvents = async (
   try {
     dbg(
       "[getAccountEvents] Fetching strategy creation events for:",
-      accountProvider.target
+      accountProvider.target,
     );
 
     // Use dedicated provider for log queries
-    const logProvider = getLogProvider();
-    const contractForLogs = DCAAccount__factory.connect(
-      accountProvider.target.toString(),
-      logProvider
-    );
+    const logCtx = await getLogContract(accountProvider);
+    if (!logCtx) throw new Error("No public log RPC for active chain");
+    const { contract: contractForLogs, provider: logProvider } = logCtx;
 
     const filter = contractForLogs.filters["StrategyCreated"];
     dbg("[getAccountEvents] Using filter:", filter);
@@ -120,7 +160,11 @@ const getAccountStrategyCreationEvents = async (
     const latestBlock = await logProvider.getBlockNumber();
     dbg("[getAccountEvents] Latest block number:", latestBlock);
 
-    const events = await contractForLogs.queryFilter(filter, 0, latestBlock);
+    const events = await queryFilterChunked(
+      (from, to) => contractForLogs.queryFilter(filter, from, to),
+      logCtx.fromBlock,
+      latestBlock,
+    );
     dbg("[getAccountEvents] Found events:", {
       eventCount: events.length,
       latestBlock,
@@ -133,8 +177,8 @@ const getAccountStrategyCreationEvents = async (
 
     const results = await Promise.all(
       events.map((event: StrategyCreatedEvent.Log) =>
-        buildStrategyCreationEvent(event, accountProvider)
-      )
+        buildStrategyCreationEvent(event, accountProvider),
+      ),
     );
 
     dbg("[getAccountEvents] Processed results:", {
@@ -161,8 +205,8 @@ const getAccountStrategyCreationEvents = async (
 
       const results = await Promise.all(
         events.map((event: StrategyCreatedEvent.Log) =>
-          buildStrategyCreationEvent(event, accountProvider)
-        )
+          buildStrategyCreationEvent(event, accountProvider),
+        ),
       );
 
       setInCache(cacheKey, results);
@@ -177,7 +221,7 @@ const getAccountStrategyCreationEvents = async (
 
 const getStrategyExecutionEvents = async (
   accountProvider: DCAAccount,
-  strategyId: number
+  strategyId: number,
 ): Promise<AccountStrategyExecutionEvent[]> => {
   const cacheKey = getCacheKey(accountProvider.target, "execution", strategyId);
   const cached = getFromCache(cacheKey);
@@ -186,28 +230,31 @@ const getStrategyExecutionEvents = async (
   try {
     dbg(
       "[getAccountEvents] Fetching execution events for strategy:",
-      strategyId
+      strategyId,
     );
 
     // Use dedicated provider for log queries
-    const logProvider = getLogProvider();
-    const contractForLogs = DCAAccount__factory.connect(
-      accountProvider.target.toString(),
-      logProvider
-    );
+    const logCtx = await getLogContract(accountProvider);
+    if (!logCtx) throw new Error("No public log RPC for active chain");
+    const { contract: contractForLogs, provider: logProvider } = logCtx;
 
     const filter = contractForLogs.filters["StrategyExecuted"];
-    const events = await contractForLogs.queryFilter(filter);
+    const latestBlock = await logProvider.getBlockNumber();
+    const events = await queryFilterChunked(
+      (from, to) => contractForLogs.queryFilter(filter, from, to),
+      logCtx.fromBlock,
+      latestBlock,
+    );
 
     const thisStrategyEvents = events.filter(
       (event: StrategyExecutedEvent.Log) =>
-        event?.args.strategyId_ === BigInt(strategyId)
+        event?.args.strategyId_ === BigInt(strategyId),
     );
 
     const results = await Promise.all(
       thisStrategyEvents.map((event) =>
-        buildAccountStrategyExecutionEvent(event)
-      )
+        buildAccountStrategyExecutionEvent(event),
+      ),
     );
 
     setInCache(cacheKey, results);
@@ -222,13 +269,13 @@ const getStrategyExecutionEvents = async (
 
       const thisStrategyEvents = events.filter(
         (event: StrategyExecutedEvent.Log) =>
-          event?.args.strategyId_ === BigInt(strategyId)
+          event?.args.strategyId_ === BigInt(strategyId),
       );
 
       const results = await Promise.all(
         thisStrategyEvents.map((event) =>
-          buildAccountStrategyExecutionEvent(event)
-        )
+          buildAccountStrategyExecutionEvent(event),
+        ),
       );
 
       setInCache(cacheKey, results);
@@ -242,27 +289,29 @@ const getStrategyExecutionEvents = async (
 };
 
 const getAccountStrategyExecutionEvents = async (
-  accountProvider: DCAAccount
+  accountProvider: DCAAccount,
 ): Promise<AccountStrategyExecutionEvent[]> => {
   try {
     dbg(
       "[getAccountEvents] Fetching all execution events for account:",
-      accountProvider.target
+      accountProvider.target,
     );
 
     // Use dedicated provider for log queries
-    const logProvider = getLogProvider();
-    const contractForLogs = DCAAccount__factory.connect(
-      accountProvider.target.toString(),
-      logProvider
-    );
+    const logCtx = await getLogContract(accountProvider);
+    if (!logCtx) throw new Error("No public log RPC for active chain");
+    const { contract: contractForLogs, provider: logProvider } = logCtx;
 
-    const events = await contractForLogs.queryFilter(
-      contractForLogs.filters["StrategyExecuted"]
+    const filter = contractForLogs.filters["StrategyExecuted"];
+    const latestBlock = await logProvider.getBlockNumber();
+    const events = await queryFilterChunked(
+      (from, to) => contractForLogs.queryFilter(filter, from, to),
+      logCtx.fromBlock,
+      latestBlock,
     );
 
     return events.map((event: StrategyExecutedEvent.Log) =>
-      buildAccountStrategyExecutionEvent(event)
+      buildAccountStrategyExecutionEvent(event),
     );
   } catch (error) {
     console.error("Error fetching past events:", error);
@@ -270,11 +319,11 @@ const getAccountStrategyExecutionEvents = async (
     // Fallback: try with the original provider
     try {
       const events = await accountProvider.queryFilter(
-        accountProvider.filters["StrategyExecuted"]
+        accountProvider.filters["StrategyExecuted"],
       );
 
       return events.map((event: StrategyExecutedEvent.Log) =>
-        buildAccountStrategyExecutionEvent(event)
+        buildAccountStrategyExecutionEvent(event),
       );
     } catch (fallbackError) {
       console.error("Fallback also failed:", fallbackError);

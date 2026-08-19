@@ -16,6 +16,7 @@ import {
 } from '@nextui-org/react';
 import { ExternalLink, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
 import { useTransactions } from '@/context/TransactionContext';
+import { useEthPrice } from '@/hooks/useEthPrice';
 import { formatDistanceToNow } from 'date-fns';
 
 interface TransactionStatusModalProps {
@@ -25,6 +26,7 @@ interface TransactionStatusModalProps {
 
 export function TransactionStatusModal({ isOpen, onClose }: TransactionStatusModalProps) {
   const { transactions, clearTransactions } = useTransactions();
+  const ethPrice = useEthPrice();
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -68,13 +70,10 @@ export function TransactionStatusModal({ isOpen, onClose }: TransactionStatusMod
     const costWei = gasUsed * gasPrice;
     const costEth = Number(costWei) / 1e18;
 
-    // Rough USD conversion (this should be fetched from an API in production)
-    const ethPrice = 2500; // Mock price
-    const costUsd = costEth * ethPrice;
-
     return {
       eth: costEth.toFixed(6),
-      usd: costUsd.toFixed(2),
+      // No live price → no USD figure; better to omit than to fake one.
+      usd: ethPrice !== null ? (costEth * ethPrice).toFixed(2) : null,
     };
   };
 
@@ -131,7 +130,10 @@ export function TransactionStatusModal({ isOpen, onClose }: TransactionStatusMod
                       {gasCost && (
                         <div className="flex justify-between">
                           <span>Cost:</span>
-                          <span>{gasCost.eth} ETH (~${gasCost.usd})</span>
+                          <span>
+                            {gasCost.eth} ETH
+                            {gasCost.usd !== null && ` (~$${gasCost.usd})`}
+                          </span>
                         </div>
                       )}
 

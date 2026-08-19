@@ -2,7 +2,6 @@
 
 import React from "react";
 import { Button, Card, CardBody } from "@nextui-org/react";
-import { Settings } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -20,7 +19,7 @@ import { NetworkKeys } from "@/types/Chains";
 import { ExecutionStats, useDCAProvider } from "@/providers/DCAStatsProvider";
 import { format } from "date-fns";
 import { useTokenFormatter } from "@/hooks/useTokenFormatter";
-import { getTokenIcon, getTokenTicker } from "@/helpers/tokenData";
+import { getTokenTicker } from "@/helpers/tokenData";
 
 export interface StrategyCardProps {
   strategy: IDCADataStructures.StrategyStruct;
@@ -36,35 +35,33 @@ export interface StrategyCardProps {
 
 interface ChartDataPoint {
   timestamp: string;
-  baseAmount: number;
-  targetAmount: number;
-  rate?: number;
+  amount: number;
+  cumulative: number;
 }
 
+// Execution amounts are amountIn, so everything here is denominated in the
+// base token — we chart spend per execution and cumulative spend, not a
+// target-token series we don't have data for.
 function prepareChartData(
   executions: ExecutionStats[] | undefined,
   strategy: IDCADataStructures.StrategyStruct
 ): ChartDataPoint[] {
   if (!executions || executions.length === 0) return [];
 
+  let cumulative = 0;
   return executions.map((execution) => {
     const timestamp = format(
       new Date(execution.timestamp * 1000),
       "MMM dd HH:mm"
     );
-    const baseAmount =
+    const amount =
       Number(execution.amount) / 10 ** Number(strategy.baseToken.decimals);
-    const targetAmount =
-      Number(execution.amount) / 10 ** Number(strategy.targetToken.decimals);
-
-    // Calculate rate (optional)
-    const rate = baseAmount > 0 ? targetAmount / baseAmount : 0;
+    cumulative += amount;
 
     return {
       timestamp,
-      baseAmount,
-      targetAmount,
-      rate,
+      amount,
+      cumulative,
     };
   });
 }
@@ -76,15 +73,16 @@ export function StrategyCard({
   handleFundingModal,
   isExpanded,
 }: StrategyCardProps) {
-  const { getStrategyStats, getStrategy } = useDCAProvider();
+  const { getStrategyStats } = useDCAProvider();
   const { formatTokenAmount } = useTokenFormatter();
 
-  const executions = getStrategyStats(
+  const stats = getStrategyStats(
     strategy.accountAddress,
     Number(strategy.strategyId)
-  )?.executions;
+  );
 
-  const chartData = prepareChartData(executions, strategy);
+  const chartData = prepareChartData(stats?.executions, strategy);
+  const baseTicker = getTokenTicker(strategy.baseToken);
 
   const onSelect = () => {
     setSelectedStrategy(isExpanded ? null : strategy.strategyId.toString());
@@ -101,72 +99,53 @@ export function StrategyCard({
           <StrategyHeader
             ACTIVE_NETWORK={ACTIVE_NETWORK}
             strategy={strategy}
-            stats={
-              getStrategyStats(
-                strategy.accountAddress,
-                Number(strategy.strategyId)
-              )!
-            }
+            stats={stats}
             isExpanded={isExpanded}
             onToggle={onSelect}
           />
 
           {isExpanded && (
             <div className="mt-4 space-y-6">
-              <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={chartData}>
-                    <XAxis dataKey="timestamp" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
+              {chartData.length > 0 ? (
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={chartData}>
+                      <XAxis dataKey="timestamp" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
 
-                    <Line
-                      type="monotone"
-                      dataKey="targetAmount"
-                      name={`${strategy.targetToken.ticker} Amount`}
-                      stroke="#82ca9d"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="rate"
-                      name="Exchange Rate"
-                      stroke="#ffc658"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+                      <Line
+                        type="monotone"
+                        dataKey="amount"
+                        name={`${baseTicker} per Execution`}
+                        stroke="#82ca9d"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="cumulative"
+                        name={`Total ${baseTicker} Invested`}
+                        stroke="#8884d8"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-64 w-full flex items-center justify-center text-gray-500">
+                  No executions yet
+                </div>
+              )}
 
               <div className="flex justify-between items-center text-sm text-gray-500">
+                <div>Total Executions: {stats?.totalExecutions ?? 0}</div>
                 <div>
-                  Total Executions:{" "}
-                  {
-                    getStrategyStats(
-                      strategy.accountAddress,
-                      Number(strategy.strategyId)
-                    )!.totalExecutions
-                  }
-                </div>
-                <div>
-                  Strategy Worth:{" "}
-                  {formatTokenAmount(
-                    BigInt(
-                      getStrategyStats(
-                        strategy.accountAddress,
-                        Number(strategy.strategyId)
-                      )!.totalCumulated
-                    ),
-                    getStrategy(
-                      strategy.accountAddress,
-                      Number(strategy.strategyId)
-                    )?.targetToken
-                  )}
-                  {getTokenIcon(
-                    getStrategy(
-                      strategy.accountAddress,
-                      Number(strategy.strategyId)
-                    )?.targetToken
-                  )}
+                  Total Invested:{" "}
+                  {stats
+                    ? `${formatTokenAmount(
+                        BigInt(stats.totalCumulated),
+                        strategy.baseToken
+                      )} ${baseTicker}`
+                    : "No executions yet"}
                 </div>
               </div>
 
@@ -209,14 +188,6 @@ export function StrategyCard({
                     Withdraw
                   </Button>
                 </div>
-
-                <Button
-                  color="primary"
-                  variant="bordered"
-                  startContent={<Settings size={18} />}
-                >
-                  Reinvest Settings
-                </Button>
               </div>
             </div>
           )}

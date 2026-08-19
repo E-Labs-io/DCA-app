@@ -17,7 +17,7 @@ import { ExecutionTimings, StrategyStats } from "@/providers/DCAStatsProvider";
 interface StrategyHeaderProps {
   strategy: IDCADataStructures.StrategyStruct;
   ACTIVE_NETWORK: NetworkKeys;
-  stats: StrategyStats;
+  stats?: StrategyStats | null;
   isExpanded: boolean;
   onToggle: () => void;
 }
@@ -35,10 +35,13 @@ export function StrategyHeader({
 
   const intervalLabel = intervalOption ? intervalOption.label : "Unknown";
 
-  const lastExecution = stats.lastExecution!;
-  const nextExecutionTime = lastExecution + Number(strategy.interval);
-  const currentTime = Math.floor(Date.now() / 1000);
-  const secondsUntilNextExecution = nextExecutionTime - currentTime;
+  // lastExecution of 0/undefined means the strategy has never run — a
+  // countdown from the epoch would render "over 55 years ago".
+  // strategy.interval is an enum index, so seconds come from intervalOptions.
+  const lastExecution = stats?.lastExecution;
+  const nextExecutionTime = lastExecution
+    ? lastExecution + (intervalOption?.seconds ?? 0)
+    : null;
 
   return (
     <div
@@ -74,11 +77,16 @@ export function StrategyHeader({
         <Chip size="sm" color="default">
           {`Every ${intervalLabel}`}
         </Chip>
-        {nextExecutionTime && strategy.active && (
+        {strategy.active && (
           <Chip size="sm" color="default">
-            {`Next Execution: ${formatDistanceToNow(nextExecutionTime * 1000, {
-              addSuffix: true,
-            })}`}
+            {nextExecutionTime
+              ? `Next Execution: ${formatDistanceToNow(
+                  nextExecutionTime * 1000,
+                  {
+                    addSuffix: true,
+                  }
+                )}`
+              : "Awaiting first execution"}
           </Chip>
         )}
         {strategy.reinvest.active && (

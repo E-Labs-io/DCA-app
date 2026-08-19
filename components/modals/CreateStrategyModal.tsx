@@ -127,12 +127,34 @@ export function CreateStrategyModal({
         !formData.baseToken ||
         !formData.targetToken ||
         !formData.amount ||
-        !formData.interval ||
+        // == null, not falsy: TestIntervalOneMin is enum value 0, so
+        // !interval rejected "[DEV] Every Minute" as a missing field
+        formData.interval == null ||
         !address
       ) {
         toast.error(
           "Please fill in all required fields and connect your wallet"
         );
+        setIsProcessing(false);
+        return;
+      }
+
+      // A token without an address on the active network would fall back
+      // to "0x" in the strategy struct and revert on-chain — refuse early
+      // with a message that says what's actually wrong.
+      const baseTokenData = createTokenData(formData.baseToken as TokenTickers);
+      const targetTokenData = createTokenData(
+        formData.targetToken as TokenTickers
+      );
+      if (
+        baseTokenData.tokenAddress === "0x" ||
+        targetTokenData.tokenAddress === "0x"
+      ) {
+        const missing =
+          baseTokenData.tokenAddress === "0x"
+            ? formData.baseToken
+            : formData.targetToken;
+        toast.error(`${missing} is not available on ${ACTIVE_NETWORK}`);
         setIsProcessing(false);
         return;
       }
@@ -157,23 +179,27 @@ export function CreateStrategyModal({
           toast.dismiss(approvalToast);
           toast.loading("Please approve token spending...");
 
-          try {
-            const transaction = await approveToken(
-              (accountAddress as DCAAccount).target as string,
-              formData.fundAmount
-            ).catch((error: any) => {
-              dbgWarn("Approval warning:", error);
-              return null;
-            });
+          // A failed approval must abort: funding without allowance makes
+          // SetupStrategy revert on transferFrom, and the old flow's
+          // swallow-and-continue reported "approval confirmed" for
+          // approvals that never happened.
+          const transaction = await approveToken(
+            (accountAddress as DCAAccount).target as string,
+            formData.fundAmount
+          ).catch((error: any) => {
+            dbgWarn("Approval failed:", error);
+            return null;
+          });
 
-            if (typeof transaction !== "boolean") {
-              toast.loading("Waiting for approval confirmation...");
-              await transaction?.tx.wait();
-              toast.success("Token approval confirmed");
-            }
-          } catch (error) {
-            dbgWarn("Non-critical approval error:", error);
+          if (!transaction || typeof transaction === "boolean") {
+            toast.error("Token approval failed — strategy not created");
+            setIsProcessing(false);
+            return;
           }
+
+          toast.loading("Waiting for approval confirmation...");
+          await transaction.tx.wait();
+          toast.success("Token approval confirmed");
         } else {
           toast.dismiss(approvalToast);
           toast.success("Token approval verified");
@@ -185,8 +211,8 @@ export function CreateStrategyModal({
 
       const strategyData: IDCADataStructures.StrategyStruct = {
         accountAddress: (accountAddress as DCAAccount).target as `0x${string}`,
-        baseToken: createTokenData(formData.baseToken as TokenTickers),
-        targetToken: createTokenData(formData.targetToken as TokenTickers),
+        baseToken: baseTokenData,
+        targetToken: targetTokenData,
         interval: BigInt(formData.interval),
         amount: parseUnits(formData.amount, selectedTokenDecimals!),
         strategyId: 0,
@@ -299,11 +325,13 @@ export function CreateStrategyModal({
             }
             isDisabled={isProcessing}
           >
-            {Object.values(stableCoins).map((token) => (
-              <SelectItem key={token.ticker} value={token.ticker}>
-                {token.label}
-              </SelectItem>
-            ))}
+            {Object.values(stableCoins)
+              .filter((token) => (token.contractAddress as any)?.[ACTIVE_NETWORK])
+              .map((token) => (
+                <SelectItem key={token.ticker} value={token.ticker}>
+                  {token.label}
+                </SelectItem>
+              ))}
           </Select>
 
           <Select
@@ -315,11 +343,13 @@ export function CreateStrategyModal({
             }
             isDisabled={isProcessing}
           >
-            {Object.values(tokenList).map((token) => (
-              <SelectItem key={token.ticker} value={token.ticker}>
-                {token.label}
-              </SelectItem>
-            ))}
+            {Object.values(tokenList)
+              .filter((token) => (token.contractAddress as any)?.[ACTIVE_NETWORK])
+              .map((token) => (
+                <SelectItem key={token.ticker} value={token.ticker}>
+                  {token.label}
+                </SelectItem>
+              ))}
           </Select>
 
           <Input

@@ -78,13 +78,15 @@ export function GasEstimateDisplay({ gasEstimate, isLoading }: GasEstimateDispla
               <span className="text-xs text-gray-500">Cost (ETH)</span>
               <span className="text-xs font-mono">{gasEstimate.estimatedCostEth.toFixed(6)}</span>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-xs text-gray-500">Cost (USD)</span>
-              <div className="flex items-center gap-1">
-                <DollarSign className="w-3 h-3 text-green-500" />
-                <span className="text-xs font-mono text-green-600">{gasEstimate.estimatedCostUsd.toFixed(2)}</span>
+            {gasEstimate.estimatedCostUsd !== null && (
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-500">Cost (USD)</span>
+                <div className="flex items-center gap-1">
+                  <DollarSign className="w-3 h-3 text-green-500" />
+                  <span className="text-xs font-mono text-green-600">{gasEstimate.estimatedCostUsd.toFixed(2)}</span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 

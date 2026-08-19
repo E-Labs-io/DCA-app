@@ -4,7 +4,6 @@ import { Interval, intervalOptions } from "@/constants/intervals";
 import { TokenData } from "@/constants/tokens";
 import { getIntervalSeconds } from "@/helpers/intervals";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
-import { dbg } from '@/helpers/debug';
 
 export interface AccountStrategyIntervalCost {
   strategyId: number; // Strategy ID
@@ -55,29 +54,3 @@ export function buildAccountStrategyIntervalCost(
       baseToken: strategy.baseToken.tokenAddress as string, // Include the base token address
     }));
 }
-
-// Example usage:
-const baseTokenBalance = 1500; // Example base token balance
-const strategies: AccountStrategyIntervalCost[] = [
-  {
-    strategyId: 1,
-    interval: 60,
-    executionAmount: 100,
-    baseToken: "baseToken1",
-  }, // Strategy 1 (1 minute)
-  {
-    strategyId: 2,
-    interval: 300,
-    executionAmount: 100,
-    baseToken: "baseToken1",
-  }, // Strategy 2 (5 minutes)
-  {
-    strategyId: 3,
-    interval: 300,
-    executionAmount: 50,
-    baseToken: "baseToken1",
-  }, // Strategy 2 (5 minutes)
-];
-
-const executionsLeft = calculateExecutionsLeft(baseTokenBalance, strategies);
-dbg(executionsLeft); // Output: [{ strategyId: 1, executionsLeft: 13 }, { strategyId: 2, executionsLeft: 2 }]
