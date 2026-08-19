@@ -35,7 +35,7 @@ import {
   ChainDCAStats,
 } from "@/types";
 import { DCAStatsAPIClient } from "@/utils/dcaApiClient";
-import { dbg, dbgWarn } from '@/helpers/debug';
+import { dbg, dbgWarn } from "@/helpers/debug";
 
 export interface AccountStorage {
   account: EthereumAddress;
@@ -91,31 +91,32 @@ export interface DCAProviderContextInterface {
 
   // Core Functions
   initiateUserAccounts: () => void;
+  refreshUserAccounts: () => Promise<void>;
   setSelectedAccount: (account: EthereumAddress) => void;
   addAccount: (account: AccountStorage) => void;
   addStrategy: (
     account: EthereumAddress,
-    strategy: IDCADataStructures.StrategyStruct
+    strategy: IDCADataStructures.StrategyStruct,
   ) => void;
   updateAccount: (
     account: EthereumAddress,
     key: keyof AccountStorage,
-    value: any
+    value: any,
   ) => void;
   getAccount: (account: EthereumAddress) => AccountStorage | undefined;
   getAccountInstance: (account: EthereumAddress) => DCAAccount | undefined;
   getAccountStrategies: (
-    account: EthereumAddress
+    account: EthereumAddress,
   ) => IDCADataStructures.StrategyStruct[] | undefined;
   getStrategy: (
     account: EthereumAddress,
-    strategyId: number
+    strategyId: number,
   ) => IDCADataStructures.StrategyStruct;
   getAccountBalances: (account: EthereumAddress) => TokenBalances | undefined;
   getAccountStats: (account: EthereumAddress) => AccountStats | null;
   getStrategyStats: (
     account: EthereumAddress,
-    strategyId: number
+    strategyId: number,
   ) => StrategyStats | null;
 
   // API Client Functions
@@ -128,7 +129,7 @@ export interface DCAProviderContextInterface {
 }
 
 export const DCAProviderContext = createContext(
-  {} as DCAProviderContextInterface
+  {} as DCAProviderContextInterface,
 );
 
 export interface DCAProviderProps {
@@ -245,11 +246,11 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
       } catch (error) {
         console.error(
           `[DCAStatsProvider] Error loading ${chain} stats:`,
-          error
+          error,
         );
       }
     },
-    []
+    [],
   );
 
   const refreshAllStats = useCallback(async (): Promise<void> => {
@@ -286,7 +287,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
 
       // Check if account exists in our state
       const existingAccount = accounts.find(
-        (a) => a.account === accountAddress
+        (a) => a.account === accountAddress,
       );
       dbg("[DCAStatsProvider] Account lookup debug:", {
         targetAccountAddress: accountAddress,
@@ -305,17 +306,14 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
       // Refresh the specific account data
       const instance = getAccountInstance(accountAddress);
       if (instance) {
-        dbg(
-          "[DCAStatsProvider] Account instance found:",
-          instance.target
-        );
+        dbg("[DCAStatsProvider] Account instance found:", instance.target);
 
         try {
           // Fetch fresh data
           dbg("[DCAStatsProvider] Fetching fresh strategies...");
           const strategies = await fetchAccountStrategies(
             accountAddress,
-            instance
+            instance,
           );
 
           dbg("[DCAStatsProvider] Fetched strategies:", {
@@ -334,7 +332,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
           const balances = await fetchTokenBalances(
             accountAddress,
             strategies,
-            instance
+            instance,
           );
 
           dbg("[DCAStatsProvider] Fetching statistics...");
@@ -350,7 +348,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
               prev.map((a) => ({
                 address: a.account,
                 strategiesCount: a.strategies.length,
-              }))
+              })),
             );
 
             const updated = prev.map((account) => {
@@ -359,27 +357,21 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
                 String(account.account).toLowerCase() ===
                 String(accountAddress).toLowerCase();
 
-              dbg(
-                `[DCAStatsProvider] Checking account ${account.account}:`,
-                {
-                  exactMatch: isMatch,
-                  lowercaseMatch: isLowercaseMatch,
-                  willUpdate: isMatch || isLowercaseMatch,
-                }
-              );
+              dbg(`[DCAStatsProvider] Checking account ${account.account}:`, {
+                exactMatch: isMatch,
+                lowercaseMatch: isLowercaseMatch,
+                willUpdate: isMatch || isLowercaseMatch,
+              });
 
               if (isMatch || isLowercaseMatch) {
-                dbg(
-                  "[DCAStatsProvider] Updating account:",
-                  account.account
-                );
+                dbg("[DCAStatsProvider] Updating account:", account.account);
                 dbg(
                   "[DCAStatsProvider] Old strategies:",
-                  account.strategies.map((s) => s.strategyId)
+                  account.strategies.map((s) => s.strategyId),
                 );
                 dbg(
                   "[DCAStatsProvider] New strategies:",
-                  strategies.map((s) => s.strategyId)
+                  strategies.map((s) => s.strategyId),
                 );
                 return { ...account, strategies, balances, statistics };
               }
@@ -389,11 +381,11 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
             dbg("[DCAStatsProvider] Updated accounts state:", {
               totalAccounts: updated.length,
               accountsWithStrategies: updated.filter(
-                (a) => a.strategies.length > 0
+                (a) => a.strategies.length > 0,
               ).length,
               totalStrategies: updated.reduce(
                 (sum, a) => sum + a.strategies.length,
-                0
+                0,
               ),
               updatedAccountDetails: updated.map((a) => ({
                 address: a.account,
@@ -413,47 +405,90 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
 
           // Add a small delay and force a component re-render check
           setTimeout(() => {
-            dbg(
-              "[DCAStatsProvider] ===== POST-UPDATE VERIFICATION ====="
-            );
-            dbg(
-              "[DCAStatsProvider] Checking if UI should have updated..."
-            );
+            dbg("[DCAStatsProvider] ===== POST-UPDATE VERIFICATION =====");
+            dbg("[DCAStatsProvider] Checking if UI should have updated...");
           }, 100);
 
           dbg(
-            "[DCAStatsProvider] ===== STRATEGY CREATED HANDLING COMPLETE ====="
+            "[DCAStatsProvider] ===== STRATEGY CREATED HANDLING COMPLETE =====",
           );
         } catch (error) {
           console.error(
             "[DCAStatsProvider] Error during strategy refresh:",
-            error
+            error,
           );
         }
       } else {
         console.error(
           "[DCAStatsProvider] No account instance found for:",
-          accountAddress
+          accountAddress,
         );
         dbg(
           "[DCAStatsProvider] Available accounts:",
-          accounts.map((a) => a.account)
+          accounts.map((a) => a.account),
         );
       }
     };
 
     window.addEventListener(
       "strategy-created",
-      handleStrategyCreated as unknown as EventListener
+      handleStrategyCreated as unknown as EventListener,
     );
 
     return () => {
       window.removeEventListener(
         "strategy-created",
-        handleStrategyCreated as unknown as EventListener
+        handleStrategyCreated as unknown as EventListener,
       );
     };
   }, [accounts, refreshAllStats]);
+
+  // Refresh an account's balances the moment a fund/defund/withdraw tx
+  // confirms (dispatched by useDCAAccount) — the UI otherwise showed
+  // stale balances until a full reload.
+  useEffect(() => {
+    const handleFundsUpdated = async (event: CustomEvent) => {
+      const { accountAddress } = event.detail ?? {};
+      if (!accountAddress) return;
+
+      const account = accounts.find(
+        (a) =>
+          String(a.account).toLowerCase() ===
+          String(accountAddress).toLowerCase(),
+      );
+      const instance = getAccountInstance(accountAddress);
+      if (!account || !instance) return;
+
+      try {
+        const balances = await fetchTokenBalances(
+          accountAddress,
+          account.strategies,
+          instance,
+        );
+        setAccounts((prev) =>
+          prev.map((a) =>
+            String(a.account).toLowerCase() ===
+            String(accountAddress).toLowerCase()
+              ? { ...a, balances }
+              : a,
+          ),
+        );
+      } catch (error) {
+        console.error("[DCAStatsProvider] Balance refresh failed:", error);
+      }
+    };
+
+    window.addEventListener(
+      "funds-updated",
+      handleFundsUpdated as unknown as EventListener,
+    );
+    return () => {
+      window.removeEventListener(
+        "funds-updated",
+        handleFundsUpdated as unknown as EventListener,
+      );
+    };
+  }, [accounts]);
 
   // Load global stats on mount and network change
   useEffect(() => {
@@ -461,6 +496,12 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
       refreshAllStats();
     }
   }, [ACTIVE_NETWORK, refreshAllStats]);
+
+  // Wallet stats are derived state — rebuild whenever the account list
+  // changes so late-arriving accounts/strategies are always reflected.
+  useEffect(() => {
+    if (accounts.length > 0) buildWalletStats(accounts);
+  }, [accounts]);
 
   /** LOGIC */
   const initiateUserAccounts = async () => {
@@ -492,7 +533,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
               strategy: {},
             },
           };
-        })
+        }),
       );
 
       dbg("[DCAStatsProvider] Got Basic Account Data");
@@ -512,7 +553,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
           if (!instance) return null;
 
           setLoadingMessage(
-            `Loading account ${index + 1} of ${totalAccounts}...`
+            `Loading account ${index + 1} of ${totalAccounts}...`,
           );
 
           // Load strategies and initial balances in parallel
@@ -542,19 +583,19 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
             balances: finalBalances,
             statistics,
           };
-        }
+        },
       );
 
       // 5. Process all detailed data
       const completedAccounts = (
         await Promise.all(detailedDataPromises)
       ).filter(
-        (account): account is NonNullable<typeof account> => account !== null
+        (account): account is NonNullable<typeof account> => account !== null,
       );
 
-      // 6. Final state update
+      // 6. Final state update (walletStats is rebuilt by the effect on
+      // `accounts`, so it stays correct on every later mutation too)
       setAccounts(completedAccounts);
-      buildWalletStats(completedAccounts);
       startListeners(completedAccounts);
 
       // 7. Load API stats after accounts are loaded
@@ -570,6 +611,26 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
     }
   };
 
+  // Explicit re-sync with the factory, callable after account creation.
+  // Unlike initiateUserAccounts this is not gated by firstLoad — the
+  // wallet-RPC factory listener fails silently on most wallets, so this
+  // is the reliable path for surfacing a just-created account.
+  const refreshUserAccounts = async (): Promise<void> => {
+    if (!Signer || !DCAFactory) return;
+    try {
+      const accountAddresses = await getUsersAccountAddresses();
+      const known = new Set(
+        accounts.map((a) => String(a.account).toLowerCase()),
+      );
+      for (const account of accountAddresses) {
+        if (known.has(account.toLowerCase())) continue;
+        await onNewAccount(account);
+      }
+    } catch (error) {
+      console.error("[DCAStatsProvider] Error refreshing accounts:", error);
+    }
+  };
+
   const createAccountInstance = async (accountAddress: EthereumAddress) => {
     if (!Signer) return null;
     try {
@@ -581,9 +642,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
   };
 
   const startListeners = (accountsInput: AccountStorage[]) => {
-    dbg(
-      "[DCAStatsProvider] startListeners - Setting up event listeners"
-    );
+    dbg("[DCAStatsProvider] startListeners - Setting up event listeners");
 
     try {
       if (DCAFactory && address) {
@@ -591,23 +650,20 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
         listenForNewAccount(DCAFactory, address, onNewAccount);
       }
     } catch (error) {
-      dbgWarn(
-        "[DCAStatsProvider] Failed to set up factory listener:",
-        error
-      );
+      dbgWarn("[DCAStatsProvider] Failed to set up factory listener:", error);
     }
 
     if (accountsInput.length > 0) {
       dbg(
         "[DCAStatsProvider] Setting up account listeners for",
         accountsInput.length,
-        "accounts"
+        "accounts",
       );
       for (const account of accountsInput) {
         try {
           dbg(
             "[DCAStatsProvider] Setting up listeners for account:",
-            account.account
+            account.account,
           );
           // These are now async functions
           listenForNewStrategy(account.instance, onNewStrategy);
@@ -615,7 +671,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
         } catch (error) {
           dbgWarn(
             `[DCAStatsProvider] Failed to set up listeners for account ${account.account}:`,
-            error
+            error,
           );
         }
       }
@@ -630,7 +686,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
   };
 
   const getAccountInstance = (
-    account: EthereumAddress
+    account: EthereumAddress,
   ): DCAAccount | undefined =>
     accounts.find((a) => a.account === account)?.instance;
 
@@ -645,7 +701,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
 
   const getStrategyStats = (
     account: EthereumAddress,
-    strategyId: number
+    strategyId: number,
   ): StrategyStats | null =>
     accounts.find((a) => a.account === account)?.statistics?.strategy[
       strategyId
@@ -653,13 +709,10 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
 
   const getStrategy = (
     accountAddress: EthereumAddress,
-    strategyId: number
+    strategyId: number,
   ): IDCADataStructures.StrategyStruct => {
     let strat: IDCADataStructures.StrategyStruct;
-    dbg(
-      "[useDCAProdivder] : Check get Strategy Account",
-      accountAddress
-    );
+    dbg("[useDCAProdivder] : Check get Strategy Account", accountAddress);
     const strategies = getAccountStrategies(accountAddress);
     strat = strategies?.find((s) => s.strategyId === strategyId)!;
 
@@ -667,47 +720,51 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
   };
 
   /** UPDATERS */
+  // All updaters use the functional setState form: they're called from
+  // contract-event listeners whose closures capture a stale `accounts`,
+  // and the spread form was clobbering state (a second account created
+  // in one session wiped the list back to one entry).
   const updateAccount = (
     account: EthereumAddress,
     key: keyof AccountStorage,
-    value: any
+    value: any,
   ) =>
-    setAccounts(
-      accounts.map((a) => (a.account === account ? { ...a, [key]: value } : a))
+    setAccounts((prev) =>
+      prev.map((a) => (a.account === account ? { ...a, [key]: value } : a)),
     );
 
   const updateAccountStrategies = (
     account: EthereumAddress,
-    strategies: IDCADataStructures.StrategyStruct[]
+    strategies: IDCADataStructures.StrategyStruct[],
   ) =>
-    setAccounts(
-      accounts.map((a) => (a.account === account ? { ...a, strategies } : a))
+    setAccounts((prev) =>
+      prev.map((a) => (a.account === account ? { ...a, strategies } : a)),
     );
 
   const updateStrategy = (
     account: EthereumAddress,
-    strategy: IDCADataStructures.StrategyStruct
+    strategy: IDCADataStructures.StrategyStruct,
   ) =>
-    setAccounts(
-      accounts.map((a) => {
+    setAccounts((prev) =>
+      prev.map((a) => {
         if (a.account === account) {
           // Find and update the specific strategy
           const updatedStrategies = a.strategies.map((s) =>
-            s.strategyId === strategy.strategyId ? strategy : s
+            s.strategyId === strategy.strategyId ? strategy : s,
           );
           return { ...a, strategies: updatedStrategies };
         }
         return a;
-      })
+      }),
     );
 
   const updateStrategyStats = (
     account: EthereumAddress,
     strategyId: number,
-    stats: StrategyStats
+    stats: StrategyStats,
   ) =>
-    setAccounts(
-      accounts.map((a) => {
+    setAccounts((prev) =>
+      prev.map((a) => {
         if (a.account === account && a.statistics) {
           return {
             ...a,
@@ -724,35 +781,45 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
           };
         }
         return a;
-      })
+      }),
     );
 
   /** SETTERS */
+  // Deduped so the explicit post-creation refresh and the factory event
+  // listener can both fire without double-adding the same account.
   const addAccount = (account: AccountStorage): void => {
     dbg("[DCAStatsProvider] adding account", account.account);
-    setAccounts([...accounts, account]);
+    setAccounts((prev) =>
+      prev.some(
+        (a) =>
+          String(a.account).toLowerCase() ===
+          String(account.account).toLowerCase(),
+      )
+        ? prev
+        : [...prev, account],
+    );
   };
 
   const addStrategy = (
     account: EthereumAddress,
-    strategy: IDCADataStructures.StrategyStruct
+    strategy: IDCADataStructures.StrategyStruct,
   ) =>
-    setAccounts(
-      accounts.map((a) =>
+    setAccounts((prev) =>
+      prev.map((a) =>
         a.account === account
           ? { ...a, strategies: [...a.strategies, strategy] }
-          : a
-      )
+          : a,
+      ),
     );
 
   /** FETCHERS */
   const fetchAccountStrategies = async (
     accountAddress: string,
-    dcaAccount: DCAAccount
+    dcaAccount: DCAAccount,
   ): Promise<IDCADataStructures.StrategyStruct[]> => {
     dbg(
       "[DCAStatsProvider] fetchAccountStrategies called for:",
-      accountAddress
+      accountAddress,
     );
 
     if (!Signer) {
@@ -767,7 +834,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
     dbg("[DCAStatsProvider] Getting strategy creation events...");
     const strategyEvents = await getAccountStrategyCreationEvents(
       dcaAccount,
-      true
+      true,
     ); // Force refresh
 
     dbg("[DCAStatsProvider] Strategy events found:", {
@@ -785,7 +852,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
         dbg(
           `[DCAStatsProvider] Processing event ${index + 1}/${
             strategyEvents.length
-          }: strategy ID ${event.id}`
+          }: strategy ID ${event.id}`,
         );
 
         const rawStrategyData = await dcaAccount.getStrategyData(event.id);
@@ -806,7 +873,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
           blockNumber: event.blockNumber,
           transactionHash: event.transactionHash,
         };
-      })
+      }),
     );
 
     dbg("[DCAStatsProvider] Final processed strategies:", {
@@ -824,7 +891,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
 
   const fetchAccountStrategy = async (
     accountAddress: string,
-    strategyId: number
+    strategyId: number,
   ): Promise<IDCADataStructures.StrategyStruct> => {
     const accountInstance = getAccountInstance(accountAddress);
     const strategyData = await accountInstance?.getStrategyData(strategyId);
@@ -835,7 +902,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
   const fetchTokenBalances = async (
     accountAddress: string,
     strategies: IDCADataStructures.StrategyStruct[],
-    dcaAccount: DCAAccount
+    dcaAccount: DCAAccount,
   ) => {
     if (!Signer) return {};
 
@@ -854,19 +921,18 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
         Array.from(uniqueTokens).map(async (tokenAddress) => {
           try {
             const baseBalance = await dcaAccount.getBaseBalance(tokenAddress);
-            const targetBalance = await dcaAccount.getTargetBalance(
-              tokenAddress
-            );
+            const targetBalance =
+              await dcaAccount.getTargetBalance(tokenAddress);
 
             // Get strategies that use this token as base token
             const relevantStrategies = strategies.filter(
-              (s) => s.baseToken.tokenAddress.toString() === tokenAddress
+              (s) => s.baseToken.tokenAddress.toString() === tokenAddress,
             );
 
             // Calculate total amount needed per execution
             const totalPerExecution = relevantStrategies.reduce(
               (sum, strategy) => sum + BigInt(strategy.amount),
-              BigInt(0)
+              BigInt(0),
             );
 
             const remainingExecutions =
@@ -883,7 +949,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
           } catch (error) {
             console.error(
               `Error fetching balance for token ${tokenAddress}:`,
-              error
+              error,
             );
             balances[tokenAddress] = {
               balance: BigInt(0),
@@ -891,7 +957,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
               remainingExecutions: 0,
             };
           }
-        })
+        }),
       );
 
       return balances;
@@ -904,14 +970,14 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
   /** BUILDERS */
   const buildAccountStats = async (
     accountInstance: DCAAccount,
-    strategies: IDCADataStructures.StrategyStruct[]
+    strategies: IDCADataStructures.StrategyStruct[],
   ): Promise<AccountStats> => {
     const [reinvest, strategyStatsArray] = await Promise.all([
       accountInstance.getAttachedReinvestLibraryVersion(),
       Promise.all(
         strategies.map((strategy) =>
-          buildStrategyStats(accountInstance, strategy)
-        )
+          buildStrategyStats(accountInstance, strategy),
+        ),
       ),
     ]);
 
@@ -944,11 +1010,11 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
 
   const buildStrategyStats = async (
     accountInstance: DCAAccount,
-    strategy: IDCADataStructures.StrategyStruct
+    strategy: IDCADataStructures.StrategyStruct,
   ): Promise<StrategyStats> => {
     const executions = await getStrategyExecutionEvents(
       accountInstance,
-      Number(strategy?.strategyId)
+      Number(strategy?.strategyId),
     );
 
     let totalExecutions = executions.length,
@@ -960,7 +1026,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
     if (totalExecutions > 0) {
       totalCumulated = executions?.reduce(
         (sum, execution) => sum + Number(execution.amountIn),
-        0
+        0,
       );
 
       const lastExecEvent = executions?.reduce((latest, current) => {
@@ -1019,49 +1085,65 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
   };
 
   /** LISTENERS */
+  // try/catch is load-bearing: this runs inside ethers' event emitter and
+  // from refreshUserAccounts — an unhandled throw here silently drops the
+  // new account instead of surfacing an error.
   const onNewAccount = async (account: string) => {
     dbg("[DCAStatsProvider] onNewAccount", account);
-    let accountStates: AccountStorage;
-    const instance = await createAccountInstance(account as EthereumAddress);
-    const strategies = await fetchAccountStrategies(account, instance!);
+    try {
+      let accountStates: AccountStorage;
+      const instance = await createAccountInstance(account as EthereumAddress);
+      if (!instance) throw new Error("Could not connect to account contract");
+      const strategies = await fetchAccountStrategies(account, instance);
 
-    if (strategies.length > 0) {
-      const balances = await fetchTokenBalances(account, strategies, instance!);
+      if (strategies.length > 0) {
+        const balances = await fetchTokenBalances(
+          account,
+          strategies,
+          instance!,
+        );
 
-      const statistics = await buildAccountStats(instance!, strategies);
+        const statistics = await buildAccountStats(instance!, strategies);
 
-      const accountData: AccountStorage = {
-        account: account as EthereumAddress,
-        instance: instance!,
-        strategies,
-        balances,
-        statistics,
-      };
-      accountStates = accountData;
-    } else {
-      const balances = {};
-      const statistics = {
-        totalExecutions: 0,
-        totalActiveStrategies: 0,
-        totalStrategies: 0,
-        reinvestLibraryVersion: "false",
-        strategy: {},
-        lastExecution: 0,
-      };
+        const accountData: AccountStorage = {
+          account: account as EthereumAddress,
+          instance: instance!,
+          strategies,
+          balances,
+          statistics,
+        };
+        accountStates = accountData;
+      } else {
+        const balances = {};
+        const statistics = {
+          totalExecutions: 0,
+          totalActiveStrategies: 0,
+          totalStrategies: 0,
+          reinvestLibraryVersion: "false",
+          strategy: {},
+          lastExecution: 0,
+        };
 
-      const accountData: AccountStorage = {
-        account: account as EthereumAddress,
-        instance: instance!,
-        strategies: [],
-        balances,
-        statistics,
-      };
-      accountStates = accountData;
+        const accountData: AccountStorage = {
+          account: account as EthereumAddress,
+          instance: instance!,
+          strategies: [],
+          balances,
+          statistics,
+        };
+        accountStates = accountData;
+      }
+
+      addAccount(accountStates);
+      // Refresh API stats when new account is added
+      refreshAllStats();
+    } catch (error) {
+      console.error(
+        "[DCAStatsProvider] Failed to load new account:",
+        account,
+        error,
+      );
     }
-
-    addAccount(accountStates);
-    // Refresh API stats when new account is added
-    refreshAllStats();
   };
 
   const onNewStrategy = async (strategyId: number, account: string) => {
@@ -1072,12 +1154,12 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
       const accountInstance = getAccountInstance(account);
       const strategies = await fetchAccountStrategies(
         account,
-        accountInstance!
+        accountInstance!,
       );
       const balances = await fetchTokenBalances(
         account,
         strategies,
-        accountInstance!
+        accountInstance!,
       );
       const statistics = await buildAccountStats(accountInstance!, strategies);
       updateAccount(account, "balances", balances);
@@ -1100,7 +1182,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
   const onSubscription = (
     strategyId: number,
     active: boolean,
-    dcaAccount: string
+    dcaAccount: string,
   ) => {
     dbg("[DCAStatsProvider] onSubscription", strategyId, active);
     const strategy = getStrategy(dcaAccount, strategyId);
@@ -1137,6 +1219,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
         getStrategyStats,
         getStrategy,
         initiateUserAccounts,
+        refreshUserAccounts,
 
         // API Client Functions
         apiHealthCheck,

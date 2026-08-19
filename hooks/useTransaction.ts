@@ -26,7 +26,8 @@ export interface TransactionOptions {
 const DEFAULT_WAIT_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 export function useTransaction() {
-  const { addTransaction, updateTransaction } = useTransactions();
+  const { addTransaction, updateTransaction, beginWalletPrompt, endWalletPrompt } =
+    useTransactions();
   const { chainId } = useAppKitNetwork();
 
   const executeTransaction = useCallback(async (
@@ -42,8 +43,15 @@ export function useTransaction() {
     } = options;
 
     try {
-      // Send the transaction
-      const tx = await txPromise;
+      // Send the transaction — the wallet prompt is open until this
+      // resolves (signed) or throws (rejected).
+      beginWalletPrompt();
+      let tx: ContractTransactionResponse;
+      try {
+        tx = await txPromise;
+      } finally {
+        endWalletPrompt();
+      }
 
       // Add to transaction tracking
       const txId = addTransaction({
@@ -118,7 +126,7 @@ export function useTransaction() {
 
       return { success: false, error };
     }
-  }, [addTransaction, updateTransaction, chainId]);
+  }, [addTransaction, updateTransaction, chainId, beginWalletPrompt, endWalletPrompt]);
 
   const retryTransaction = useCallback(async (
     txFunction: () => Promise<ContractTransactionResponse>,

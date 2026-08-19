@@ -3,7 +3,13 @@
 "use client";
 
 import { Tabs, Tab } from "@nextui-org/react";
-import { base, baseSepolia, optimism, optimismSepolia, sepolia } from "viem/chains";
+import {
+  base,
+  baseSepolia,
+  optimism,
+  optimismSepolia,
+  sepolia,
+} from "viem/chains";
 import { ACTIVE_CHAIN } from "@/constants/contracts";
 import { LineChart, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -18,26 +24,28 @@ import { useDCAProvider } from "@/providers/DCAStatsProvider";
 import LoadingPage from "../common/LoadingPage";
 import { TransactionStatusIndicator } from "../ui/TransactionStatusIndicator";
 import { ErrorBoundary } from "../common/ErrorBoundary";
+import { useTransactions } from "@/context/TransactionContext";
+import WalletPromptOverlay from "../ui/WalletPromptOverlay";
 
 // Dynamically import components with proper default exports
 const CreateAccountModal = dynamic(
   () =>
     import("@/components/modals/CreateAccountModal").then(
-      (mod) => mod.CreateAccountModal
+      (mod) => mod.CreateAccountModal,
     ),
   {
     ssr: false,
-  }
+  },
 );
 
 const CreateStrategyModal = dynamic(
   () =>
     import("@/components/modals/CreateStrategyModal").then(
-      (mod) => mod.CreateStrategyModal
+      (mod) => mod.CreateStrategyModal,
     ),
   {
     ssr: false,
-  }
+  },
 );
 
 const AccountsView = dynamic(
@@ -46,7 +54,7 @@ const AccountsView = dynamic(
   {
     ssr: false,
     loading: () => <LoadingCard />,
-  }
+  },
 );
 
 const PairsView = dynamic(
@@ -54,7 +62,7 @@ const PairsView = dynamic(
   {
     ssr: false,
     loading: () => <LoadingCard />,
-  }
+  },
 );
 
 const StrategyView = dynamic(
@@ -63,32 +71,33 @@ const StrategyView = dynamic(
   {
     ssr: false,
     loading: () => <LoadingCard />,
-  }
+  },
 );
 
 const TransactionStatusModal = dynamic(
   () =>
     import("@/components/modals/TransactionStatusModal").then(
-      (mod) => mod.TransactionStatusModal
+      (mod) => mod.TransactionStatusModal,
     ),
   {
     ssr: false,
-  }
+  },
 );
 
 const UserStatsOverview = dynamic(
   () =>
     import("@/components/ui/layout/UserStats").then(
-      (mod) => mod.UserStatsOverview
+      (mod) => mod.UserStatsOverview,
     ),
   {
     ssr: false,
     loading: () => <LoadingStats />,
-  }
+  },
 );
 
 export default function AppContent() {
   const { isConnected } = useAppKitAccount();
+  const { awaitingWallet } = useTransactions();
   const { chainId } = useAppKitNetwork();
 
   const {
@@ -114,12 +123,18 @@ export default function AppContent() {
   // Keep this in sync with ACTIVE_CHAIN in constants/contracts.ts.
   const supportedChainIds = ACTIVE_CHAIN.map((chain) => {
     switch (chain) {
-      case "BASE_MAINNET": return base.id;
-      case "BASE_SEPOLIA": return baseSepolia.id;
-      case "OPT_MAINNET": return optimism.id;
-      case "OPT_SEPOLIA": return optimismSepolia.id;
-      case "ETH_SEPOLIA": return sepolia.id;
-      default: return -1;
+      case "BASE_MAINNET":
+        return base.id;
+      case "BASE_SEPOLIA":
+        return baseSepolia.id;
+      case "OPT_MAINNET":
+        return optimism.id;
+      case "OPT_SEPOLIA":
+        return optimismSepolia.id;
+      case "ETH_SEPOLIA":
+        return sepolia.id;
+      default:
+        return -1;
     }
   }).filter((id) => id !== -1);
 
@@ -128,20 +143,29 @@ export default function AppContent() {
   // check against supportedChainIds (number[]).
   const chainIdNum = typeof chainId === "string" ? Number(chainId) : chainId;
   const isWrongNetwork =
-    chainIdNum !== undefined && !supportedChainIds.includes(chainIdNum as never);
+    chainIdNum !== undefined &&
+    !supportedChainIds.includes(chainIdNum as never);
 
   useEffect(() => {
     if (isConnected || (!isLoading && DCAFactory)) initiateUserAccounts();
   }, [isConnected, isLoading, DCAFactory, initiateUserAccounts]);
 
-  if (!isConnected || isWrongNetwork) {
+  // Don't swap the page for the connect screen while a wallet prompt
+  // is open — AppKit's connection state can flap during the prompt,
+  // which used to blank the whole app until the user confirmed.
+  if ((!isConnected || isWrongNetwork) && !awaitingWallet) {
     return (
       <div className="min-h-screen p-4 md:p-8">
         <h1 className="text-3xl font-bold text-center">ÅTION CONTROL</h1>
         <ConnectionCard
           isConnected={isConnected}
           isWrongNetwork={Boolean(isWrongNetwork)}
-          supportedNetworks={["Base", "Base Sepolia", "Optimism", "Optimism Sepolia"]}
+          supportedNetworks={[
+            "Base",
+            "Base Sepolia",
+            "Optimism",
+            "Optimism Sepolia",
+          ]}
         />
       </div>
     );
@@ -186,7 +210,9 @@ export default function AppContent() {
           />
           <Tab
             key="pairs"
-            disabled={true}
+            // NextUI's prop is isDisabled — plain `disabled` is silently
+            // dropped, which left this placeholder tab clickable.
+            isDisabled={true}
             title={
               <div className="flex items-center gap-2">
                 <LineChart size={18} />
@@ -252,6 +278,7 @@ export default function AppContent() {
 
       {/* Transaction status indicator */}
       <TransactionStatusIndicator />
+      {awaitingWallet && <WalletPromptOverlay />}
     </div>
   );
 }

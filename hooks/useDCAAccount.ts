@@ -14,8 +14,15 @@ import { EthereumAddress } from "@/types/generic";
 import { clearAccountCache } from "@/hooks/helpers/getAccountEvents";
 import { connectERC20 } from "./helpers/connectToContract";
 import { useTransaction } from "./useTransaction";
+import { useTransactions } from "@/context/TransactionContext";
 import { useGasEstimation } from "./useGasEstimation";
 import { dbg, dbgWarn } from '@/helpers/debug';
+import { DCAAccount__factory } from "@/types/contracts";
+
+// Module-level interface for decoding DCAAccount custom errors from raw
+// revert data. Ethers only pre-decodes (error.revert) when the ABI is on
+// the failing call; estimateGas failures often arrive with bare data.
+const dcaAccountInterface = new ethers.Interface(DCAAccount__factory.abi);
 
 /**
  * Decode custom contract errors into user-friendly messages
@@ -27,6 +34,33 @@ const decodeContractError = (error: any): string => {
 
   if (error.code === -32000 || error.message?.includes("insufficient funds")) {
     return "Insufficient funds for transaction";
+  }
+
+  // Real custom-error decoding first: pull revert data from the shapes
+  // ethers v6 uses and parse it against the account ABI, so users see
+  // the contract's actual complaint (with its arguments) instead of a
+  // raw CALL_EXCEPTION dump.
+  try {
+    const revertData =
+      error?.revert ??
+      (() => {
+        const data =
+          error?.data ?? error?.info?.error?.data ?? error?.error?.data;
+        if (!data || data === "0x") return null;
+        const parsed = dcaAccountInterface.parseError(data);
+        return parsed ? { name: parsed.name, args: parsed.args } : null;
+      })();
+
+    if (revertData?.name === "InsufficientFundsForSubscription") {
+      const [required, available] = revertData.args;
+      return `Not enough funds in the account to activate: the contract requires 5x the per-swap amount (${required} base units, account holds ${available}). Fund the difference and try again.`;
+    }
+    if (revertData?.name) {
+      // Reuse the message map below by matching on the decoded name.
+      error = { ...error, message: String(revertData.name) };
+    }
+  } catch {
+    // Fall through to string matching on the original error.
   }
 
   if (error.message?.includes("StrategyNotActive")) {
@@ -71,7 +105,18 @@ const decodeContractError = (error: any): string => {
 
 export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
   const { executeTransaction, retryTransaction } = useTransaction();
+  const { beginWalletPrompt, endWalletPrompt } = useTransactions();
   const { estimateGas } = useGasEstimation();
+
+  // Tell DCAStatsProvider that on-chain balances changed so every view
+  // refreshes immediately (mirrors the existing strategy-created event).
+  const announceFundsUpdated = useCallback(() => {
+    window.dispatchEvent(
+      new CustomEvent("funds-updated", {
+        detail: { accountAddress: dcaAccount?.target?.toString() },
+      })
+    );
+  }, [dcaAccount]);
 
   const createStrategy = useCallback(
     async ({
@@ -111,7 +156,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
           dcaAccount.SetupStrategy(strategy, fundAmount, subscribe)
         );
 
-        if (gasEstimate) {
+        if (gasEstimate && gasEstimate.estimatedCostUsd !== null) {
           toast.info(`Estimated cost: $${gasEstimate.estimatedCostUsd.toFixed(2)}`);
         }
 
@@ -318,15 +363,28 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
 
         if (currentAllowance < amount) {
           toast.info("Please approve the account to spend your token...");
-          const approveTx = await erc20.approve(dcaAccount.target, amount);
+          beginWalletPrompt();
+          let approveTx;
+          try {
+            approveTx = await erc20.approve(dcaAccount.target, amount);
+          } finally {
+            endWalletPrompt();
+          }
           toast.loading("Approval is confirming...");
           await approveTx.wait();
         }
 
         toast.info("Please accept the Funding Transaction...");
-        const tx = await dcaAccount.AddFunds(tokenAddress, amount);
+        beginWalletPrompt();
+        let tx;
+        try {
+          tx = await dcaAccount.AddFunds(tokenAddress, amount);
+        } finally {
+          endWalletPrompt();
+        }
         toast.loading("Funding Transaction is Confirming...");
         await tx.wait();
+        announceFundsUpdated();
         toast.success("Funding Transaction Approved.");
         return { tx, hash: tx.hash };
       } catch (error: any) {
@@ -336,7 +394,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         return false;
       }
     },
-    [Signer, dcaAccount]
+    [Signer, dcaAccount, beginWalletPrompt, endWalletPrompt, announceFundsUpdated]
   );
 
   const defundAccount = useCallback(
@@ -350,17 +408,26 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         if (!dcaAccount) throw new Error("Error connecting to account");
         toast.info("Please accept the Transaction...");
 
-        const tx = await dcaAccount.WithdrawFunds(token.tokenAddress, amount);
+        beginWalletPrompt();
+        let tx;
+        try {
+          tx = await dcaAccount.WithdrawFunds(token.tokenAddress, amount);
+        } finally {
+          endWalletPrompt();
+        }
         toast.loading("Transaction is Confirming...");
         await tx.wait();
+        announceFundsUpdated();
         toast.success("Transaction Approved.");
         return { tx, hash: tx.hash };
       } catch (error: any) {
+        const errorMessage = decodeContractError(error);
+        toast.error(errorMessage);
         console.error("Error withdrawing funds from account:", error);
         return false;
       }
     },
-    [Signer, dcaAccount]
+    [Signer, dcaAccount, beginWalletPrompt, endWalletPrompt, announceFundsUpdated]
   );
 
   const withdrawSavings = useCallback(
@@ -374,18 +441,27 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         if (!dcaAccount) throw new Error("Error connecting to account");
 
         toast.info("Please accept the Withdrawal Transaction");
-        const tx = await dcaAccount.WithdrawSavings(token.tokenAddress, amount);
+        beginWalletPrompt();
+        let tx;
+        try {
+          tx = await dcaAccount.WithdrawSavings(token.tokenAddress, amount);
+        } finally {
+          endWalletPrompt();
+        }
         toast.loading("Withdrawal Transaction Confirming...");
         await tx.wait();
+        announceFundsUpdated();
         toast.success("Withdrawal Transaction Approved.");
 
         return { tx, hash: tx.hash };
       } catch (error: any) {
+        const errorMessage = decodeContractError(error);
+        toast.error(errorMessage);
         console.error("Error withdrawing target token:", error);
         return false;
       }
     },
-    [Signer, dcaAccount]
+    [Signer, dcaAccount, beginWalletPrompt, endWalletPrompt, announceFundsUpdated]
   );
 
   const subscribeStrategy = useCallback(
@@ -399,7 +475,13 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         if (!dcaAccount) throw new Error("Error connecting to account");
 
         toast.info("Please accept the transaction...");
-        const tx = await dcaAccount.SubscribeStrategy(strategyId);
+        beginWalletPrompt();
+        let tx;
+        try {
+          tx = await dcaAccount.SubscribeStrategy(strategyId);
+        } finally {
+          endWalletPrompt();
+        }
         toast.loading("Transaction is confirming...");
         await tx.wait();
         toast.success("Account was subscribed to the Executor");
@@ -414,7 +496,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         return false;
       }
     },
-    [Signer, dcaAccount]
+    [Signer, dcaAccount, beginWalletPrompt, endWalletPrompt]
   );
 
   const unsubscribeStrategy = useCallback(
@@ -427,7 +509,13 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
       try {
         if (!dcaAccount) throw new Error("Error connecting to account");
         toast.info("Please accept the transaction...");
-        const tx = await dcaAccount.UnsubscribeStrategy(strategyId);
+        beginWalletPrompt();
+        let tx;
+        try {
+          tx = await dcaAccount.UnsubscribeStrategy(strategyId);
+        } finally {
+          endWalletPrompt();
+        }
         toast.loading("Transaction is confirming...");
         await tx.wait();
         toast.success("Account was unsubscribed to the Executor");
@@ -437,11 +525,11 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
           throw error;
         }
         console.error("Error unsubscribing from strategy:", error);
-        toast.error("Failed to unsubscribe from strategy");
+        toast.error(decodeContractError(error));
         return false;
       }
     },
-    [Signer, dcaAccount]
+    [Signer, dcaAccount, beginWalletPrompt, endWalletPrompt]
   );
 
   const getBaseBalance = useCallback(
@@ -512,7 +600,13 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
       try {
         if (!dcaAccount) throw new Error("Error connecting to account");
         toast.info("Please accept the batch subscription transaction...");
-        const tx = await dcaAccount.batchSubscribeStrategies(strategyIds);
+        beginWalletPrompt();
+        let tx;
+        try {
+          tx = await dcaAccount.batchSubscribeStrategies(strategyIds);
+        } finally {
+          endWalletPrompt();
+        }
         toast.loading("Batch subscription transaction is confirming...");
         await tx.wait();
         toast.success("Strategies subscribed successfully");
@@ -527,7 +621,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         return false;
       }
     },
-    [Signer, dcaAccount]
+    [Signer, dcaAccount, beginWalletPrompt, endWalletPrompt]
   );
 
   const batchUnsubscribeStrategies = useCallback(
@@ -540,7 +634,13 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
       try {
         if (!dcaAccount) throw new Error("Error connecting to account");
         toast.info("Please accept the batch unsubscription transaction...");
-        const tx = await dcaAccount.batchUnsubscribeStrategies(strategyIds);
+        beginWalletPrompt();
+        let tx;
+        try {
+          tx = await dcaAccount.batchUnsubscribeStrategies(strategyIds);
+        } finally {
+          endWalletPrompt();
+        }
         toast.loading("Batch unsubscription transaction is confirming...");
         await tx.wait();
         toast.success("Strategies unsubscribed successfully");
@@ -555,7 +655,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         return false;
       }
     },
-    [Signer, dcaAccount]
+    [Signer, dcaAccount, beginWalletPrompt, endWalletPrompt]
   );
 
   return {

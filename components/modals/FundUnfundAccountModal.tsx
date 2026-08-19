@@ -46,6 +46,8 @@ export function FundUnfundAccountModal({
   const [balance, setBalance] = useState<number>(0.0);
   const [isWorking, setIsWorking] = useState<boolean>(false);
   const [isComplete, setIsComplete] = useState<boolean>(false);
+  // Bumped after a confirmed tx so the modal's own balance line refetches.
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const { address } = useAppKitAccount();
   const { getAccountInstance, Signer } = useDCAProvider();
@@ -88,7 +90,7 @@ export function FundUnfundAccountModal({
 
       fetchBalance();
     }
-  }, [accountAddress, actionType, address, getBalance, selectedToken, tokens]);
+  }, [accountAddress, actionType, address, getBalance, selectedToken, tokens, refreshKey]);
 
   const handleClose = () => {
     onClose();
@@ -120,6 +122,7 @@ export function FundUnfundAccountModal({
       if (result) {
         toast.success(`Successfully ${actionType}ed account`);
         setIsComplete(true);
+        setRefreshKey((k) => k + 1);
       }
     } catch (error) {
       console.error(`Error ${actionType}ing account:`, error);

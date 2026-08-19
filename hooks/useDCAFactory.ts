@@ -12,9 +12,12 @@ import { ContractTransactionReport } from "@/types/contractReturns";
 import { DCAFactory } from "@/types/contracts";
 
 import useSigner from "./useSigner";
-import { dbg } from '@/helpers/debug';
+import { dbg } from "@/helpers/debug";
+import { isUserRejection } from "@/helpers/walletErrors";
+import { useTransactions } from "@/context/TransactionContext";
 
 export function useDCAFactory() {
+  const { beginWalletPrompt, endWalletPrompt } = useTransactions();
   const { Signer, ACTIVE_NETWORK } = useSigner();
 
   const { address } = useAppKitAccount();
@@ -51,19 +54,28 @@ export function useDCAFactory() {
       try {
         if (!DCAFactory) throw new Error("Error connecting to factory");
         toast.info("Creating account with deterministic address...");
-        const tx = await DCAFactory.CreateAccountWithSalt(salt);
+        beginWalletPrompt();
+        let tx;
+        try {
+          tx = await DCAFactory.CreateAccountWithSalt(salt);
+        } finally {
+          endWalletPrompt();
+        }
         toast.loading("Account creation transaction is confirming...");
         await tx.wait();
         toast.success("Account created successfully");
         return { tx, hash: tx.hash };
       } catch (error: any) {
-        const errorMessage = error.message?.includes("rejected") ? "Transaction was rejected" : "Failed to create account";
-        toast.error(errorMessage);
+        toast.error(
+          isUserRejection(error)
+            ? "Transaction was rejected"
+            : "Failed to create account",
+        );
         console.error("Error creating account:", error);
         return false;
       }
     },
-    [Signer, DCAFactory]
+    [Signer, DCAFactory],
   );
 
   const predictAccountAddress = useCallback(
@@ -77,7 +89,7 @@ export function useDCAFactory() {
         return null;
       }
     },
-    [DCAFactory]
+    [DCAFactory],
   );
 
   const debugContractInterface = useCallback(async () => {
@@ -97,15 +109,12 @@ export function useDCAFactory() {
         "[useDCAFactory] Available functions:",
         factory.interface.fragments
           .filter((f) => f.type === "function")
-          .map((f) => (f as any).name)
+          .map((f) => (f as any).name),
       );
 
       // Check if getAccountsOfUser exists
       const hasFunction = factory.interface.hasFunction("getAccountsOfUser");
-      dbg(
-        "[useDCAFactory] Has getAccountsOfUser function:",
-        hasFunction
-      );
+      dbg("[useDCAFactory] Has getAccountsOfUser function:", hasFunction);
 
       if (hasFunction) {
         const functionFragment =
@@ -113,7 +122,7 @@ export function useDCAFactory() {
         dbg("[useDCAFactory] Function fragment:", functionFragment);
         dbg(
           "[useDCAFactory] Function selector:",
-          factory.interface.getFunction("getAccountsOfUser").selector
+          factory.interface.getFunction("getAccountsOfUser").selector,
         );
       }
 
@@ -137,7 +146,7 @@ export function useDCAFactory() {
     if (!DCA_FACTORY_ADDRESS || DCA_FACTORY_ADDRESS === "") {
       toast.error(`DCA Factory not deployed on ${ACTIVE_NETWORK}`);
       throw new Error(
-        `[useDCAFactory] No factory address for ${ACTIVE_NETWORK}`
+        `[useDCAFactory] No factory address for ${ACTIVE_NETWORK}`,
       );
     }
 
@@ -151,7 +160,7 @@ export function useDCAFactory() {
 
       dbg(
         "[useDCAFactory] Attempting to call getAccountsOfUser with address:",
-        address
+        address,
       );
       dbg("[useDCAFactory] Factory address:", DCA_FACTORY_ADDRESS);
 
@@ -160,10 +169,7 @@ export function useDCAFactory() {
         // Method 1: Direct call
         dbg("[useDCAFactory] Trying direct call...");
         const accounts: string[] = await factory.getAccountsOfUser(address);
-        dbg(
-          "[useDCAFactory] Direct call successful, accounts:",
-          accounts
-        );
+        dbg("[useDCAFactory] Direct call successful, accounts:", accounts);
 
         const accountList: string[] = [];
         const keys = Object.keys(accounts);
@@ -186,14 +192,14 @@ export function useDCAFactory() {
         } catch (staticCallError) {
           console.error(
             "[useDCAFactory] Static call also failed:",
-            staticCallError
+            staticCallError,
           );
 
           // Method 3: Try encoding and calling manually
           dbg("[useDCAFactory] Trying manual encoding...");
           const data = factory.interface.encodeFunctionData(
             "getAccountsOfUser",
-            [address]
+            [address],
           );
           dbg("[useDCAFactory] Encoded data:", data);
 
@@ -206,7 +212,7 @@ export function useDCAFactory() {
           if (result && result !== "0x") {
             const decoded = factory.interface.decodeFunctionResult(
               "getAccountsOfUser",
-              result
+              result,
             );
             dbg("[useDCAFactory] Decoded result:", decoded);
             return decoded[0] || [];
@@ -227,30 +233,27 @@ export function useDCAFactory() {
     }
   }, [Signer, address, DCA_FACTORY_ADDRESS, debugContractInterface]);
 
-  const createAccount = useCallback(async (): Promise<
-    ContractTransactionReport | false
-  > => {
-    if (!Signer || !address) {
-      toast.error("Please connect your wallet first");
-      throw new Error("No signer available");
-    }
-
-    if (!DCAFactory) throw new Error("DCA Factory not found");
-    try {
-      const tx = await DCAFactory.CreateAccount();
-
-      await tx.wait();
-
-      return { tx, hash: tx.hash };
-    } catch (error: any) {
-      console.error("Error creating DCA account:", error);
-      if (error.code === 4001 || error.message?.includes("rejected")) {
-        throw error;
+  // Throws on any failure (including wallet rejection) — the modal is the
+  // single owner of user-facing toasts for this flow, so success/failure
+  // messaging can't contradict itself.
+  const createAccount =
+    useCallback(async (): Promise<ContractTransactionReport> => {
+      if (!Signer || !address) {
+        toast.error("Please connect your wallet first");
+        throw new Error("No signer available");
       }
-      toast.error("Failed to create DCA account");
-      return false;
-    }
-  }, [Signer, address, DCAFactory]);
+      if (!DCAFactory) throw new Error("DCA Factory not found");
+
+      beginWalletPrompt();
+      let tx;
+      try {
+        tx = await DCAFactory.CreateAccount();
+      } finally {
+        endWalletPrompt();
+      }
+      await tx.wait();
+      return { tx, hash: tx.hash };
+    }, [Signer, address, DCAFactory, beginWalletPrompt, endWalletPrompt]);
 
   return {
     DCAFactory,

@@ -26,12 +26,28 @@ interface TransactionContextType {
   getTransaction: (id: string) => Transaction | undefined;
   clearTransactions: () => void;
   getPendingCount: () => number;
+  // True while a wallet signature prompt is open. Drives the light
+  // page overlay and stops AppContent's connection gate from blanking
+  // the page when AppKit's connection state flaps mid-prompt.
+  awaitingWallet: boolean;
+  beginWalletPrompt: () => void;
+  endWalletPrompt: () => void;
 }
 
 const TransactionContext = createContext<TransactionContextType | undefined>(undefined);
 
 export function TransactionProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  // Counter, not boolean: chained prompts (approve → AddFunds) overlap.
+  const [walletPromptCount, setWalletPromptCount] = useState(0);
+
+  const beginWalletPrompt = useCallback(() => {
+    setWalletPromptCount((c) => c + 1);
+  }, []);
+
+  const endWalletPrompt = useCallback(() => {
+    setWalletPromptCount((c) => Math.max(0, c - 1));
+  }, []);
 
   const addTransaction = useCallback((tx: Omit<Transaction, 'id' | 'timestamp'>): string => {
     const id = `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -72,6 +88,9 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
     getTransaction,
     clearTransactions,
     getPendingCount,
+    awaitingWallet: walletPromptCount > 0,
+    beginWalletPrompt,
+    endWalletPrompt,
   };
 
   return (

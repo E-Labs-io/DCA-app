@@ -5,6 +5,8 @@
 import { Card, CardBody, Button, Chip, Select, SelectItem, Input, Pagination, Checkbox } from "@nextui-org/react";
 import { Play, StopCircle, Settings, AlertCircle, Wallet, Filter, SortAsc, Grid, List, CheckSquare, Square } from "lucide-react";
 import { tokenList, TokenTickers } from "@/constants/tokens";
+import { intervalOptions } from "@/constants/intervals";
+import { buildNetworkScanLink } from "@/helpers/buildScanLink";
 import Image from "next/image";
 import { IDCADataStructures } from "@/types/contracts/contracts/base/DCAAccount";
 import { useDCAAccount } from "@/hooks/useDCAAccount";
@@ -22,15 +24,6 @@ interface StrategyListProps {
   accountAddress: string;
   strategies: IDCADataStructures.StrategyStruct[];
 }
-
-const INTERVAL_LABELS: { [key: number]: string } = {
-  60: "1 Minute [DEV]",
-  300: "5 Minutes [DEV]",
-  3600: "1 Hour",
-  86400: "1 Day",
-  604800: "1 Week",
-  2592000: "1 Month",
-};
 
 type SortOption = "nextExecution" | "creationDate" | "amount" | "performance";
 type FilterStatus = "all" | "active" | "inactive";
@@ -186,13 +179,10 @@ export function StrategyList({
       if (strategy.active) {
         toast.promise(
           unsubscribeStrategy(strategy.strategyId).then(async (result) => {
-            if (result) {
-              const updatedStrategies = strategies.map((s) =>
-                s.strategyId === strategy.strategyId
-                  ? { ...s, active: false }
-                  : s
-              );
-            }
+            // The hook resolves `false` on failure (it already toasted
+            // the decoded error) — throw so toast.promise doesn't ALSO
+            // report success.
+            if (!result) throw new Error("unsubscribe failed");
             return result;
           }),
           {
@@ -202,15 +192,28 @@ export function StrategyList({
           }
         );
       } else {
+        // Pre-flight the contract's activation rule: base balance must
+        // cover 5x the per-execution amount, or SubscribeStrategy
+        // reverts with InsufficientFundsForSubscription.
+        const balance = getTokenBalance(strategy.baseToken);
+        if (balance) {
+          const required = BigInt(strategy.amount) * 5n;
+          if (balance.balance < required) {
+            const shortfall = required - balance.balance;
+            toast.error(
+              `Fund at least ${formatUnits(
+                shortfall,
+                Number(strategy.baseToken.decimals)
+              )} ${getTokenTicker(
+                strategy.baseToken
+              )} more to activate — the contract requires 5x the per-execution amount.`
+            );
+            return;
+          }
+        }
         toast.promise(
           subscribeStrategy(strategy.strategyId).then(async (result) => {
-            if (result) {
-              const updatedStrategies = strategies.map((s) =>
-                s.strategyId === strategy.strategyId
-                  ? { ...s, active: true }
-                  : s
-              );
-            }
+            if (!result) throw new Error("subscribe failed");
             return result;
           }),
           {
@@ -285,24 +288,30 @@ export function StrategyList({
     };
   };
 
-  const getIntervalLabel = (interval: bigint) => {
-    return INTERVAL_LABELS[Number(interval)] || `${interval} seconds`;
-  };
-
   const getExecutionTiming = (strategy: IDCADataStructures.StrategyStruct) => {
-    const accountTimings = getStrategyStats(
-      accountAddress,
-      Number(strategy.strategyId)
-    );
-    if (!accountTimings) return null;
+    const stats = getStrategyStats(accountAddress, Number(strategy.strategyId));
+    if (!stats) return null;
 
-    const nextExecutionIn = accountTimings?.lastExecution ?? 0 - currentTime;
+    // lastExecution of 0/undefined means the strategy has never run.
+    // strategy.interval is a V0.9 enum index, so seconds come from
+    // intervalOptions rather than the raw value.
+    const lastExecution = stats.lastExecution;
+    if (!lastExecution) {
+      return {
+        nextExecutionIn: null,
+        formattedNextExecution: "Awaiting first execution",
+      };
+    }
+
+    const intervalSeconds =
+      intervalOptions[Number(strategy.interval)]?.seconds ?? 0;
+    const nextExecutionIn = lastExecution + intervalSeconds - currentTime;
     return {
       nextExecutionIn,
       formattedNextExecution:
         nextExecutionIn > 0
           ? `Next execution in ${formatTimeRemaining(nextExecutionIn)}`
-          : "Execution pending...",
+          : "Due now",
     };
   };
 
@@ -443,6 +452,16 @@ export function StrategyList({
         {paginatedStrategies?.map((strategy) => {
           const baseTokenBalance = getTokenBalance(strategy.baseToken);
           const executionTiming = getExecutionTiming(strategy);
+          // Contract rule (DCAAccount.SubscribeStrategy): activation
+          // requires base balance >= 5x the per-execution amount.
+          const requiredToActivate = BigInt(strategy.amount) * 5n;
+          const activationShortfall = baseTokenBalance
+            ? requiredToActivate - baseTokenBalance.balance
+            : null;
+          const blockActivation =
+            !strategy.active &&
+            activationShortfall !== null &&
+            activationShortfall > 0n;
 
           return (
             <div key={strategy.strategyId}>
@@ -486,13 +505,11 @@ export function StrategyList({
                           ID: {strategy.strategyId.toString()}
                         </Chip>
 
-                        {strategy.active &&
-                          executionTiming &&
-                          executionTiming.nextExecutionIn > 0 && (
-                            <Chip color="default" size="sm">
-                              {executionTiming.formattedNextExecution}
-                            </Chip>
-                          )}
+                        {strategy.active && executionTiming && (
+                          <Chip color="default" size="sm">
+                            {executionTiming.formattedNextExecution}
+                          </Chip>
+                        )}
                         {strategy.reinvest.active && (
                           <Chip color="success" size="sm">
                             Reinvest Active
@@ -508,7 +525,11 @@ export function StrategyList({
                           <p className="font-semibold">
                             {baseTokenBalance ? (
                               <a
-                                href={`https://etherscan.io/token/${strategy.baseToken}`}
+                                href={buildNetworkScanLink({
+                                  network: ACTIVE_NETWORK!,
+                                  address:
+                                    strategy.baseToken.tokenAddress as string,
+                                })}
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >
@@ -519,6 +540,7 @@ export function StrategyList({
                                   height={16}
                                   className="inline-block mr-1"
                                 />
+                                {baseTokenBalance.formattedBalance}{" "}
                                 {getTokenTicker(strategy.baseToken)}
                               </a>
                             ) : (
@@ -534,6 +556,17 @@ export function StrategyList({
                           )}{" "}
                           {getTokenTicker(strategy.baseToken)}
                         </p>
+                        {blockActivation && (
+                          <p className="text-xs text-warning">
+                            Fund at least{" "}
+                            {formatUnits(
+                              activationShortfall!,
+                              Number(strategy.baseToken.decimals)
+                            )}{" "}
+                            {getTokenTicker(strategy.baseToken)} more to
+                            activate (needs 5x the per-execution amount)
+                          </p>
+                        )}
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -541,6 +574,7 @@ export function StrategyList({
                           color={strategy.active ? "warning" : "success"}
                           variant="light"
                           isIconOnly
+                          isDisabled={blockActivation}
                           isLoading={isUpdating === strategy.strategyId}
                           startContent={
                             strategy.active ? (
