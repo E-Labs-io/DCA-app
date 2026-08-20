@@ -333,10 +333,58 @@ const getAccountStrategyExecutionEvents = async (
   }
 };
 
+// The StrategyExecuted event only carries amountIn — the target tokens
+// actually received exist only as the ERC-20 Transfer log inside the
+// execution transaction's receipt. Receipts are immutable, so results
+// cache for the session.
+const ERC20_TRANSFER_TOPIC = ethers.id("Transfer(address,address,uint256)");
+const amountOutCache = new Map<string, bigint>();
+
+const getExecutionAmountOut = async (
+  accountProvider: DCAAccount,
+  transactionHash: string,
+  targetTokenAddress: string,
+  accountAddress: string
+): Promise<bigint | null> => {
+  const cacheKey =
+    `${transactionHash}-${targetTokenAddress}-${accountAddress}`.toLowerCase();
+  const cached = amountOutCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+
+  try {
+    const logCtx = await getLogContract(accountProvider);
+    const provider =
+      logCtx?.provider ??
+      (accountProvider.runner?.provider as ethers.Provider | undefined);
+    if (!provider) return null;
+
+    const receipt = await provider.getTransactionReceipt(transactionHash);
+    if (!receipt) return null;
+
+    let total = 0n;
+    for (const log of receipt.logs) {
+      if (log.address.toLowerCase() !== targetTokenAddress.toLowerCase())
+        continue;
+      if (log.topics[0] !== ERC20_TRANSFER_TOPIC) continue;
+      const to = `0x${log.topics[2].slice(26)}`;
+      if (to.toLowerCase() !== accountAddress.toString().toLowerCase())
+        continue;
+      total += BigInt(log.data);
+    }
+
+    amountOutCache.set(cacheKey, total);
+    return total;
+  } catch (error) {
+    console.error("Error reading execution receipt:", error);
+    return null;
+  }
+};
+
 // Single export statement
 export {
   getAccountStrategyCreationEvents,
   getAccountStrategyExecutionEvents,
   getStrategyExecutionEvents,
+  getExecutionAmountOut,
   clearAccountCache,
 };

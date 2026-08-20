@@ -20,6 +20,7 @@ import { buildStrategyStruct } from "@/hooks/helpers/buildDataTypes";
 import {
   getAccountStrategyCreationEvents,
   getStrategyExecutionEvents,
+  getExecutionAmountOut,
   clearAccountCache,
 } from "@/hooks/helpers/getAccountEvents";
 import {
@@ -59,12 +60,18 @@ export interface AccountStats {
 export interface StrategyStats {
   totalExecutions: number;
   totalCumulated: number;
+  // Target-token units actually received across executions (from tx
+  // receipts). null when no receipt could be read yet.
+  totalReceived: number | null;
   lastExecution?: number;
   executions: ExecutionStats[];
 }
 
 export interface ExecutionStats {
   amount: number;
+  // Target-token raw units received in this execution, read from the
+  // ERC-20 Transfer in the tx receipt; null if the receipt fetch failed.
+  amountOut: number | null;
   executionId: number;
   blockNumber: number;
   timestamp: number;
@@ -1020,6 +1027,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
     let totalExecutions = executions.length,
       totalCumulated = 0,
       lastExecution = 0;
+    let totalReceived: number | null = null;
 
     const executionEvents: ExecutionStats[] = [];
 
@@ -1037,13 +1045,32 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
 
       lastExecution = block?.timestamp!;
 
+      // Receipt reads run in parallel — one per execution, cached for the
+      // session (receipts are immutable).
+      const amountsOut = await Promise.all(
+        executions.map((execution) =>
+          getExecutionAmountOut(
+            accountInstance,
+            execution.transactionHash,
+            strategy.targetToken.tokenAddress.toString(),
+            strategy.accountAddress.toString(),
+          ),
+        ),
+      );
+
       let i = 0;
       for (const execution of executions) {
+        const amountOutRaw = amountsOut[i];
         i++;
         const block = await getCachedBlock(execution.blockNumber, getBlock);
         const timestamp = block?.timestamp!;
+        const amountOut = amountOutRaw === null ? null : Number(amountOutRaw);
+        if (amountOut !== null) {
+          totalReceived = (totalReceived ?? 0) + amountOut;
+        }
         executionEvents.push({
           amount: Number(execution.amountIn),
+          amountOut,
           executionId: i,
           blockNumber: execution.blockNumber,
           timestamp: timestamp,
@@ -1054,6 +1081,7 @@ export function DCAStatsProvider({ children }: DCAProviderProps) {
     const data: StrategyStats = {
       totalExecutions,
       totalCumulated,
+      totalReceived,
       lastExecution,
       executions: executionEvents,
     };
