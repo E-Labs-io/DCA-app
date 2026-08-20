@@ -44,6 +44,9 @@ export function FundUnfundAccountModal({
     useState<IDCADataStructures.TokenDataStruct | null>(null);
   const [amount, setAmount] = useState<string>("");
   const [balance, setBalance] = useState<number>(0.0);
+  // Raw bigint alongside the display value so percent quick-fills and
+  // "Max" are exact rather than float-rounded.
+  const [rawBalance, setRawBalance] = useState<bigint>(0n);
   const [isWorking, setIsWorking] = useState<boolean>(false);
   const [isComplete, setIsComplete] = useState<boolean>(false);
   // Bumped after a confirmed tx so the modal's own balance line refetches.
@@ -65,27 +68,31 @@ export function FundUnfundAccountModal({
       const fetchBalance = async () => {
         // Replace with actual logic to fetch balance
         dbg("Selceted Token Check : ", selectedToken);
+        // The relevant balance differs per action: funding spends the
+        // WALLET's tokens, but defund/withdraw are limited by the
+        // account contract's internal ledgers (_baseBalances /
+        // _targetBalances), NOT its raw ERC20 balance — when a token is
+        // base in one strategy and target in another, balanceOf is the
+        // sum of both and Max would overfill and revert.
+        let balance: bigint;
         if (actionType === "fund") {
-          const balance = await getBalance(address as string);
-          dbg(
-            "Balacne of wallet for token",
-            selectedToken?.ticker,
-            balance
-          );
-          setBalance(
-            Number(formatUnits(balance, Number(selectedToken.decimals)))
-          );
+          balance = BigInt(await getBalance(address as string));
         } else {
-          const balance = await getBalance(accountAddress as string);
-          dbg(
-            "Balacne of Account for token",
-            selectedToken?.ticker,
-            balance
-          );
-          setBalance(
-            Number(formatUnits(balance, Number(selectedToken.decimals)))
-          );
+          const account = getAccountInstance(accountAddress)!;
+          balance =
+            actionType === "unfund"
+              ? BigInt(
+                  await account.getBaseBalance(String(selectedToken.tokenAddress))
+                )
+              : BigInt(
+                  await account.getTargetBalance(String(selectedToken.tokenAddress))
+                );
         }
+        dbg("Balance for token", selectedToken?.ticker, balance);
+        setRawBalance(balance);
+        setBalance(
+          Number(formatUnits(balance, Number(selectedToken.decimals)))
+        );
       };
 
       fetchBalance();
@@ -97,6 +104,8 @@ export function FundUnfundAccountModal({
     setIsComplete(false);
     setIsWorking(false);
     setBalance(0.0);
+    setRawBalance(0n);
+    setAmount("");
   };
 
   const handleAction = async () => {
@@ -197,6 +206,13 @@ export function FundUnfundAccountModal({
                 onChange={(e) => {
                   const token = tokens.find((t) => t.ticker === e.target.value);
                   setSelectedToken(token || null);
+                  // Kill stale values until the new token's balance
+                  // resolves — chips formatting the OLD raw balance with
+                  // the NEW token's decimals were off by 10^12 on
+                  // mixed-decimal pairs.
+                  setRawBalance(0n);
+                  setBalance(0);
+                  setAmount("");
                 }}
                 renderValue={() => {
                   if (selectedToken) {
@@ -217,9 +233,19 @@ export function FundUnfundAccountModal({
                 ))}
               </Select>
               {selectedToken && (
-                <div style={{ marginTop: 10 }}>
+                <button
+                  type="button"
+                  className="mt-2 text-left text-sm hover:text-primary transition-colors"
+                  onClick={() =>
+                    setAmount(
+                      formatUnits(rawBalance, Number(selectedToken.decimals))
+                    )
+                  }
+                  disabled={isWorking}
+                  title="Click to use full balance"
+                >
                   <strong>Balance:</strong> {balance} {selectedToken.ticker}
-                </div>
+                </button>
               )}
               <Input
                 type="number"
@@ -229,6 +255,28 @@ export function FundUnfundAccountModal({
                 onChange={(e) => setAmount(e.target.value)}
                 isDisabled={isWorking}
               />
+              {selectedToken && rawBalance > 0n && (
+                <div className="flex gap-2">
+                  {[25, 50, 75, 100].map((pct) => (
+                    <Button
+                      key={pct}
+                      size="sm"
+                      variant="flat"
+                      isDisabled={isWorking}
+                      onPress={() =>
+                        setAmount(
+                          formatUnits(
+                            (rawBalance * BigInt(pct)) / 100n,
+                            Number(selectedToken.decimals)
+                          )
+                        )
+                      }
+                    >
+                      {pct === 100 ? "Max" : `${pct}%`}
+                    </Button>
+                  ))}
+                </div>
+              )}
             </>
           )}
         </ModalBody>

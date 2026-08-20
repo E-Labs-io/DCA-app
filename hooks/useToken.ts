@@ -18,15 +18,17 @@ export function useToken(tokenAddress: EthereumAddress, decimals: number = 18) {
   const [ERC20Instance, setERC20Instance] = useState<erc20.IERC20 | null>(null);
 
   useEffect(() => {
-    if (!Signer) {
-      dbgWarn("Signer is not available yet");
+    if (!Signer || !tokenAddress) {
       return;
     }
 
+    // Reconnect whenever the ADDRESS changes, not only when no instance
+    // exists — the old `!ERC20Instance &&` guard kept serving the first
+    // token's contract after the caller switched tokens.
     if (ERC20Instance?.target !== tokenAddress) {
-      !ERC20Instance && connectToToken();
+      connectToToken();
     }
-  }, [Signer, ERC20Instance]);
+  }, [Signer, ERC20Instance, tokenAddress]);
 
   const connectToToken = async () => {
     if (Signer) {

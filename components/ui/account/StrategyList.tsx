@@ -15,6 +15,7 @@ import { formatUnits } from "viem";
 import { useState, useEffect, useMemo } from "react";
 import { getTokenIcon, getTokenTicker } from "@/helpers/tokenData";
 import { FundUnfundAccountModal } from "../../modals/FundUnfundAccountModal";
+import { StrategySettingsModal } from "../../modals/StrategySettingsModal";
 import { EthereumAddress } from "@/types/generic";
 import useSigner from "@/hooks/useSigner";
 import { useDCAProvider } from "@/providers/DCAStatsProvider";
@@ -50,6 +51,8 @@ export function StrategyList({
   );
 
   const [isCreateStrategyOpen, setIsCreateStrategyOpen] = useState(false);
+  const [settingsStrategy, setSettingsStrategy] =
+    useState<IDCADataStructures.StrategyStruct | null>(null);
 
   // Filtering and sorting state
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
@@ -594,7 +597,10 @@ export function StrategyList({
                           variant="light"
                           isIconOnly
                           startContent={<Settings size={18} />}
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSettingsStrategy(strategy);
+                          }}
                         />
                       </div>
                     </div>
@@ -651,6 +657,15 @@ export function StrategyList({
           accountAddress={getAccountInstance(accountAddress as string)!}
           Signer={Signer}
           ACTIVE_NETWORK={ACTIVE_NETWORK!}
+        />
+      )}
+      {settingsStrategy && Signer && (
+        <StrategySettingsModal
+          isOpen={!!settingsStrategy}
+          onClose={() => setSettingsStrategy(null)}
+          strategy={settingsStrategy}
+          accountContract={getAccountInstance(accountAddress as string)!}
+          signer={Signer}
         />
       )}
     </div>

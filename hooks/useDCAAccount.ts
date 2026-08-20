@@ -532,6 +532,42 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
     [Signer, dcaAccount, beginWalletPrompt, endWalletPrompt]
   );
 
+  const setStrategyReinvest = useCallback(
+    async (
+      strategyId: BigNumberish,
+      reinvest: IDCADataStructures.ReinvestStruct
+    ) => {
+      if (!Signer) {
+        toast.error("Please connect your wallet first");
+        throw new Error("No signer available");
+      }
+
+      try {
+        if (!dcaAccount) throw new Error("Error connecting to account");
+        toast.info("Please accept the transaction...");
+        beginWalletPrompt();
+        let tx;
+        try {
+          tx = await dcaAccount.setStrategyReinvest(strategyId, reinvest);
+        } finally {
+          endWalletPrompt();
+        }
+        toast.loading("Updating reinvest settings...");
+        await tx.wait();
+        toast.success("Reinvest settings updated");
+        return { tx, hash: tx.hash };
+      } catch (error: any) {
+        if (error.code === 4001 || error.message?.includes("rejected")) {
+          throw error;
+        }
+        toast.error(decodeContractError(error));
+        console.error("Error setting strategy reinvest:", error);
+        return false;
+      }
+    },
+    [Signer, dcaAccount, beginWalletPrompt, endWalletPrompt]
+  );
+
   const getBaseBalance = useCallback(
     async (tokenAddress: EthereumAddress): Promise<number> => {
       if (!Signer) {
@@ -665,6 +701,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
     withdrawSavings,
     subscribeStrategy,
     unsubscribeStrategy,
+    setStrategyReinvest,
     batchSubscribeStrategies,
     batchUnsubscribeStrategies,
     getBaseBalance,

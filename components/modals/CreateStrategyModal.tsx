@@ -32,6 +32,13 @@ import {
 import { NetworkKeys } from "@/types";
 import { Signer } from "ethers";
 import { dbg, dbgWarn } from '@/helpers/debug';
+import { ethers } from "ethers";
+import {
+  reinvestOptions,
+  buildReinvest,
+  REINVEST_NONE,
+  REINVEST_FORWARD,
+} from "@/helpers/reinvest";
 
 interface FormData {
   baseToken: string;
@@ -40,6 +47,8 @@ interface FormData {
   interval: Interval;
   fundAmount: string;
   subscribeToExecutor: boolean;
+  reinvestCode: number;
+  reinvestReceiver: string;
 }
 interface CreateStrategyModalProps {
   isOpen: boolean;
@@ -65,6 +74,8 @@ export function CreateStrategyModal({
     interval: Interval.OneDay,
     fundAmount: "",
     subscribeToExecutor: true,
+    reinvestCode: REINVEST_NONE,
+    reinvestReceiver: "",
   });
 
   const selectedTokenDecimals = formData.baseToken
@@ -98,12 +109,13 @@ export function CreateStrategyModal({
     };
   };
 
-  const createReinvestData = (): IDCADataStructures.ReinvestStruct => ({
-    reinvestData: "0x" as `0x${string}`,
-    active: false,
-    investCode: 0,
-    dcaAccountAddress: accountAddress.target as `0x${string}`,
-  });
+  const createReinvestData = (
+    targetTokenAddress: string
+  ): IDCADataStructures.ReinvestStruct =>
+    buildReinvest(String(accountAddress.target), formData.reinvestCode, {
+      receiver: formData.reinvestReceiver || address,
+      targetTokenAddress,
+    });
 
   const resetForm = () => {
     setFormData({
@@ -113,6 +125,8 @@ export function CreateStrategyModal({
       interval: Interval.OneDay,
       fundAmount: "",
       subscribeToExecutor: true,
+      reinvestCode: REINVEST_NONE,
+      reinvestReceiver: "",
     });
     setStep(1);
     setIsProcessing(false);
@@ -146,6 +160,16 @@ export function CreateStrategyModal({
       const targetTokenData = createTokenData(
         formData.targetToken as TokenTickers
       );
+      if (
+        formData.reinvestCode === REINVEST_FORWARD &&
+        formData.reinvestReceiver &&
+        !ethers.isAddress(formData.reinvestReceiver)
+      ) {
+        toast.error("Reinvest receiver is not a valid address");
+        setIsProcessing(false);
+        return;
+      }
+
       if (
         baseTokenData.tokenAddress === "0x" ||
         targetTokenData.tokenAddress === "0x"
@@ -217,7 +241,7 @@ export function CreateStrategyModal({
         amount: parseUnits(formData.amount, selectedTokenDecimals!),
         strategyId: 0,
         active: true,
-        reinvest: createReinvestData(),
+        reinvest: createReinvestData(String(targetTokenData.tokenAddress)),
       };
 
       const fundAmountBigInt = formData.fundAmount
@@ -394,6 +418,44 @@ export function CreateStrategyModal({
             }
             isDisabled={isProcessing}
           />
+
+          <Select
+            label="Reinvest bought tokens"
+            disallowEmptySelection
+            selectedKeys={[String(formData.reinvestCode)]}
+            onChange={(e) =>
+              setFormData({ ...formData, reinvestCode: Number(e.target.value) })
+            }
+            isDisabled={isProcessing}
+          >
+            {reinvestOptions.map((o) => (
+              <SelectItem
+                key={String(o.code)}
+                value={String(o.code)}
+                description={o.description}
+              >
+                {o.label}
+              </SelectItem>
+            ))}
+          </Select>
+
+          {formData.reinvestCode === REINVEST_FORWARD && (
+            <Input
+              label="Reinvest receiver"
+              placeholder={address ?? "0x…"}
+              description="Each buy is sent here straight after the swap (defaults to your wallet)"
+              value={formData.reinvestReceiver}
+              onChange={(e) =>
+                setFormData({ ...formData, reinvestReceiver: e.target.value })
+              }
+              isInvalid={
+                formData.reinvestReceiver.length > 0 &&
+                !ethers.isAddress(formData.reinvestReceiver)
+              }
+              errorMessage="Not a valid address"
+              isDisabled={isProcessing}
+            />
+          )}
 
           <div className="flex items-center gap-2">
             <input
