@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'export',
+  // CI/verification builds set NEXT_DIST_DIR so `next build` can run
+  // beside a live `next dev` — a build into the default .next wipes the
+  // dev server's chunks out from under it (page 404s every asset until
+  // the dev server is restarted).
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   eslint: {
     ignoreDuringBuilds: true,
   },
