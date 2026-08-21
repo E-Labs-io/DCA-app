@@ -117,9 +117,9 @@ export function useToken(tokenAddress: EthereumAddress, decimals: number = 18) {
     // Approve exactly the requested amount.
     const approveAmount = parseUnits(amount, decimals);
     const tx = await tokenContract.approve(spender, approveAmount);
-    toast.loading("Transaction is confirming...");
+    const progressToast = toast.loading("Transaction is confirming...");
     await tx.wait();
-    toast.success("Transaction confirmed, the token has been approved");
+    toast.success("Transaction confirmed, the token has been approved", { id: progressToast });
     try {
       dbg("Approving token:", {
         tokenAddress,

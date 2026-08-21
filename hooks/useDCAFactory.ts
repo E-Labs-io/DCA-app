@@ -51,6 +51,7 @@ export function useDCAFactory() {
         throw new Error("No signer available");
       }
 
+      let progressToast: string | number | undefined;
       try {
         if (!DCAFactory) throw new Error("Error connecting to factory");
         toast.info("Creating account with deterministic address...");
@@ -61,11 +62,12 @@ export function useDCAFactory() {
         } finally {
           endWalletPrompt();
         }
-        toast.loading("Account creation transaction is confirming...");
+        progressToast = toast.loading("Account creation transaction is confirming...");
         await tx.wait();
-        toast.success("Account created successfully");
+        toast.success("Account created successfully", { id: progressToast });
         return { tx, hash: tx.hash };
       } catch (error: any) {
+        if (progressToast !== undefined) toast.dismiss(progressToast);
         toast.error(
           isUserRejection(error)
             ? "Transaction was rejected"

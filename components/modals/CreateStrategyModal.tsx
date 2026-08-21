@@ -136,6 +136,10 @@ export function CreateStrategyModal({
     if (isProcessing) return;
     setIsProcessing(true);
 
+    // One toast id threads the whole flow: each step REPLACES the chip instead
+    // of stacking a new one, and error/close paths dismiss it — sonner loading
+    // toasts never expire on their own.
+    let flowToast: string | number | undefined;
     try {
       if (
         !formData.baseToken ||
@@ -185,7 +189,7 @@ export function CreateStrategyModal({
 
       if (formData.fundAmount && parseFloat(formData.fundAmount) > 0) {
         setStep(1);
-        const approvalToast = toast.loading("Checking token approval...");
+        flowToast = toast.loading("Checking token approval...");
 
         let hasAllowance = false;
         try {
@@ -200,8 +204,7 @@ export function CreateStrategyModal({
 
         if (!hasAllowance) {
           setStep(2);
-          toast.dismiss(approvalToast);
-          toast.loading("Please approve token spending...");
+          toast.loading("Please approve token spending...", { id: flowToast });
 
           // A failed approval must abort: funding without allowance makes
           // SetupStrategy revert on transferFrom, and the old flow's
@@ -216,22 +219,21 @@ export function CreateStrategyModal({
           });
 
           if (!transaction || typeof transaction === "boolean") {
-            toast.error("Token approval failed — strategy not created");
+            toast.error("Token approval failed — strategy not created", { id: flowToast });
             setIsProcessing(false);
             return;
           }
 
-          toast.loading("Waiting for approval confirmation...");
+          toast.loading("Waiting for approval confirmation...", { id: flowToast });
           await transaction.tx.wait();
-          toast.success("Token approval confirmed");
+          toast.success("Token approval confirmed", { id: flowToast });
         } else {
-          toast.dismiss(approvalToast);
-          toast.success("Token approval verified");
+          toast.success("Token approval verified", { id: flowToast });
         }
       }
 
       setStep(3);
-      toast.loading("Creating strategy...");
+      flowToast = toast.loading("Creating strategy...", flowToast !== undefined ? { id: flowToast } : undefined);
 
       const strategyData: IDCADataStructures.StrategyStruct = {
         accountAddress: (accountAddress as DCAAccount).target as `0x${string}`,
@@ -275,7 +277,7 @@ export function CreateStrategyModal({
           dbg(
             "[CreateStrategyModal] Retrying without subscription due to 'already subscribed' error"
           );
-          toast.loading("Retrying strategy creation without subscription...");
+          toast.loading("Retrying strategy creation without subscription...", { id: flowToast });
 
           return createStrategy({
             strategy: strategyData,
@@ -290,6 +292,10 @@ export function CreateStrategyModal({
         return null;
       });
 
+      // The flow chip's job is done — executeTransaction/createStrategy own
+      // the outcome toasts from here.
+      if (flowToast !== undefined) toast.dismiss(flowToast);
+
       // executeTransaction inside createStrategy already awaits the
       // receipt and shows confirmation toasts, so no second wait here.
       // We only need to surface the final outcome.
@@ -302,6 +308,7 @@ export function CreateStrategyModal({
       resetForm();
       onClose();
     } catch (error) {
+      if (flowToast !== undefined) toast.dismiss(flowToast);
       console.error("Strategy creation process error:", error);
       toast.error("Failed to create strategy");
       resetForm();

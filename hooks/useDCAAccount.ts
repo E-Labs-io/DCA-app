@@ -344,6 +344,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         throw new Error("No signer available");
       }
 
+      let progressToast: string | number | undefined;
       try {
         if (!dcaAccount) throw new Error("Error connecting to account");
 
@@ -370,8 +371,11 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
           } finally {
             endWalletPrompt();
           }
-          toast.loading("Approval is confirming...");
+          // Reuse the loading toast's id so the chip resolves in place instead
+          // of leaking a stuck spinner (sonner loading toasts never expire).
+          progressToast = toast.loading("Approval is confirming...");
           await approveTx.wait();
+          toast.success("Approval confirmed.", { id: progressToast });
         }
 
         toast.info("Please accept the Funding Transaction...");
@@ -382,12 +386,13 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         } finally {
           endWalletPrompt();
         }
-        toast.loading("Funding Transaction is Confirming...");
+        progressToast = toast.loading("Funding Transaction is Confirming...");
         await tx.wait();
         announceFundsUpdated();
-        toast.success("Funding Transaction Approved.");
+        toast.success("Funding Transaction Approved.", { id: progressToast });
         return { tx, hash: tx.hash };
       } catch (error: any) {
+        if (progressToast !== undefined) toast.dismiss(progressToast);
         const errorMessage = decodeContractError(error);
         toast.error(errorMessage);
         console.error("Error funding account:", error);
@@ -404,6 +409,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         throw new Error("No signer available");
       }
 
+      let progressToast: string | number | undefined;
       try {
         if (!dcaAccount) throw new Error("Error connecting to account");
         toast.info("Please accept the Transaction...");
@@ -415,12 +421,13 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         } finally {
           endWalletPrompt();
         }
-        toast.loading("Transaction is Confirming...");
+        progressToast = toast.loading("Transaction is Confirming...");
         await tx.wait();
         announceFundsUpdated();
-        toast.success("Transaction Approved.");
+        toast.success("Transaction Approved.", { id: progressToast });
         return { tx, hash: tx.hash };
       } catch (error: any) {
+        if (progressToast !== undefined) toast.dismiss(progressToast);
         const errorMessage = decodeContractError(error);
         toast.error(errorMessage);
         console.error("Error withdrawing funds from account:", error);
@@ -437,6 +444,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         throw new Error("No signer available");
       }
 
+      let progressToast: string | number | undefined;
       try {
         if (!dcaAccount) throw new Error("Error connecting to account");
 
@@ -448,13 +456,14 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         } finally {
           endWalletPrompt();
         }
-        toast.loading("Withdrawal Transaction Confirming...");
+        progressToast = toast.loading("Withdrawal Transaction Confirming...");
         await tx.wait();
         announceFundsUpdated();
-        toast.success("Withdrawal Transaction Approved.");
+        toast.success("Withdrawal Transaction Approved.", { id: progressToast });
 
         return { tx, hash: tx.hash };
       } catch (error: any) {
+        if (progressToast !== undefined) toast.dismiss(progressToast);
         const errorMessage = decodeContractError(error);
         toast.error(errorMessage);
         console.error("Error withdrawing target token:", error);
@@ -471,6 +480,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         throw new Error("No signer available");
       }
 
+      let progressToast: string | number | undefined;
       try {
         if (!dcaAccount) throw new Error("Error connecting to account");
 
@@ -482,11 +492,12 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         } finally {
           endWalletPrompt();
         }
-        toast.loading("Transaction is confirming...");
+        progressToast = toast.loading("Transaction is confirming...");
         await tx.wait();
-        toast.success("Account was subscribed to the Executor");
+        toast.success("Account was subscribed to the Executor", { id: progressToast });
         return { tx, hash: tx.hash };
       } catch (error: any) {
+        if (progressToast !== undefined) toast.dismiss(progressToast);
         const errorMessage = decodeContractError(error);
         toast.error(errorMessage);
         console.error("Error subscribing to strategy:", error);
@@ -506,6 +517,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         throw new Error("No signer available");
       }
 
+      let progressToast: string | number | undefined;
       try {
         if (!dcaAccount) throw new Error("Error connecting to account");
         toast.info("Please accept the transaction...");
@@ -516,11 +528,12 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         } finally {
           endWalletPrompt();
         }
-        toast.loading("Transaction is confirming...");
+        progressToast = toast.loading("Transaction is confirming...");
         await tx.wait();
-        toast.success("Account was unsubscribed to the Executor");
+        toast.success("Account was unsubscribed to the Executor", { id: progressToast });
         return { tx, hash: tx.hash };
       } catch (error: any) {
+        if (progressToast !== undefined) toast.dismiss(progressToast);
         if (error.code === 4001 || error.message?.includes("rejected")) {
           throw error;
         }
@@ -542,6 +555,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         throw new Error("No signer available");
       }
 
+      let progressToast: string | number | undefined;
       try {
         if (!dcaAccount) throw new Error("Error connecting to account");
         toast.info("Please accept the transaction...");
@@ -552,11 +566,12 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         } finally {
           endWalletPrompt();
         }
-        toast.loading("Updating reinvest settings...");
+        progressToast = toast.loading("Updating reinvest settings...");
         await tx.wait();
-        toast.success("Reinvest settings updated");
+        toast.success("Reinvest settings updated", { id: progressToast });
         return { tx, hash: tx.hash };
       } catch (error: any) {
+        if (progressToast !== undefined) toast.dismiss(progressToast);
         if (error.code === 4001 || error.message?.includes("rejected")) {
           throw error;
         }
@@ -633,6 +648,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         throw new Error("No signer available");
       }
 
+      let progressToast: string | number | undefined;
       try {
         if (!dcaAccount) throw new Error("Error connecting to account");
         toast.info("Please accept the batch subscription transaction...");
@@ -643,11 +659,12 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         } finally {
           endWalletPrompt();
         }
-        toast.loading("Batch subscription transaction is confirming...");
+        progressToast = toast.loading("Batch subscription transaction is confirming...");
         await tx.wait();
-        toast.success("Strategies subscribed successfully");
+        toast.success("Strategies subscribed successfully", { id: progressToast });
         return { tx, hash: tx.hash };
       } catch (error: any) {
+        if (progressToast !== undefined) toast.dismiss(progressToast);
         if (error.code === 4001 || error.message?.includes("rejected")) {
           toast.error("Transaction was rejected");
           throw error;
@@ -667,6 +684,7 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         throw new Error("No signer available");
       }
 
+      let progressToast: string | number | undefined;
       try {
         if (!dcaAccount) throw new Error("Error connecting to account");
         toast.info("Please accept the batch unsubscription transaction...");
@@ -677,11 +695,12 @@ export function useDCAAccount(dcaAccount: DCAAccount, Signer: Signer) {
         } finally {
           endWalletPrompt();
         }
-        toast.loading("Batch unsubscription transaction is confirming...");
+        progressToast = toast.loading("Batch unsubscription transaction is confirming...");
         await tx.wait();
-        toast.success("Strategies unsubscribed successfully");
+        toast.success("Strategies unsubscribed successfully", { id: progressToast });
         return { tx, hash: tx.hash };
       } catch (error: any) {
+        if (progressToast !== undefined) toast.dismiss(progressToast);
         if (error.code === 4001 || error.message?.includes("rejected")) {
           toast.error("Transaction was rejected");
           throw error;

@@ -28,7 +28,9 @@ export function Providers({ children }: { children: ReactNode }) {
                 forcedTheme="dark"
                 disableTransitionOnChange
               >
-                <Toaster richColors position="top-right" />
+                {/* closeButton: every chip gets an ✕ so nothing can strand on
+                    screen; swipe-to-dismiss is built into sonner. */}
+                <Toaster richColors closeButton position="top-right" />
                 {children}
               </NextThemesProvider>
             </DCAStatsProvider>
